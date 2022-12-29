@@ -1,0 +1,44 @@
+plugins {
+    // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
+    `java-gradle-plugin`
+    kotlin("jvm") version "1.8.0"
+}
+
+group = "org.example"
+version = "1.0-SNAPSHOT"
+
+repositories {
+    // Use Maven Central for resolving dependencies
+    mavenCentral()
+}
+
+dependencies {
+    // Use JUnit test framework for unit tests
+    testImplementation(kotlin("test"))
+    testImplementation("io.kotest:kotest-assertions-core:5.5.4")
+    implementation(gradleApi())
+}
+
+gradlePlugin {
+    // Define the plugin
+    val kdocInclude by plugins.creating {
+        id = "com.example.plugin.kdocInclude"
+        implementationClass = "com.example.plugin.KdocIncludePlugin"
+    }
+}
+
+// Add a source set and a task for a functional test suite
+val functionalTest: SourceSet by sourceSets.creating
+gradlePlugin.testSourceSets(functionalTest)
+
+configurations[functionalTest.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+
+val functionalTestTask = tasks.register<Test>("functionalTest") {
+    testClassesDirs = functionalTest.output.classesDirs
+    classpath = configurations[functionalTest.runtimeClasspathConfigurationName] + functionalTest.output
+}
+
+tasks.check {
+    // Run the functional tests as part of `check`
+    dependsOn(functionalTestTask)
+}
