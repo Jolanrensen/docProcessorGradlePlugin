@@ -8,16 +8,8 @@ private val encompassingBracketsRegex =
 private val packageRegex = Regex("""package(\s+)(.+)(\s+)(;?)""")
 private val nameRegex = Regex("""((`[^`]+`)|([a-zA-Z][a-zA-Z0-9]*))""")
 
-// For @`A`(`@Test` = ((123)))
-val annotationRegex1 =
-    Regex("""@`[^`]+`${encompassingBracketsRegex.pattern}""")
-
-// For @Test(`@Test` = ((123)))
-val annotationRegex2 =
-    Regex("""@[a-zA-Z][a-zA-Z0-9]*${encompassingBracketsRegex.pattern}""")
-
-// For @Test or @`A`
-val annotationRegex3 = Regex("""@((`[^`]+`)|([a-zA-Z][a-zA-Z0-9]*))""")
+// For @`A`(`@Test` = ((123))), @Test, etc.
+val annotationRegex = Regex("""@(?:(?:[a-zA-Z]\w*)|(?:`[^`]+`))(?:(?=\()(?:(?=.*?\((?!\1)(.*\)(?!\2).*))(?=.*?\)(?!\2)(.*)).)+?.*?(?=\1)[^\(]*(?=\2${'$'}))?""")
 
 fun getPackageName(@Language("kt") fileContent: String): String =
     packageRegex.find(fileContent)?.groupValues?.get(2) ?: ""
@@ -25,15 +17,14 @@ fun getPackageName(@Language("kt") fileContent: String): String =
 fun String.removeAnnotations(): String {
     var res = this
     while (res.startsWith('@')) {
-        val annotationPart = annotationRegex1.matchAt(res, 0)?.value
-            ?: annotationRegex2.matchAt(res, 0)?.value
-            ?: annotationRegex3.matchAt(res, 0)?.value!!
+        val annotationPart = annotationRegex.matchAt(res, 0)!!.value
         res = res.removePrefix(annotationPart).trim()
     }
     return res
 }
 
 fun getSourceName(source: String): String = source
+    .replace('\n', ' ')
     .trim()
     .removeAnnotations()
     .trim()

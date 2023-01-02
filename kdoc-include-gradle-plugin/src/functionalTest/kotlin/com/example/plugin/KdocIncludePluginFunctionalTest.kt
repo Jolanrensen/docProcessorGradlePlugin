@@ -38,12 +38,14 @@ class KdocIncludePluginFunctionalTest {
          * @param name The name of the person to greet
          * @see [com.example.plugin.KdocIncludePlugin]
          */
+
         private interface TestA
         
         /**
          * Hello World 2!
          * @include [TestA]
          */
+        @AnnotationTest(a = 24)
         private interface Test
 
         

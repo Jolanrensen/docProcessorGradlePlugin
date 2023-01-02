@@ -102,6 +102,12 @@ class KdocIncludePluginTest {
         """.trimIndent())
 
         g shouldBe "private"
+
+        val h = getSourceName("""
+            @Test @`A`(`@werwerjkwent` = (123) ) object `@Test` 
+        """.trimIndent())
+
+        h shouldBe "`@Test`"
     }
 
     @Test
