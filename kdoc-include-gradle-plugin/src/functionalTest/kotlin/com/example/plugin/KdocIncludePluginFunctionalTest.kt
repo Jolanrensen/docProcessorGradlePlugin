@@ -14,7 +14,7 @@ class KdocIncludePluginFunctionalTest {
     private val buildFile = """
         plugins {  
             kotlin("jvm") version "1.8.0"
-            id("com.example.plugin.kdocInclude") 
+            id("com.example.plugin.kdocInclude")
         }
         
         val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
@@ -38,7 +38,14 @@ class KdocIncludePluginFunctionalTest {
          * @param name The name of the person to greet
          * @see [com.example.plugin.KdocIncludePlugin]
          */
+        private interface TestA
+        
+        /**
+         * Hello World 2!
+         * @include [TestA]
+         */
         private interface Test
+
         
         
         /** 
