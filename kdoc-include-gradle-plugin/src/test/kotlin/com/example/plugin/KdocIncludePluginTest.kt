@@ -57,4 +57,61 @@ class KdocIncludePluginTest {
 
         kdoc5.getKdocContent().toKdoc() shouldBe kdoc5
     }
+
+
+    @Test
+    fun `Test get class name from string`() {
+        val a = getSourceName("""
+            private class TestClass {
+        """.trimIndent())
+
+        a shouldBe "TestClass"
+
+        val b = getSourceName("""
+            internal object internal : Something, A {
+        """.trimIndent())
+
+        b shouldBe "internal"
+
+        val c = getSourceName("""
+            class private
+        """.trimIndent())
+
+        c shouldBe "private"
+
+        val d = getSourceName("""
+            public object public {
+        """.trimIndent())
+
+        d shouldBe "public"
+
+        val e = getSourceName("""
+            class `public`
+        """.trimIndent())
+
+        e shouldBe "`public`"
+
+        val f = getSourceName("""
+            @Test @`A`(`@Test` = (123) ) object `@Test` 
+        """.trimIndent())
+
+        f shouldBe "`@Test`"
+
+        val g = getSourceName("""
+            class private(val a: Int, val b: Private) : Iets {
+        """.trimIndent())
+
+        g shouldBe "private"
+    }
+
+    @Test
+    fun `Test remove annotations`() {
+        val a = """
+            @Test @`A`(`@Test` = (123) ) object `@Test` 
+        """.trimIndent()
+
+        a.removeAnnotations() shouldBe "object `@Test`"
+    }
 }
+
+

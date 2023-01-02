@@ -49,9 +49,8 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
     private val kdocSourceRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/(\s+)(.*)(interface|class|object)(\s+).+""")
     private val kdocRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
     private val includeRegex = Regex("""@include(\s+)(\[?)(.+)(]?)""")
-    private val packageRegex = Regex("""package(\s+)(.+)(\s+)""")
 
-    private data class SourceKdoc(val packageName: String, val source: String, val kdocContent: String)
+    internal data class SourceKdoc(val packageName: String, val source: String, val kdocContent: String)
 
     @TaskAction
     fun process() {
@@ -103,15 +102,12 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         }
     }
 
-    private fun getPackageName(fileContent: String): String =
-        packageRegex.find(fileContent)?.groupValues?.get(2) ?: ""
-
     /**
      * Scans the given file content for source kdocs and returns a list of them.
      *
      * TODO maybe replace these sources with @define or something similar?
      */
-    private fun readSourceKDocs(fileContent: String): List<SourceKdoc> {
+    internal fun readSourceKDocs(fileContent: String): List<SourceKdoc> {
 
         val packageName = getPackageName(fileContent)
 
@@ -122,16 +118,17 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
 
             val kdocPart = kdocRegex.find(value)!!.value
             val sourcePart = value.removePrefix(kdocPart).trim()
+            val sourceName = getSourceName(sourcePart)
 
             val kdocContent = kdocPart.getKdocContent()
 
-            SourceKdoc(packageName, sourcePart, kdocContent)
+            SourceKdoc(packageName, sourceName, kdocContent)
         }.toList()
 
         return sourceKDocs
     }
 
-    private fun processFileContent(fileContent: String, sourceKDocs: Map<String, List<SourceKdoc>>): String {
+    internal fun processFileContent(fileContent: String, sourceKDocs: Map<String, List<SourceKdoc>>): String {
         val packageName = getPackageName(fileContent)
 
         // Find all kdocs and replace @include with the content of the targeted kdoc
@@ -144,7 +141,7 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
      * Get include target name.
      * For instance, changes `@include [Foo]` to `Foo`
      */
-    private fun String.getIncludeTargetName(): String {
+    internal fun String.getIncludeTargetName(): String {
         require("@include" in this)
 
         return this
@@ -156,7 +153,7 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
             .trim()
     }
 
-    private fun processKdoc(kdoc: String, sourceKDocs: Map<String, List<SourceKdoc>>, packageName: String): String {
+    internal fun processKdoc(kdoc: String, sourceKDocs: Map<String, List<SourceKdoc>>, packageName: String): String {
         val indent = kdoc.indexOfFirst { it != ' ' }
 
         val sourceKDocsCurrentPackage = sourceKDocs[packageName] ?: emptyList()
@@ -175,12 +172,13 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                 if ('.' !in name) return@replace ""
 
                 // try to get the content using the specified package
-                val targetPackage = name.dropLastWhile { it != '.' }
-                val targetName = name.removePrefix(targetPackage)
+                val i = name.indexOfLast { it == '.' }
+                val targetPackage = name.subSequence(0, i)
+                val targetName = name.subSequence(i + 1, name.length)
 
-                println("Looking for $targetName in ${targetPackage.dropLast(1)}")
+                println("Looking for $targetName in $targetPackage")
 
-                val otherKdocContent = sourceKDocs[targetPackage.dropLast(1)]?.firstOrNull { targetName in it.source }?.kdocContent
+                val otherKdocContent = sourceKDocs[targetPackage]?.firstOrNull { targetName in it.source }?.kdocContent
 
                 return@replace otherKdocContent
                     ?: ""
