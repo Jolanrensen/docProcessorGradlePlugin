@@ -2,10 +2,20 @@ plugins {
     // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
     `java-gradle-plugin`
     kotlin("jvm") version "1.8.0"
+    id("com.gradle.plugin-publish") version "1.0.0"
 }
 
 group = "nl.jolanrensen"
 version = "1.0-SNAPSHOT"
+
+publishing {
+    repositories {
+        maven {
+            name = "localPluginRepository"
+            url = uri("~/.m2/repository")
+        }
+    }
+}
 
 repositories {
     // Use Maven Central for resolving dependencies
@@ -23,6 +33,8 @@ gradlePlugin {
     // Define the plugin
     val kdocInclude by plugins.creating {
         id = "nl.jolanrensen.kdocInclude"
+        displayName = "KDoc @include Gradle Plugin"
+        description = "KDoc @include Gradle Plugin"
         implementationClass = "nl.jolanrensen.kdocInclude.KdocIncludePlugin"
     }
 }

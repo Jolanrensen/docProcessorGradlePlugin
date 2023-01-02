@@ -48,8 +48,6 @@ class KdocIncludePluginFunctionalTest {
         @AnnotationTest(a = 24)
         private interface Test
 
-        
-        
         /** 
          * Some extra text
          * @include [Test] */
