@@ -144,4 +144,13 @@ tasks.withType<Jar> {
         }
     }
 }
+
+// As a bonus, this will update dokka if you use that
+tasks.withType<org.jetbrains.dokka.gradle.AbstractDokkaLeafTask> {
+    dokkaSourceSets {
+        all {
+            sourceRoot(processKdocIncludeMain.target.get())
+        }
+    }
+}
 ```
