@@ -1,4 +1,4 @@
-package com.example.plugin
+package nl.jolanrensen.kdocInclude
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project

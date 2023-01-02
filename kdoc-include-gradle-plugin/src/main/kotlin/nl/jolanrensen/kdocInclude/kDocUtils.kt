@@ -1,4 +1,4 @@
-package com.example.plugin
+package nl.jolanrensen.kdocInclude
 
 /**
  * Returns the actual content of the KDoc comment

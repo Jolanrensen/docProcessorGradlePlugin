@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm") version "1.8.0"
 }
 
-group = "org.example"
+group = "nl.jolanrensen"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -22,8 +22,8 @@ dependencies {
 gradlePlugin {
     // Define the plugin
     val kdocInclude by plugins.creating {
-        id = "com.example.plugin.kdocInclude"
-        implementationClass = "com.example.plugin.KdocIncludePlugin"
+        id = "nl.jolanrensen.kdocInclude"
+        implementationClass = "nl.jolanrensen.kdocInclude.KdocIncludePlugin"
     }
 }
 

@@ -1,4 +1,4 @@
-package com.example.plugin
+package nl.jolanrensen.kdocInclude
 
 import org.gradle.testkit.runner.GradleRunner
 import org.intellij.lang.annotations.Language
@@ -14,12 +14,12 @@ class KdocIncludePluginFunctionalTest {
     private val buildFile = """
         plugins {  
             kotlin("jvm") version "1.8.0"
-            id("com.example.plugin.kdocInclude")
+            id("nl.jolanrensen.kdocInclude")
         }
         
         val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
         
-        val processKdocIncludeMain by tasks.creating(com.example.plugin.ProcessKdocIncludeTask::class) {
+        val processKdocIncludeMain by tasks.creating(nl.jolanrensen.kdocInclude.ProcessKdocIncludeTask::class) {
             sources.set(kotlinMainSources)
         }
         
@@ -88,7 +88,7 @@ class KdocIncludePluginFunctionalTest {
             .build()
 
         // Verify the result
-        Assert.assertTrue(result.output.contains("Hello from plugin 'com.example.plugin.kdocInclude'"))
+        Assert.assertTrue(result.output.contains("Hello from plugin 'nl.jolanrensen.kdocInclude'"))
     }
 
     @Throws(IOException::class)

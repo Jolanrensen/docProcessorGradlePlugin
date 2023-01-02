@@ -1,4 +1,4 @@
-package com.example.plugin
+package nl.jolanrensen.kdocInclude
 
 import org.intellij.lang.annotations.Language
 

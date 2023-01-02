@@ -1,4 +1,4 @@
-package com.example.plugin
+package nl.jolanrensen.kdocInclude
 
 import io.kotest.matchers.shouldBe
 import org.gradle.testfixtures.ProjectBuilder
@@ -10,7 +10,7 @@ class KdocIncludePluginTest {
     fun pluginRegistersATask() {
         // Create a test project and apply the plugin
         val project = ProjectBuilder.builder().build()
-        project.plugins.apply("com.example.plugin.kdocInclude")
+        project.plugins.apply("nl.jolanrensen.kdocInclude")
 
         // Verify the result
         Assert.assertNotNull(project.tasks.findByName("processKdocInclude"))

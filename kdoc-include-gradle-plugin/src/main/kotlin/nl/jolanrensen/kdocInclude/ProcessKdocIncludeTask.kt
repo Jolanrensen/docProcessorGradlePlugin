@@ -1,4 +1,4 @@
-package com.example.plugin
+package nl.jolanrensen.kdocInclude
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.model.ObjectFactory
@@ -60,7 +60,7 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
 
     @TaskAction
     fun process() {
-        println("Hello from plugin 'com.example.plugin.kdocInclude'")
+        println("Hello from plugin 'nl.jolanrensen.kdocInclude'")
 
         val fileExtensions = fileExtensions.get()
         val sources = sources.get()
