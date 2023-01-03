@@ -103,6 +103,20 @@ Say you want to create a task that will run when you're making a sources Jar suc
 import nl.jolanrensen.kdocInclude.ProcessKdocIncludeTask
 import org.gradle.jvm.tasks.Jar
 
+...
+
+plugins {
+    id("nl.jolanrensen.kdocInclude") version "1.0-SNAPSHOT"
+    ...
+}
+
+repositories {
+    mavenLocal()
+    ...
+}
+
+...
+
 // Backup the kotlin source files location
 val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
 
@@ -146,6 +160,8 @@ tasks.withType<Jar> {
         }
     }
 }
+
+...
 
 // As a bonus, this will update dokka if you use that
 tasks.withType<org.jetbrains.dokka.gradle.AbstractDokkaLeafTask> {
