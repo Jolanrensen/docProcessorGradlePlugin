@@ -1,11 +1,14 @@
 package nl.jolanrensen.kdocInclude
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 import javax.inject.Inject
@@ -46,6 +49,9 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         .property(File::class.java)
         .convention(File(project.buildDir, "kdocInclude${File.separatorChar}${taskIdentity.name}"))
 
+    @get:OutputFiles
+    public val targets: FileCollection = factory.fileCollection()
+
     private val kdocSourceRegex =
         Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/((\s)|(@.+))+(.*)(interface|class|object)(\s+).+""")
     private val kdocRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
@@ -66,11 +72,19 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         val sources = sources.get()
         val target = target.get()
 
+        val relativeSources = sources.map { it.relativeTo(baseDir.get()) }
+        (targets as ConfigurableFileCollection).setFrom(
+            relativeSources.map {
+                File(target, it.path)
+            }
+        )
+
         if (target.exists()) target.deleteRecursively()
         target.mkdir()
 
         println("Using target folder: $target")
         println("Using source folders: $sources")
+        println("Using target folders: ${targets.files.toList()}")
         println("Using file extensions: $fileExtensions")
 
         // gather source kdocs
