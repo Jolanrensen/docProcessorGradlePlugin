@@ -122,6 +122,7 @@ val processKdocIncludeMain by tasks.creating(ProcessKdocIncludeTask::class) {
 // the target of processKdocIncludeMain and they are returned back to normal afterwards.
 tasks.withType<Jar> {
     dependsOn(processKdocIncludeMain)
+    outputs.upToDateWhen { false }
 
     doFirst {
         kotlin {
