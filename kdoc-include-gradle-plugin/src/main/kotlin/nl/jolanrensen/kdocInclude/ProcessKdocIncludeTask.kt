@@ -64,6 +64,10 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         val hasInclude: Boolean,
     )
 
+    init {
+        outputs.upToDateWhen { false }
+    }
+
     @TaskAction
     fun process() {
         println("Hello from plugin 'nl.jolanrensen.kdocInclude'")
@@ -216,7 +220,11 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
             .removePrefix("@include")
             .trim()
             .removePrefix("[")
+            .removePrefix("[") // twice for scalaDoc
             .removeSuffix("]")
+            .removeSuffix("]")
+            .removePrefix("<code>") // for javaDoc
+            .removeSuffix("</code>")
             .trim()
     }
 

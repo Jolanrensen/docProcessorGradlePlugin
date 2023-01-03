@@ -43,6 +43,7 @@ fun getSourceName(source: String): String = source
     .removePrefix("annotation")
     .removePrefix("companion")
     .removePrefix("data")
+    .removePrefix("case")
     .removePrefix("value")
     .removePrefix("inline")
     .removePrefix("inner")
@@ -50,6 +51,9 @@ fun getSourceName(source: String): String = source
     .removePrefix("object")
     .removePrefix("class")
     .removePrefix("interface")
+    .removePrefix("trait")
+    .removePrefix("typealias")
+    .removePrefix("record")
     .trim()
     .let { nameRegex.matchAt(it, 0)?.value }
     ?: error("Could not find source name in: $source")

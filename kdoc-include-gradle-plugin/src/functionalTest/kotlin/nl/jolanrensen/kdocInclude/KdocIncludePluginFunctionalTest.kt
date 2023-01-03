@@ -21,13 +21,14 @@ class KdocIncludePluginFunctionalTest {
         
         val processKdocIncludeMain by tasks.creating(nl.jolanrensen.kdocInclude.ProcessKdocIncludeTask::class) {
             sources.set(kotlinMainSources)
+            fileExtensions.set(listOf("kt", "java", "scala"))
         }
         
         tasks.compileKotlin { dependsOn(processKdocIncludeMain) }
     """.trimIndent()
 
     @Language("kt")
-    private val mainFile = """
+    private val kotlinFile = """
         package com.example.plugin
 
         /**
@@ -61,6 +62,81 @@ class KdocIncludePluginFunctionalTest {
         }
     """.trimIndent()
 
+    @Language("java")
+    private val javaFile = """
+        package com.example.plugin;
+        
+        class Main {
+
+            /**
+             * Hello World!
+             * <p> 
+             * This is a large example of how the plugin will work
+             * 
+             * @param name The name of the person to greet
+             * @see com.example.plugin.KdocIncludePlugin
+             */
+    
+            private interface TestA {}
+            
+            /**
+             * Hello World 2!
+             * @include TestA
+             */
+            @AnnotationTest(a = 24)
+            private interface Test {}
+    
+            /** 
+             * Some extra text
+             * @include Test */
+            void someFun() {
+                System.out.println("Hello World!");
+            }
+    
+            /** @include com.example.plugin.Test */
+            void someMoreFun() {
+                System.out.println("Hello World!");
+            }
+        }
+    """.trimIndent()
+
+    @Language("scala")
+    private val scalaFile = """
+        package com.example.plugin
+
+        /**
+         * Hello World!
+         * 
+         * This is a large example of how the plugin will work
+         * 
+         * @param name The name of the person to greet
+         * @see [[com.example.plugin.KdocIncludePlugin]]
+         */
+
+        private trait TestA
+        
+        /**
+         * Hello World 2!
+         *
+         * @include [[TestA]]
+         */
+        @AnnotationTest(a = 24)
+        private trait Test
+
+        /** 
+         * Some extra text
+         *
+         * @include [[Test]] */
+        def someFun(): Unit = {
+            println("Hello World!")
+        }
+
+        /** @include [[com.example.plugin.Test]] */
+        def someMoreFun(): Unit = {
+            println("Hello World!")
+        }
+    """.trimIndent()
+
     @Test
     @Throws(IOException::class)
     fun canRunTask() {
@@ -74,8 +150,14 @@ class KdocIncludePluginFunctionalTest {
         File(projectDir, "build.gradle.kts")
             .writeString(buildFile)
 
-        File(projectDir, "src/main/kotlin/com/example/plugin/Main.kt")
-            .writeString(mainFile)
+        File(projectDir, "src/main/java/com/example/plugin/Main.kt")
+            .writeString(kotlinFile)
+
+        File(projectDir, "src/main/java/com/example/plugin/Main.java")
+            .writeString(javaFile)
+
+        File(projectDir, "src/main/java/com/example/plugin/Main.scala")
+            .writeString(scalaFile)
 
         // Run the build
         val result = GradleRunner.create()
