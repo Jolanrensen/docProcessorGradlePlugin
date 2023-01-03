@@ -1,6 +1,6 @@
 # KDoc @include Gradle Plugin
 
-Adds the @include modifier to KDocs to reuse written docs.
+Adds the @include modifier to KDocs to reuse written docs. At the moment, only classes, objects and interfaces can function as a Kdoc source to include. `@include` links are package specific, but visibility modifiers and nesting are ignored (since the files are accessed as plain text).
 
 For example:
 ```kotlin
@@ -103,6 +103,20 @@ Say you want to create a task that will run when you're making a sources Jar suc
 import nl.jolanrensen.kdocInclude.ProcessKdocIncludeTask
 import org.gradle.jvm.tasks.Jar
 
+...
+
+plugins {
+    id("nl.jolanrensen.kdocInclude") version "1.0-SNAPSHOT"
+    ...
+}
+
+repositories {
+    mavenLocal()
+    ...
+}
+
+...
+
 // Backup the kotlin source files location
 val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
 
@@ -122,6 +136,7 @@ val processKdocIncludeMain by tasks.creating(ProcessKdocIncludeTask::class) {
 // the target of processKdocIncludeMain and they are returned back to normal afterwards.
 tasks.withType<Jar> {
     dependsOn(processKdocIncludeMain)
+    outputs.upToDateWhen { false }
 
     doFirst {
         kotlin {
@@ -145,6 +160,8 @@ tasks.withType<Jar> {
         }
     }
 }
+
+...
 
 // As a bonus, this will update dokka if you use that
 tasks.withType<org.jetbrains.dokka.gradle.AbstractDokkaLeafTask> {
