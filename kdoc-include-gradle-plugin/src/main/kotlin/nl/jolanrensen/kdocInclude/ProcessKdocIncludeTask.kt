@@ -176,8 +176,8 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         val sourceKDocs = kdocSourceRegex.findAll(fileContent).map {
             val value = it.value
 
-            val kdocPart = kdocRegex.find(value)!!.value.trim().removeSurrounding("\n")
-            val sourcePart = value.removePrefix(kdocPart).trim().removeSurrounding("\n")
+            val kdocPart = kdocRegex.find(value)!!.value.trim()
+            val sourcePart = value.trim().removePrefix(kdocPart).trim().removeSurrounding("\n")
             val sourceName = getSourceName(sourcePart)
             val kdocContent = kdocPart.getKdocContent()
             val hasInclude = kdocContent.split('\n').any { it.startsWith("@include") }

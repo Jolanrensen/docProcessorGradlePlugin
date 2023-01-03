@@ -51,7 +51,8 @@ fun getSourceName(source: String): String = source
     .removePrefix("class")
     .removePrefix("interface")
     .trim()
-    .let { nameRegex.matchAt(it, 0)!!.value }
+    .let { nameRegex.matchAt(it, 0)?.value }
+    ?: error("Could not find source name in: $source")
 
 
 
