@@ -93,7 +93,7 @@ class KdocIncludePluginFunctionalTest {
                 System.out.println("Hello World!");
             }
     
-            /** @include com.example.plugin.Test */
+            /** @include <code>com.example.plugin.Test</code> */
             void someMoreFun() {
                 System.out.println("Hello World!");
             }
