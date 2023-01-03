@@ -101,6 +101,7 @@ Say you want to create a task that will run when you're making a sources Jar suc
 
 ```kts
 import nl.jolanrensen.kdocInclude.ProcessKdocIncludeTask
+import org.gradle.jvm.tasks.Jar
 
 // Backup the kotlin source files location
 val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
@@ -127,7 +128,7 @@ tasks.withType<Jar> {
             sourceSets {
                 main {
                     kotlin.setSrcDirs(
-                        listOf(processKdocIncludeMain.target.get())
+                        processKdocIncludeMain.targets
                     )
                 }
             }
