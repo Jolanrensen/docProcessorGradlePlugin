@@ -1,6 +1,7 @@
 # KDoc @include Gradle Plugin
 
 Adds the @include modifier to KDocs to reuse written docs. At the moment, only classes, objects and interfaces can function as a Kdoc source to include. `@include` links are package specific, but visibility modifiers and nesting are ignored (since the files are accessed as plain text).
+JavaDoc and ScalaDoc are also supported but will probably remain experimental. Add the extensions to `fileExtensions` in the plugin setup to use them.
 
 For example:
 ```kotlin
