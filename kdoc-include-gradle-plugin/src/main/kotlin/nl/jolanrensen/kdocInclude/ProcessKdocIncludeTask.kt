@@ -1,5 +1,6 @@
 package nl.jolanrensen.kdocInclude
 
+import com.intellij.psi.PsiNamedElement
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
@@ -10,6 +11,21 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
+import org.jetbrains.dokka.CoreExtensions
+import org.jetbrains.dokka.DokkaConfigurationImpl
+import org.jetbrains.dokka.DokkaGenerator
+import org.jetbrains.dokka.DokkaSourceSetID
+import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
+import org.jetbrains.dokka.analysis.PsiDocumentableSource
+import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
+import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
+import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
+import org.jetbrains.dokka.model.Documentable
+import org.jetbrains.dokka.model.WithSources
+import org.jetbrains.dokka.model.withDescendants
+import org.jetbrains.dokka.utilities.DokkaConsoleLogger
+import org.jetbrains.kotlin.idea.kdoc.findKDoc
+import org.jetbrains.kotlin.js.resolve.diagnostics.findPsi
 import java.io.File
 import javax.inject.Inject
 
@@ -68,6 +84,82 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         outputs.upToDateWhen { false }
     }
 
+    internal data class DocumentableWithComment(
+        val documentable: Documentable,
+        val kdocContent: String?,
+    )
+
+    private fun dokkaAnalyse(vararg sourceRoots: File) {
+        val sourceSetName = "sourceSet"
+        val sources = GradleDokkaSourceSetBuilder(
+            name = sourceSetName,
+            project = project,
+            sourceSetIdFactory = { DokkaSourceSetID(it, sourceSetName) },
+        ).apply {
+//            sourceRoot(File("/mnt/data/Projects/kdocIncludeGradlePlugin/kdoc-include-gradle-plugin/build/functionalTest/src"))
+            sourceRoots.forEach {
+                sourceRoot(it)
+            }
+        }.build()
+
+        val configuration = DokkaConfigurationImpl(
+            sourceSets = listOf(sources),
+        )
+        val logger = DokkaConsoleLogger()
+
+        val dokkaGenerator = DokkaGenerator(
+            configuration = configuration,
+            logger = logger,
+        )
+
+        val context = dokkaGenerator.initializePlugins(configuration, logger)
+        val translators = context[CoreExtensions.sourceToDocumentableTranslator]
+            .filter {
+                it is DefaultPsiToDocumentableTranslator || // java
+                        it is DefaultDescriptorToDocumentableTranslator // kotlin
+            }
+
+        val modules = translators.map {
+            it.invoke(
+                sourceSet = sources,
+                context = context,
+            )
+        }
+
+        val documentables = modules.flatMap {
+            it.withDescendants()
+                .filter { it.isLinkableElement() && it.hasDocumentation() && it is WithSources }
+                .map {
+                    val source = (it as WithSources).sources[sources]!!
+
+                    val kdocContent = findClosestDocComment(
+                        element = when (source) {
+                            is PsiDocumentableSource -> source.psi
+                            is DescriptorDocumentableSource -> source.descriptor.findPsi() as PsiNamedElement
+                            else -> null
+                        },
+                        logger = logger,
+                    )?.getDocumentString()
+
+                    DocumentableWithComment(
+                        documentable = it,
+                        kdocContent = kdocContent,
+                    )
+                }
+        }
+
+        println(
+            """
+                |Found ${documentables.size} documentables
+                |${
+                documentables.joinToString("\n\n") {
+                    it.documentable.dri.asLinkString() + ":\n" + it.kdocContent?.toKdoc()
+                }
+            }
+                """.trimMargin()
+        )
+    }
+
     @TaskAction
     fun process() {
         println("Hello from plugin 'nl.jolanrensen.kdocInclude'")
@@ -90,6 +182,8 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         println("Using source folders: $sources")
         println("Using target folders: ${targets.files.toList()}")
         println("Using file extensions: $fileExtensions")
+
+        dokkaAnalyse(*sources.toTypedArray())
 
         // gather source kdocs
         val sourceDocsByPackageName = buildMap<String, MutableSet<SourceKdoc>> {
@@ -186,7 +280,12 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
             val kdocContent = kdocPart.getKdocContent()
             val hasInclude = kdocContent.split('\n').any { it.startsWith("@include") }
 
-            SourceKdoc(packageName, sourceName, kdocContent, hasInclude)
+            SourceKdoc(
+                packageName = packageName,
+                sourceName = sourceName,
+                kdocContent = kdocContent,
+                hasInclude = hasInclude,
+            )
         }.toList()
 
         return sourceKDocs
@@ -194,7 +293,7 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
 
     internal fun processFileContent(
         fileContent: String,
-        sourceKDocsByPackageName: Map<String, Set<SourceKdoc>>
+        sourceKDocsByPackageName: Map<String, Set<SourceKdoc>>,
     ): String {
         val packageName = getPackageName(fileContent)
 
@@ -206,26 +305,6 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                 packageName = packageName,
             ) { "" }
         }
-    }
-
-    /**
-     * Get include target name.
-     * For instance, changes `@include [Foo]` to `Foo`
-     */
-    internal fun String.getIncludeTargetName(): String {
-        require("@include" in this)
-
-        return this
-            .trim()
-            .removePrefix("@include")
-            .trim()
-            .removePrefix("[")
-            .removePrefix("[") // twice for scalaDoc
-            .removeSuffix("]")
-            .removeSuffix("]")
-            .removePrefix("<code>") // for javaDoc
-            .removeSuffix("</code>")
-            .trim()
     }
 
     internal fun processKdoc(
@@ -242,7 +321,7 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
             .getKdocContent()
             .replace(includeRegex) { match ->
                 val replacement: String = run {
-                    val name = match.value.getIncludeTargetName()
+                    val name = match.value.getAtSymbolTargetName("include")
                     if (name == sourceName || "$packageName.$name" == sourceName)
                         error("Detected a circular reference in @include statements in $packageName.$sourceName:\n$kdoc")
 

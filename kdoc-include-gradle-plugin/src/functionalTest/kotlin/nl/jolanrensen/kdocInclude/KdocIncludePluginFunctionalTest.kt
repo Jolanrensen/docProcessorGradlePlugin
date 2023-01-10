@@ -66,36 +66,41 @@ class KdocIncludePluginFunctionalTest {
     private val javaFile = """
         package com.example.plugin;
         
-        class Main {
+        class JavaMain {
+            class Main2 {
 
-            /**
-             * Hello World!
-             * <p> 
-             * This is a large example of how the plugin will work
-             * 
-             * @param name The name of the person to greet
-             * @see com.example.plugin.KdocIncludePlugin
-             */
-    
-            private interface TestA {}
-            
-            /**
-             * Hello World 2!
-             * @include TestA
-             */
-            @AnnotationTest(a = 24)
-            private interface Test {}
-    
-            /** 
-             * Some extra text
-             * @include Test */
-            void someFun() {
-                System.out.println("Hello World!");
-            }
-    
-            /** @include <code>com.example.plugin.Test</code> */
-            void someMoreFun() {
-                System.out.println("Hello World!");
+                /**
+                 * Hello World!
+                 * <p> 
+                 * This is a large example of how the plugin will work
+                 * 
+                 * @param name The name of the person to greet
+                 * @see com.example.plugin.KdocIncludePlugin
+                 */
+        
+                private interface TestA {}
+                
+                /**
+                 * Hello World 2!
+                 * @include TestA
+                 */
+                @AnnotationTest(a = 24)
+                private interface Test {}
+        
+                /** 
+                 * Some extra text
+                 * @include Test */
+                void someFun(
+                    /** test */
+                    String name
+                ) {
+                    System.out.println("Hello World!");
+                }
+        
+                /** @include <code>com.example.plugin.JavaMain.Main2.Test</code> */
+                void someMoreFun() {
+                    System.out.println("Hello World!");
+                }
             }
         }
     """.trimIndent()
@@ -150,13 +155,13 @@ class KdocIncludePluginFunctionalTest {
         File(projectDir, "build.gradle.kts")
             .writeString(buildFile)
 
-        File(projectDir, "src/main/java/com/example/plugin/Main.kt")
+        File(projectDir, "src/main/kotlin/com/example/plugin/KotlinMain.kt")
             .writeString(kotlinFile)
 
-        File(projectDir, "src/main/java/com/example/plugin/Main.java")
+        File(projectDir, "src/main/java/com/example/plugin/JavaMain.java")
             .writeString(javaFile)
 
-        File(projectDir, "src/main/java/com/example/plugin/Main.scala")
+        File(projectDir, "src/main/scala/com/example/plugin/ScalaMain.scala")
             .writeString(scalaFile)
 
         // Run the build
@@ -165,6 +170,7 @@ class KdocIncludePluginFunctionalTest {
             .withPluginClasspath()
             .withArguments("processKdocIncludeMain")
             .withProjectDir(projectDir)
+            .withDebug(true)
             .build()
 
         // Verify the result

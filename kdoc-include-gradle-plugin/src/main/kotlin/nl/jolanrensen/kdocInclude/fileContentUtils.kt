@@ -9,7 +9,8 @@ private val packageRegex = Regex("""package(\s+)(.+)(\s+)(;?)""")
 private val nameRegex = Regex("""((`[^`]+`)|([a-zA-Z][a-zA-Z0-9]*))""")
 
 // For @`A`(`@Test` = ((123))), @Test, etc.
-val annotationRegex = Regex("""@(?:(?:[a-zA-Z]\w*)|(?:`[^`]+`))(?:(?=\()(?:(?=.*?\((?!\1)(.*\)(?!\2).*))(?=.*?\)(?!\2)(.*)).)+?.*?(?=\1)[^\(]*(?=\2${'$'}))?""")
+val annotationRegex =
+    Regex("""@(?:(?:[a-zA-Z]\w*)|(?:`[^`]+`))(?:(?=\()(?:(?=.*?\((?!\1)(.*\)(?!\2).*))(?=.*?\)(?!\2)(.*)).)+?.*?(?=\1)[^\(]*(?=\2${'$'}))?""")
 
 fun getPackageName(@Language("kt") fileContent: String): String =
     packageRegex.find(fileContent)?.groupValues?.get(2) ?: ""
@@ -57,7 +58,4 @@ fun getSourceName(source: String): String = source
     .trim()
     .let { nameRegex.matchAt(it, 0)?.value }
     ?: error("Could not find source name in: $source")
-
-
-
 

@@ -40,3 +40,20 @@ fun String.toKdoc(indent: Int = 0) = this
             }
         }.joinToString("")
     }
+
+/**
+ * Get include target name.
+ * For instance, changes `@include [Foo]` to `Foo`
+ */
+fun String.getAtSymbolTargetName(target: String): String =
+    also { require("@$target" in this) }
+        .trim()
+        .removePrefix("@$target")
+        .trim()
+        .removePrefix("[")
+        .removePrefix("[") // twice for scalaDoc
+        .removeSuffix("]")
+        .removeSuffix("]")
+        .removePrefix("<code>") // for javaDoc
+        .removeSuffix("</code>")
+        .trim()
