@@ -21,6 +21,7 @@ import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocum
 import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
 import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
 import org.jetbrains.dokka.model.Documentable
+import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.withDescendants
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
@@ -83,15 +84,54 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         outputs.upToDateWhen { false }
     }
 
-    internal data class DocumentableWithContent(
-        val documentable: Documentable,
-        val docComment: DocComment?,
-        val path: String?,
-        val kdocContent: String?,
-        val hasInclude: Boolean,
-    )
+    internal open class DocumentableWithContent(
+        open val documentable: Documentable,
+        open val source: DocumentableSource,
+        private val logger: DokkaConsoleLogger,
+        val docComment: DocComment? = findClosestDocComment(
+            element = source.let { source ->
+                when (source) {
+                    is PsiDocumentableSource -> source.psi
+                    is DescriptorDocumentableSource -> source.descriptor.findPsi() as PsiNamedElement
+                    else -> null
+                }
+            },
+            logger = logger,
+        ),
+        open val kdocContent: String? = docComment?.getDocumentString(),
+        open val hasInclude: Boolean = docComment?.hasTag(JavadocTag.INCLUDE) ?: false,
+    ) {
 
-    private fun dokkaAnalyse(vararg sourceRoots: File): MutableFullyQualifiedPathTree<DocumentableWithContent> {
+        val file: File = File(source.path)
+
+        val textRange = when (docComment) {
+            is JavaDocComment -> docComment.comment.textRange
+            is KotlinDocComment -> docComment.descriptor.findPsi()?.textRange
+            else -> null
+        }
+
+        fun withPath(path: String): DocumentableWithContentAndPath =
+            DocumentableWithContentAndPath(
+                documentable = documentable,
+                source = source,
+                kdocContent = kdocContent,
+                hasInclude = hasInclude,
+                path = path,
+                logger = logger,
+            )
+    }
+
+    internal data class DocumentableWithContentAndPath(
+        override val documentable: Documentable,
+        override val source: DocumentableSource,
+        override val kdocContent: String?,
+        override val hasInclude: Boolean,
+        private val logger: DokkaConsoleLogger,
+        val path: String,
+    ) : DocumentableWithContent(documentable, source, logger)
+
+
+    private fun dokkaAnalyse(vararg sourceRoots: File): MutableFullyQualifiedPathTree<DocumentableWithContentAndPath> {
         val sourceSetName = "sourceSet"
         val sources = GradleDokkaSourceSetBuilder(
             name = sourceSetName,
@@ -133,23 +173,10 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                 .map {
                     val source = (it as WithSources).sources[sources]!!
 
-                    val kdoc = findClosestDocComment(
-                        element = when (source) {
-                            is PsiDocumentableSource -> source.psi
-                            is DescriptorDocumentableSource -> source.descriptor.findPsi() as PsiNamedElement
-                            else -> null
-                        },
-                        logger = logger,
-                    )
-
-                    val hasInclude = kdoc?.hasTag(JavadocTag.INCLUDE) ?: false
-
                     DocumentableWithContent(
                         documentable = it,
-                        docComment = kdoc,
-                        kdocContent = kdoc?.getDocumentString(),
-                        hasInclude = hasInclude,
-                        path = null,
+                        source = source,
+                        logger = logger,
                     )
                 }
         }
@@ -165,7 +192,7 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                 packagePart(*packagePath) {
                     clazz(*classPath) {
                         callable(callable) {
-                            content = documentable.copy(path = this@callable.path)
+                            content = documentable.withPath(this@callable.path)
                         }
                     }
                 }
@@ -231,7 +258,10 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
             }
         }
 
-        println(sourceDocTree)
+        println(sourceDocTree.query("com.example.plugin.Test"))
+
+        // TODO you now have [DocumentableWithContentAndPath.file and DocumentableWithContentAndPath.textRange]
+        // TODO should be good to go from here
 
         // replace @include tags with matching source kdocs
 //        for (source in sources) {
