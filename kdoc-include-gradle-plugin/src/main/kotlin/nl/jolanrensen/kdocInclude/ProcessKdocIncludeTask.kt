@@ -24,7 +24,6 @@ import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.withDescendants
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
-import org.jetbrains.kotlin.idea.kdoc.findKDoc
 import org.jetbrains.kotlin.js.resolve.diagnostics.findPsi
 import java.io.File
 import javax.inject.Inject
@@ -84,19 +83,21 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         outputs.upToDateWhen { false }
     }
 
-    internal data class DocumentableWithComment(
+    internal data class DocumentableWithContent(
         val documentable: Documentable,
+        val docComment: DocComment?,
+        val path: String?,
         val kdocContent: String?,
+        val hasInclude: Boolean,
     )
 
-    private fun dokkaAnalyse(vararg sourceRoots: File) {
+    private fun dokkaAnalyse(vararg sourceRoots: File): MutableFullyQualifiedPathTree<DocumentableWithContent> {
         val sourceSetName = "sourceSet"
         val sources = GradleDokkaSourceSetBuilder(
             name = sourceSetName,
             project = project,
             sourceSetIdFactory = { DokkaSourceSetID(it, sourceSetName) },
         ).apply {
-//            sourceRoot(File("/mnt/data/Projects/kdocIncludeGradlePlugin/kdoc-include-gradle-plugin/build/functionalTest/src"))
             sourceRoots.forEach {
                 sourceRoot(it)
             }
@@ -132,32 +133,44 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                 .map {
                     val source = (it as WithSources).sources[sources]!!
 
-                    val kdocContent = findClosestDocComment(
+                    val kdoc = findClosestDocComment(
                         element = when (source) {
                             is PsiDocumentableSource -> source.psi
                             is DescriptorDocumentableSource -> source.descriptor.findPsi() as PsiNamedElement
                             else -> null
                         },
                         logger = logger,
-                    )?.getDocumentString()
+                    )
 
-                    DocumentableWithComment(
+                    val hasInclude = kdoc?.hasTag(JavadocTag.INCLUDE) ?: false
+
+                    DocumentableWithContent(
                         documentable = it,
-                        kdocContent = kdocContent,
+                        docComment = kdoc,
+                        kdocContent = kdoc?.getDocumentString(),
+                        hasInclude = hasInclude,
+                        path = null,
                     )
                 }
         }
 
-        println(
-            """
-                |Found ${documentables.size} documentables
-                |${
-                documentables.joinToString("\n\n") {
-                    it.documentable.dri.asLinkString() + ":\n" + it.kdocContent?.toKdoc()
+        return MutableFullyQualifiedPathTree.build {
+            for (documentable in documentables) {
+                val path = documentable.documentable.dri
+
+                val packagePath = path.packageName?.split(".")?.toTypedArray() ?: emptyArray()
+                val classPath = path.classNames?.split(".")?.toTypedArray() ?: emptyArray()
+                val callable = path.callable?.name
+
+                packagePart(*packagePath) {
+                    clazz(*classPath) {
+                        callable(callable) {
+                            content = documentable.copy(path = this@callable.path)
+                        }
+                    }
                 }
             }
-                """.trimMargin()
-        )
+        }
     }
 
     @TaskAction
@@ -183,81 +196,60 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         println("Using target folders: ${targets.files.toList()}")
         println("Using file extensions: $fileExtensions")
 
-        dokkaAnalyse(*sources.toTypedArray())
-
-        // gather source kdocs
-        val sourceDocsByPackageName = buildMap<String, MutableSet<SourceKdoc>> {
-            for (source in sources) {
-                for (file in source.walkTopDown()) {
-                    if (!file.isFile) continue
-
-                    val content = file.readText()
-                    val sourceKDocs = readSourceKDocs(content)
-
-                    for (sourceKDoc in sourceKDocs) {
-                        getOrPut(sourceKDoc.packageName) { mutableSetOf() }.add(sourceKDoc)
-                    }
-                }
-            }
-        }
+        val sourceDocTree = dokkaAnalyse(*sources.toTypedArray())
 
         // replace @include tags in source kdocs
         var i = 0
-        while (sourceDocsByPackageName.any { it.value.any { it.hasInclude } }) {
+        while (sourceDocTree.any { it.content?.hasInclude == true }) {
             if (i++ > 10_000) {
-                val circularRefs = sourceDocsByPackageName
-                    .flatMap { it.value.filter { it.hasInclude } }
+                val circularRefs = sourceDocTree
+                    .filter { it.content?.hasInclude == true }
                     .joinToString(",\n") {
                         buildString {
-                            appendLine("${it.packageName}.${it.sourceName}:")
-                            appendLine(it.kdocContent.toKdoc())
+                            appendLine(it.path)
+                            appendLine(it.content?.kdocContent?.toKdoc())
                         }
                     }
                 error("Circular references detected in @include statements:\n$circularRefs")
             }
-            sourceDocsByPackageName.values.first { set ->
-                val found = set.firstOrNull { it.hasInclude }
 
-                if (found != null) {
-                    set.remove(found)
+            sourceDocTree.filter { it.content?.hasInclude == true }.forEach {
+                val kdoc = it.content!!.kdocContent!!
+                val processedKdoc = kdoc.replace(includeRegex) { match ->
+                    val includePath = match.value.getAtSymbolTargetName("include")
+                    val parentPath = (it.parent?.path ?: "")
+                    val includeQuery = expandInclude(includePath, parentPath)
+                    val queried = sourceDocTree.query(includeQuery)
 
-                    val new = processKdoc(
-                        kdoc = found.kdocContent.removeSuffix("\n").toKdoc(),
-                        sourceName = found.sourceName,
-                        sourceKDocsByPackageName = sourceDocsByPackageName,
-                        packageName = found.packageName,
-                    ) { it }.getKdocContent()
-                        .removeSuffix("\n")
-
-                    set.add(
-                        found.copy(
-                            kdocContent = new,
-                            hasInclude = new.split('\n').any { it.startsWith("@include") },
-                        )
-                    )
+                    queried?.content?.kdocContent ?: match.value
                 }
 
-                found != null
+                it.content = it.content!!.copy(
+                    kdocContent = processedKdoc,
+                    hasInclude = processedKdoc.contains(includeRegex),
+                )
             }
         }
+
+        println(sourceDocTree)
 
         // replace @include tags with matching source kdocs
-        for (source in sources) {
-            for (file in source.walkTopDown()) {
-                if (!file.isFile) continue
-
-                val relativePath = baseDir.get().toPath().relativize(file.toPath())
-                val targetFile = File(target, relativePath.toString())
-                targetFile.parentFile.mkdirs()
-
-                val content = file.readText()
-                val processedContent =
-                    if (file.extension !in fileExtensions) content
-                    else processFileContent(content, sourceDocsByPackageName)
-
-                targetFile.writeText(processedContent)
-            }
-        }
+//        for (source in sources) {
+//            for (file in source.walkTopDown()) {
+//                if (!file.isFile) continue
+//
+//                val relativePath = baseDir.get().toPath().relativize(file.toPath())
+//                val targetFile = File(target, relativePath.toString())
+//                targetFile.parentFile.mkdirs()
+//
+//                val content = file.readText()
+//                val processedContent = TODO()
+////                    if (file.extension !in fileExtensions) content
+////                    else processFileContent(content, sourceDocsByPackageName)
+//
+//                targetFile.writeText(processedContent)
+//            }
+//        }
     }
 
     /**
