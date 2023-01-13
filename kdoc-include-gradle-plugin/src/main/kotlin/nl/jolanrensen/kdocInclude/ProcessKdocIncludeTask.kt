@@ -89,10 +89,10 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         open val source: DocumentableSource,
         private val logger: DokkaConsoleLogger,
         val docComment: DocComment? = findClosestDocComment(
-            element = source.let { source ->
-                when (source) {
-                    is PsiDocumentableSource -> source.psi
-                    is DescriptorDocumentableSource -> source.descriptor.findPsi() as PsiNamedElement
+            element = source.let { s ->
+                when (s) {
+                    is PsiDocumentableSource -> s.psi
+                    is DescriptorDocumentableSource -> s.descriptor.findPsi() as PsiNamedElement
                     else -> null
                 }
             },
@@ -102,7 +102,8 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         open val hasInclude: Boolean = docComment?.hasTag(JavadocTag.INCLUDE) ?: false,
     ) {
 
-        val file: File = File(source.path)
+        val file: File
+            get() = File(source.path)
 
         val textRange = when (docComment) {
             is JavaDocComment -> docComment.comment.textRange
