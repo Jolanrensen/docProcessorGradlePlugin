@@ -54,7 +54,8 @@ fun Documentable.hasDocumentation(): Boolean = allDocumentation().isNotEmpty()
  * @receiver [Documentable]
  * @return true if receiver has documentation for any sourceSet
  */
-fun Documentable.hasDocumentation(sourceSet: DokkaConfiguration.DokkaSourceSet): Boolean = documentation[sourceSet]?.children?.isNotEmpty() ?: false
+fun Documentable.hasDocumentation(sourceSet: DokkaConfiguration.DokkaSourceSet): Boolean =
+    documentation[sourceSet]?.children?.isNotEmpty() ?: false
 
 fun Documentable.allDocumentation(): List<TagWrapper> = documentation.flatMap { it.value.children }
 
@@ -251,3 +252,9 @@ internal fun PsiElement.referenceElementOrSelf(): PsiElement? =
 internal fun PsiElement.resolveToGetDri(): PsiElement? =
     reference?.resolve()
 
+val DRI.path: String
+    get() = (
+            packageName?.split('.').orEmpty() +
+                    classNames?.split('.').orEmpty() +
+                    listOfNotNull(callable?.name)
+            ).joinToString(".")
