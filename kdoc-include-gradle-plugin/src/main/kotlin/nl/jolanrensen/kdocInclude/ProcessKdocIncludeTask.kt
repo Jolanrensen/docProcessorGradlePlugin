@@ -108,11 +108,13 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                 else -> error("Unknown doc comment type")
             }
 
-            val query = ogRange.substring(file.readText())
-            val start = query.indexOf("/**")
-            val end = query.lastIndexOf("*/")
+            ogRange
 
-            TextRange(ogRange.startOffset + start, ogRange.startOffset + end + 2)
+//            val query = ogRange.substring(file.readText())
+//            val start = query.indexOf("/**")
+//            val end = query.lastIndexOf("*/")
+//
+//            TextRange(ogRange.startOffset + start, ogRange.startOffset + end + 2)
         },
 
         val kdocContent: String? = docComment?.getDocumentString(),
@@ -293,118 +295,128 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                     .mapValues { it.value.single().kdocContent!! }
                     .toSortedMap(compareBy { it.startOffset })
                     .map { (textRange, kdoc) ->
-                        val indent = textRange.substring(content).split('\n')
-                            .getOrElse(1) { "" } // indent of kdoc only appears at second line
-                            .takeWhile { it == ' ' } // count indent until *
-                            .let { it.length - 1 } // - 1 because the * is already indented 1
-                            .coerceAtLeast(0)
+                        // query the content for the text range (includes kdoc and documentable)
+                        val query = textRange.substring(content)
+                        val indent = query.split('\n')
+                            .last() // get last line where the documentable statement is (like fun something)
+                            .takeWhile { it == ' ' } // count indent until statement
+                            .length
 
-                        textRange to kdoc.toKdoc(indent).trimStart()
+                        val newKdoc = kdoc.toKdoc(indent).trimStart()
+
+                        // get a new range with just the kdoc content
+                        val start = query.indexOf("/**")
+                        val end = query.lastIndexOf("*/")
+                        val newRange = (textRange.startOffset + start)..(textRange.startOffset + end + 1)
+
+                        newRange to newKdoc
                     }.toMap()
 
-                val fileRange = TextRange(0, content.length)
-                fileRange // TODO
+                val fileRange = content.indices.associateWith { content[it].toString() }.toMutableMap()
+                for ((range, kdoc) in modificationsByRange) {
+                    range.forEach { fileRange.remove(it) }
+                    fileRange[range.first] = kdoc
+                }
 
-                val processedContent = content // TODO
-
+                val processedContent = fileRange.toSortedMap().values.joinToString("")
                 targetFile.writeText(processedContent)
             }
         }
     }
 
-    /**
-     * Scans the given file content for source kdocs and returns a list of them.
-     *
-     * TODO maybe replace these sources with @define or something similar?
-     */
-    internal fun readSourceKDocs(fileContent: String): List<SourceKdoc> {
-
-        val packageName = getPackageName(fileContent)
-
-        // Find all kdoc sources that can be targeted with @include
-        // This can be any (annotation-less) interface, class, or object
-        val sourceKDocs = kdocSourceRegex.findAll(fileContent).map {
-            val value = it.value
-
-            val kdocPart = kdocRegex.find(value)!!.value.trim()
-            val sourcePart = value.trim().removePrefix(kdocPart).trim().removeSurrounding("\n")
-            val sourceName = getSourceName(sourcePart)
-            val kdocContent = kdocPart.getKdocContent()
-            val hasInclude = kdocContent.split('\n').any { it.startsWith("@include") }
-
-            SourceKdoc(
-                packageName = packageName,
-                sourceName = sourceName,
-                kdocContent = kdocContent,
-                hasInclude = hasInclude,
-            )
-        }.toList()
-
-        return sourceKDocs
-    }
-
-    internal fun processFileContent(
-        fileContent: String,
-        sourceKDocsByPackageName: Map<String, Set<SourceKdoc>>,
-    ): String {
-        val packageName = getPackageName(fileContent)
-
-        // Find all kdocs and replace @include with the content of the targeted kdoc
-        return fileContent.replace(kdocRegex) {
-            processKdoc(
-                kdoc = it.value,
-                sourceKDocsByPackageName = sourceKDocsByPackageName,
-                packageName = packageName,
-            ) { "" }
-        }
-    }
-
-    internal fun processKdoc(
-        kdoc: String,
-        sourceName: String = "",
-        sourceKDocsByPackageName: Map<String, Set<SourceKdoc>>,
-        packageName: String,
-        defaultReplacement: (includeStatement: String) -> String,
-    ): String {
-        val indent = kdoc.indexOfFirst { it != ' ' }
-        val sourceKDocsCurrentPackage = sourceKDocsByPackageName[packageName] ?: emptyList()
-
-        return kdoc
-            .getKdocContent()
-            .replace(includeRegex) { match ->
-                val replacement: String = run {
-                    val name = match.value.getAtSymbolTargetName("include")
-                    if (name == sourceName || "$packageName.$name" == sourceName)
-                        error("Detected a circular reference in @include statements in $packageName.$sourceName:\n$kdoc")
-
-                    // try to get the content using the current package
-                    val kdocIncludeContent = sourceKDocsCurrentPackage.firstOrNull { it.sourceName == name }
-                    if (kdocIncludeContent != null)
-                        return@run kdocIncludeContent.kdocContent
-
-                    // couldn't find the content in the current package and no package was specified,
-                    // returning empty string
-                    if ('.' !in name)
-                        return@run defaultReplacement(match.value)
-
-                    // try to get the content using the specified package
-                    val i = name.indexOfLast { it == '.' }
-                    val targetPackage = name.subSequence(0, i)
-                    val targetName = name.subSequence(i + 1, name.length)
-
-                    println("Looking for $targetName in $targetPackage")
-
-                    val otherKdocIncludeContent = sourceKDocsByPackageName[targetPackage]
-                        ?.firstOrNull { it.sourceName == targetName }
-                    if (otherKdocIncludeContent != null) {
-                        return@run otherKdocIncludeContent.kdocContent
-                    }
-
-                    return@run defaultReplacement(match.value)
-                }
-
-                replacement
-            }
-            .toKdoc(indent)
-    }
+//    /**
+//     * Scans the given file content for source kdocs and returns a list of them.
+//     *
+//     * TODO maybe replace these sources with @define or something similar?
+//     */
+//    internal fun readSourceKDocs(fileContent: String): List<SourceKdoc> {
+//
+//        val packageName = getPackageName(fileContent)
+//
+//        // Find all kdoc sources that can be targeted with @include
+//        // This can be any (annotation-less) interface, class, or object
+//        val sourceKDocs = kdocSourceRegex.findAll(fileContent).map {
+//            val value = it.value
+//
+//            val kdocPart = kdocRegex.find(value)!!.value.trim()
+//            val sourcePart = value.trim().removePrefix(kdocPart).trim().removeSurrounding("\n")
+//            val sourceName = getSourceName(sourcePart)
+//            val kdocContent = kdocPart.getKdocContent()
+//            val hasInclude = kdocContent.split('\n').any { it.startsWith("@include") }
+//
+//            SourceKdoc(
+//                packageName = packageName,
+//                sourceName = sourceName,
+//                kdocContent = kdocContent,
+//                hasInclude = hasInclude,
+//            )
+//        }.toList()
+//
+//        return sourceKDocs
+//    }
+//
+//    internal fun processFileContent(
+//        fileContent: String,
+//        sourceKDocsByPackageName: Map<String, Set<SourceKdoc>>,
+//    ): String {
+//        val packageName = getPackageName(fileContent)
+//
+//        // Find all kdocs and replace @include with the content of the targeted kdoc
+//        return fileContent.replace(kdocRegex) {
+//            processKdoc(
+//                kdoc = it.value,
+//                sourceKDocsByPackageName = sourceKDocsByPackageName,
+//                packageName = packageName,
+//            ) { "" }
+//        }
+//    }
+//
+//    internal fun processKdoc(
+//        kdoc: String,
+//        sourceName: String = "",
+//        sourceKDocsByPackageName: Map<String, Set<SourceKdoc>>,
+//        packageName: String,
+//        defaultReplacement: (includeStatement: String) -> String,
+//    ): String {
+//        val indent = kdoc.indexOfFirst { it != ' ' }
+//        val sourceKDocsCurrentPackage = sourceKDocsByPackageName[packageName] ?: emptyList()
+//
+//        return kdoc
+//            .getKdocContent()
+//            .replace(includeRegex) { match ->
+//                val replacement: String = run {
+//                    val name = match.value.getAtSymbolTargetName("include")
+//                    if (name == sourceName || "$packageName.$name" == sourceName)
+//                        error("Detected a circular reference in @include statements in $packageName.$sourceName:\n$kdoc")
+//
+//                    // try to get the content using the current package
+//                    val kdocIncludeContent = sourceKDocsCurrentPackage.firstOrNull { it.sourceName == name }
+//                    if (kdocIncludeContent != null)
+//                        return@run kdocIncludeContent.kdocContent
+//
+//                    // couldn't find the content in the current package and no package was specified,
+//                    // returning empty string
+//                    if ('.' !in name)
+//                        return@run defaultReplacement(match.value)
+//
+//                    // try to get the content using the specified package
+//                    val i = name.indexOfLast { it == '.' }
+//                    val targetPackage = name.subSequence(0, i)
+//                    val targetName = name.subSequence(i + 1, name.length)
+//
+//                    println("Looking for $targetName in $targetPackage")
+//
+//                    val otherKdocIncludeContent = sourceKDocsByPackageName[targetPackage]
+//                        ?.firstOrNull { it.sourceName == targetName }
+//                    if (otherKdocIncludeContent != null) {
+//                        return@run otherKdocIncludeContent.kdocContent
+//                    }
+//
+//                    return@run defaultReplacement(match.value)
+//                }
+//
+//                replacement
+//            }
+//            .toKdoc(indent)
+//    }
 }
