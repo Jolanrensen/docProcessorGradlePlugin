@@ -3,9 +3,18 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
     `java-gradle-plugin`
+    java
     kotlin("jvm") version "1.8.0"
     id("com.gradle.plugin-publish") version "1.0.0"
+//    id("org.jetbrains.intellij") version "1.11.0"
+//    id("org.jetbrains.dokka") version "1.7.20"
+    idea
 }
+
+//intellij {
+//    version.set("2021.3")
+//    type.set("IC") // Target IDE Platform
+//}
 
 group = "nl.jolanrensen"
 version = "1.0-SNAPSHOT"
@@ -22,6 +31,7 @@ publishing {
 repositories {
     // Use Maven Central for resolving dependencies
     mavenCentral()
+    maven("https://plugins.gradle.org/m2/")
 }
 
 dependencies {
@@ -29,6 +39,18 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-assertions-core:5.5.4")
     implementation(gradleApi())
+    implementation("org.jetbrains:markdown:0.3.5")
+//    compileOnly("org.jetbrains.intellij.plugins:gradle-intellij-plugin:1.11.0")
+    implementation("org.jetbrains.dokka:dokka-core:1.7.20")
+    compileOnly("org.jetbrains.dokka:dokka-analysis:1.7.20")
+//    implementation("org.jetbrains.dokka:kotlin-analysis-intellij:1.7.20")
+//    implementation("org.jetbrains.dokka:kotlin-analysis-compiler:1.7.20")
+    implementation("org.jetbrains.dokka:dokka-base:1.7.20")
+    implementation("org.jetbrains.dokka:dokka-base-test-utils:1.7.20")
+//    implementation("org.jetbrains.dokka:templating-plugin:1.7.20")
+//    implementation("org.jetbrains.dokka:gfm-template-processing-plugin:1.7.20")
+    implementation("org.jetbrains.dokka:dokka-gradle-plugin:1.7.20")
+    implementation("org.jetbrains.dokka:dokka-test-api:1.7.20")
 }
 
 gradlePlugin {

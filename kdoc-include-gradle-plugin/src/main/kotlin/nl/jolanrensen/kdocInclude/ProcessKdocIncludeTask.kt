@@ -10,6 +10,16 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
+import org.jetbrains.dokka.CoreExtensions
+import org.jetbrains.dokka.DokkaConfigurationImpl
+import org.jetbrains.dokka.DokkaGenerator
+import org.jetbrains.dokka.DokkaSourceSetID
+import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
+import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
+import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
+import org.jetbrains.dokka.model.WithSources
+import org.jetbrains.dokka.model.withDescendants
+import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import java.io.File
 import javax.inject.Inject
 
@@ -50,19 +60,9 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         .convention(File(project.buildDir, "kdocInclude${File.separatorChar}${taskIdentity.name}"))
 
     @get:OutputFiles
-    public val targets: FileCollection = factory.fileCollection()
+    val targets: FileCollection = factory.fileCollection()
 
-    private val kdocSourceRegex =
-        Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/((\s)|(@.+))+(.*)(interface|class|object)(\s+).+""")
-    private val kdocRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
     private val includeRegex = Regex("""@include(\s+)(\[?)(.+)(]?)""")
-
-    internal data class SourceKdoc(
-        val packageName: String,
-        val sourceName: String,
-        val kdocContent: String,
-        val hasInclude: Boolean,
-    )
 
     init {
         outputs.upToDateWhen { false }
@@ -91,63 +91,138 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         println("Using target folders: ${targets.files.toList()}")
         println("Using file extensions: $fileExtensions")
 
-        // gather source kdocs
-        val sourceDocsByPackageName = buildMap<String, MutableSet<SourceKdoc>> {
-            for (source in sources) {
-                for (file in source.walkTopDown()) {
-                    if (!file.isFile) continue
+        // analyse the sources with dokka to get the documentables
+        val sourceDocs = analyseSourcesWithDokka(sources)
 
-                    val content = file.readText()
-                    val sourceKDocs = readSourceKDocs(content)
+        // replace @include tags
+        val modifiedDocumentables = replaceIncludeTags(sourceDocs)
 
-                    for (sourceKDoc in sourceKDocs) {
-                        getOrPut(sourceKDoc.packageName) { mutableSetOf() }.add(sourceKDoc)
-                    }
-                }
+        // filter to only include the modified documentables
+        val modifiedDocumentablesPerFile = getModifiedDocumentablesPerFile(modifiedDocumentables)
+
+        // copy the sources to the target folder while replacing all docs in modified documentables
+        copyAndModifySources(sources, target, modifiedDocumentablesPerFile)
+    }
+
+    private fun analyseSourcesWithDokka(sourceRoots: List<File>): Map<String, DocumentableWithSource> {
+        // gather sources for dokka
+        val sourceSetName = "sourceSet"
+        val sources = GradleDokkaSourceSetBuilder(
+            name = sourceSetName,
+            project = project,
+            sourceSetIdFactory = { DokkaSourceSetID(it, sourceSetName) },
+        ).apply {
+            sourceRoots.forEach {
+                sourceRoot(it)
             }
+        }.build()
+
+        // initialize dokka with the sources
+        val configuration = DokkaConfigurationImpl(
+            sourceSets = listOf(sources),
+        )
+        val logger = DokkaConsoleLogger()
+        val dokkaGenerator = DokkaGenerator(
+            configuration = configuration,
+            logger = logger,
+        )
+
+        // get the sourceToDocumentableTranslators from DokkaBase, both for java and kotlin files
+        val context = dokkaGenerator.initializePlugins(configuration, logger)
+        val translators = context[CoreExtensions.sourceToDocumentableTranslator]
+            .filter {
+                it is DefaultPsiToDocumentableTranslator || // java
+                        it is DefaultDescriptorToDocumentableTranslator // kotlin
+            }
+
+        // execute the translators on the sources to gather the modules
+        val modules = translators.map {
+            it.invoke(
+                sourceSet = sources,
+                context = context,
+            )
         }
 
-        // replace @include tags in source kdocs
+        // collect the right documentables from the modules (only linkable elements with docs)
+        val documentables = modules.flatMap {
+            it.withDescendants()
+                .filter { it.isLinkableElement() && it.hasDocumentation() && it is WithSources }
+                .map {
+                    val source = (it as WithSources).sources[sources]!!
+                    DocumentableWithSource(
+                        documentable = it,
+                        source = source,
+                        logger = logger,
+                    )
+                }
+        }
+
+        return documentables.associateBy { it.path }
+    }
+
+    private fun replaceIncludeTags(sourceDocs: Map<String, DocumentableWithSource>): Map<String, DocumentableWithSource> {
+        val mutableSourceDocs = sourceDocs.toMutableMap()
+
         var i = 0
-        while (sourceDocsByPackageName.any { it.value.any { it.hasInclude } }) {
+        while (mutableSourceDocs.any { it.value.hasInclude }) {
             if (i++ > 10_000) {
-                val circularRefs = sourceDocsByPackageName
-                    .flatMap { it.value.filter { it.hasInclude } }
-                    .joinToString(",\n") {
+                val circularRefs = mutableSourceDocs
+                    .filter { it.value.hasInclude }
+                    .entries
+                    .joinToString(",\n") { (path, content) ->
                         buildString {
-                            appendLine("${it.packageName}.${it.sourceName}:")
-                            appendLine(it.kdocContent.toKdoc())
+                            appendLine(path)
+                            appendLine(content.kdocContent?.toKdoc())
                         }
                     }
                 error("Circular references detected in @include statements:\n$circularRefs")
             }
-            sourceDocsByPackageName.values.first { set ->
-                val found = set.firstOrNull { it.hasInclude }
 
-                if (found != null) {
-                    set.remove(found)
+            mutableSourceDocs
+                .filter { it.value.hasInclude }
+                .forEach { (path, content) ->
+                    val kdoc = content.kdocContent!!
+                    val processedKdoc = kdoc.replace(includeRegex) { match ->
+                        // get the full include path
+                        val includePath = match.value.getAtSymbolTargetName("include")
+                        val parentPath = path.take(path.lastIndexOf('.').coerceAtLeast(0))
+                        val includeQuery = expandInclude(includePath, parentPath)
 
-                    val new = processKdoc(
-                        kdoc = found.kdocContent.removeSuffix("\n").toKdoc(),
-                        sourceName = found.sourceName,
-                        sourceKDocsByPackageName = sourceDocsByPackageName,
-                        packageName = found.packageName,
-                    ) { it }.getKdocContent()
-                        .removeSuffix("\n")
+                        // query the tree for the include path
+                        val queried = mutableSourceDocs[includeQuery]
 
-                    set.add(
-                        found.copy(
-                            kdocContent = new,
-                            hasInclude = new.split('\n').any { it.startsWith("@include") },
+                        // replace the include statement with the kdoc of the queried node (if found)
+                        queried?.kdocContent ?: match.value
+                    }
+
+                    val wasModified = kdoc != processedKdoc
+
+                    if (wasModified) {
+                        mutableSourceDocs[path] = content.copy(
+                            kdocContent = processedKdoc,
+                            hasInclude = processedKdoc.contains(includeRegex),
+                            wasModified = true,
                         )
-                    )
+                    }
                 }
-
-                found != null
-            }
         }
+        return mutableSourceDocs
+    }
 
-        // replace @include tags with matching source kdocs
+    private fun getModifiedDocumentablesPerFile(modifiedSourceDocs: Map<String, DocumentableWithSource>): Map<File, List<DocumentableWithSource>> =
+        modifiedSourceDocs
+            .filter { it.value.wasModified }
+            .entries
+            .groupBy { it.value.file }
+            .mapValues { (_, nodes) ->
+                nodes.map { it.value }
+            }
+
+    private fun copyAndModifySources(
+        sources: MutableList<File>,
+        target: File?,
+        modifiedDocumentablesPerFile: Map<File, List<DocumentableWithSource>>
+    ) {
         for (source in sources) {
             for (file in source.walkTopDown()) {
                 if (!file.isFile) continue
@@ -157,123 +232,38 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                 targetFile.parentFile.mkdirs()
 
                 val content = file.readText()
-                val processedContent =
-                    if (file.extension !in fileExtensions) content
-                    else processFileContent(content, sourceDocsByPackageName)
+                val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 
+                val modificationsByRange = modifications
+                    .groupBy { it.textRange }
+                    .mapValues { it.value.single().let { Pair(it.kdocContent!!, it.indent) } }
+                    .toSortedMap(compareBy { it.startOffset })
+                    .map { (textRange, kdocAndIndent) ->
+                        val (kdoc, indent) = kdocAndIndent
+
+                        var fixedKdoc = kdoc.trim()
+
+                        // fix start and end newlines of kdoc
+                        if (fixedKdoc.split('\n').size > 1) {
+                            if (fixedKdoc.first() != '\n') fixedKdoc = "\n$fixedKdoc"
+                            if (fixedKdoc.last() != '\n') fixedKdoc = "$fixedKdoc\n"
+                        }
+
+                        val newKdoc = fixedKdoc.toKdoc(indent).trimStart()
+
+                        val range = textRange.startOffset until textRange.endOffset
+                        range to newKdoc
+                    }.toMap()
+
+                val fileRange = content.indices.associateWith { content[it].toString() }.toMutableMap()
+                for ((range, kdoc) in modificationsByRange) {
+                    range.forEach { fileRange.remove(it) }
+                    fileRange[range.first] = kdoc
+                }
+
+                val processedContent = fileRange.toSortedMap().values.joinToString("")
                 targetFile.writeText(processedContent)
             }
         }
-    }
-
-    /**
-     * Scans the given file content for source kdocs and returns a list of them.
-     *
-     * TODO maybe replace these sources with @define or something similar?
-     */
-    internal fun readSourceKDocs(fileContent: String): List<SourceKdoc> {
-
-        val packageName = getPackageName(fileContent)
-
-        // Find all kdoc sources that can be targeted with @include
-        // This can be any (annotation-less) interface, class, or object
-        val sourceKDocs = kdocSourceRegex.findAll(fileContent).map {
-            val value = it.value
-
-            val kdocPart = kdocRegex.find(value)!!.value.trim()
-            val sourcePart = value.trim().removePrefix(kdocPart).trim().removeSurrounding("\n")
-            val sourceName = getSourceName(sourcePart)
-            val kdocContent = kdocPart.getKdocContent()
-            val hasInclude = kdocContent.split('\n').any { it.startsWith("@include") }
-
-            SourceKdoc(packageName, sourceName, kdocContent, hasInclude)
-        }.toList()
-
-        return sourceKDocs
-    }
-
-    internal fun processFileContent(
-        fileContent: String,
-        sourceKDocsByPackageName: Map<String, Set<SourceKdoc>>
-    ): String {
-        val packageName = getPackageName(fileContent)
-
-        // Find all kdocs and replace @include with the content of the targeted kdoc
-        return fileContent.replace(kdocRegex) {
-            processKdoc(
-                kdoc = it.value,
-                sourceKDocsByPackageName = sourceKDocsByPackageName,
-                packageName = packageName,
-            ) { "" }
-        }
-    }
-
-    /**
-     * Get include target name.
-     * For instance, changes `@include [Foo]` to `Foo`
-     */
-    internal fun String.getIncludeTargetName(): String {
-        require("@include" in this)
-
-        return this
-            .trim()
-            .removePrefix("@include")
-            .trim()
-            .removePrefix("[")
-            .removePrefix("[") // twice for scalaDoc
-            .removeSuffix("]")
-            .removeSuffix("]")
-            .removePrefix("<code>") // for javaDoc
-            .removeSuffix("</code>")
-            .trim()
-    }
-
-    internal fun processKdoc(
-        kdoc: String,
-        sourceName: String = "",
-        sourceKDocsByPackageName: Map<String, Set<SourceKdoc>>,
-        packageName: String,
-        defaultReplacement: (includeStatement: String) -> String,
-    ): String {
-        val indent = kdoc.indexOfFirst { it != ' ' }
-        val sourceKDocsCurrentPackage = sourceKDocsByPackageName[packageName] ?: emptyList()
-
-        return kdoc
-            .getKdocContent()
-            .replace(includeRegex) { match ->
-                val replacement: String = run {
-                    val name = match.value.getIncludeTargetName()
-                    if (name == sourceName || "$packageName.$name" == sourceName)
-                        error("Detected a circular reference in @include statements in $packageName.$sourceName:\n$kdoc")
-
-                    // try to get the content using the current package
-                    val kdocIncludeContent = sourceKDocsCurrentPackage.firstOrNull { it.sourceName == name }
-                    if (kdocIncludeContent != null)
-                        return@run kdocIncludeContent.kdocContent
-
-                    // couldn't find the content in the current package and no package was specified,
-                    // returning empty string
-                    if ('.' !in name)
-                        return@run defaultReplacement(match.value)
-
-                    // try to get the content using the specified package
-                    val i = name.indexOfLast { it == '.' }
-                    val targetPackage = name.subSequence(0, i)
-                    val targetName = name.subSequence(i + 1, name.length)
-
-                    println("Looking for $targetName in $targetPackage")
-
-                    val otherKdocIncludeContent = sourceKDocsByPackageName[targetPackage]
-                        ?.firstOrNull { it.sourceName == targetName }
-                    if (otherKdocIncludeContent != null) {
-                        return@run otherKdocIncludeContent.kdocContent
-                    }
-
-                    return@run defaultReplacement(match.value)
-                }
-
-                replacement
-            }
-            .toKdoc(indent)
     }
 }
