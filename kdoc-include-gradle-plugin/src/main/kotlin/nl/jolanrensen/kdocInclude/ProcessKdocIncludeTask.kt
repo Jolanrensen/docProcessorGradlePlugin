@@ -101,22 +101,24 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         ),
         val path: String = documentable.dri.path,
         val file: File = File(source.path),
+        val fileText: String = file.readText(),
         val textRange: TextRange = run {
             val ogRange = when (docComment) {
-                is JavaDocComment -> docComment.comment.textRange
-                is KotlinDocComment -> docComment.descriptor.findPsi()!!.textRange
+                is JavaDocComment -> docComment.comment.textRange // includes just comment
+                is KotlinDocComment -> docComment.descriptor.findPsi()!!.textRange // includes comment and descriptor
                 else -> error("Unknown doc comment type")
             }
+            val query = ogRange.substring(fileText)
+            val startComment = query.indexOf("/**")
+            val endComment = query.indexOf("*/")
 
-            ogRange
+            require(startComment != -1) { "Could not find start of comment" }
+            require(endComment != -1) { "Could not find end of comment" }
 
-//            val query = ogRange.substring(file.readText())
-//            val start = query.indexOf("/**")
-//            val end = query.lastIndexOf("*/")
-//
-//            TextRange(ogRange.startOffset + start, ogRange.startOffset + end + 2)
+            TextRange(ogRange.startOffset + startComment, ogRange.startOffset + endComment + 2)
         },
 
+        val indent: Int = textRange.startOffset - fileText.lastIndexOfNot('\n', textRange.startOffset),
         val kdocContent: String? = docComment?.getDocumentString(),
         val hasInclude: Boolean = docComment?.hasTag(JavadocTag.INCLUDE) ?: false,
         val wasModified: Boolean = false,
@@ -124,7 +126,7 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         fun queryFile(): String = textRange.substring(file.readText())
     }
 
-    private fun dokkaAnalyse(vararg sourceRoots: File): FullyQualifiedPathTree<DocumentableWithSource> {
+    private fun dokkaAnalyse(vararg sourceRoots: File): MutableMap<String, DocumentableWithSource> {
         // gather sources for dokka
         val sourceSetName = "sourceSet"
         val sources = GradleDokkaSourceSetBuilder(
@@ -169,32 +171,35 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                 .filter { it.isLinkableElement() && it.hasDocumentation() && it is WithSources }
                 .map {
                     val source = (it as WithSources).sources[sources]!!
-                    DocumentableWithSource(
+                    val doc = DocumentableWithSource(
                         documentable = it,
                         source = source,
                         logger = logger,
                     )
+                    doc
                 }
         }
 
-        // convert the documentables to a tree for easier access and return
-        return FullyQualifiedPathTree.build {
-            for (documentable in documentables) {
-                val path = documentable.documentable.dri
+        return documentables.associateBy { it.path }.toMutableMap()
 
-                val packagePath = path.packageName?.split(".")?.toTypedArray() ?: emptyArray()
-                val classPath = path.classNames?.split(".")?.toTypedArray() ?: emptyArray()
-                val callable = path.callable?.name
-
-                packagePart(*packagePath) {
-                    clazz(*classPath) {
-                        callable(callable) {
-                            content = documentable
-                        }
-                    }
-                }
-            }
-        }
+//        // convert the documentables to a tree for easier access and return
+//        return FullyQualifiedPathTree.build {
+//            for (documentable in documentables) {
+//                val path = documentable.documentable.dri
+//
+//                val packagePath = path.packageName?.split(".")?.toTypedArray() ?: emptyArray()
+//                val classPath = path.classNames?.split(".")?.toTypedArray() ?: emptyArray()
+//                val callable = path.callable?.name
+//
+//                packagePart(*packagePath) {
+//                    clazz(*classPath) {
+//                        callable(callable) {
+//                            content = documentable
+//                        }
+//                    }
+//                }
+//            }
+//        }
     }
 
     @TaskAction
@@ -220,44 +225,45 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         println("Using target folders: ${targets.files.toList()}")
         println("Using file extensions: $fileExtensions")
 
-        val sourceDocTree = dokkaAnalyse(*sources.toTypedArray())
+        val sourceDocs = dokkaAnalyse(*sources.toTypedArray())
 
         // replace @include tags in kdoc tree
         var i = 0
-        while (sourceDocTree.any { it.content?.hasInclude == true }) {
+        while (sourceDocs.any { it.value.hasInclude }) {
             if (i++ > 10_000) {
-                val circularRefs = sourceDocTree
-                    .filter { it.content?.hasInclude == true }
-                    .joinToString(",\n") {
+                val circularRefs = sourceDocs
+                    .filter { it.value.hasInclude }
+                    .entries
+                    .joinToString(",\n") { (path, content) ->
                         buildString {
-                            appendLine(it.path)
-                            appendLine(it.content?.kdocContent?.toKdoc())
+                            appendLine(path)
+                            appendLine(content.kdocContent?.toKdoc())
                         }
                     }
                 error("Circular references detected in @include statements:\n$circularRefs")
             }
 
-            sourceDocTree
-                .filter { it.content?.hasInclude == true }
-                .forEach { node ->
-                    val kdoc = node.content!!.kdocContent!!
+            sourceDocs
+                .filter { it.value.hasInclude }
+                .forEach { (path, content) ->
+                    val kdoc = content.kdocContent!!
                     val processedKdoc = kdoc.replace(includeRegex) { match ->
                         // get the full include path
                         val includePath = match.value.getAtSymbolTargetName("include")
-                        val parentPath = (node.parent?.path ?: "")
+                        val parentPath = path.take(path.lastIndexOf('.').coerceAtLeast(0))
                         val includeQuery = expandInclude(includePath, parentPath)
 
                         // query the tree for the include path
-                        val queried = sourceDocTree.query(includeQuery)
+                        val queried = sourceDocs[includeQuery]
 
                         // replace the include statement with the kdoc of the queried node (if found)
-                        queried?.content?.kdocContent ?: match.value
+                        queried?.kdocContent ?: match.value
                     }
 
                     val wasModified = kdoc != processedKdoc
 
                     if (wasModified) {
-                        node.content = node.content!!.copy(
+                        sourceDocs[path] = content.copy(
                             kdocContent = processedKdoc,
                             hasInclude = processedKdoc.contains(includeRegex),
                             wasModified = true,
@@ -266,16 +272,17 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
                 }
         }
 
-        println(sourceDocTree.query("com.example.plugin.Test"))
+        println(sourceDocs["com.example.plugin.Test"])
 
         // TODO you now have [DocumentableWithContentAndPath.file and DocumentableWithContentAndPath.textRange]
         // TODO should be good to go from here
 
-        val modifiedKDocsPerFile = sourceDocTree
-            .filter { it.content?.wasModified == true }
-            .groupBy { it.content!!.file }
+        val modifiedKDocsPerFile = sourceDocs
+            .filter { it.value.wasModified }
+            .entries
+            .groupBy { it.value.file }
             .mapValues { (_, nodes) ->
-                nodes.map { it.content!! }
+                nodes.map { it.value }
             }
 
         // replace @include tags with matching source kdocs
@@ -292,24 +299,14 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
 
                 val modificationsByRange = modifications
                     .groupBy { it.textRange }
-                    .mapValues { it.value.single().kdocContent!! }
+                    .mapValues { it.value.single().let { Pair(it.kdocContent!!, it.indent) } }
                     .toSortedMap(compareBy { it.startOffset })
-                    .map { (textRange, kdoc) ->
-                        // query the content for the text range (includes kdoc and documentable)
-                        val query = textRange.substring(content)
-                        val indent = query.split('\n')
-                            .last() // get last line where the documentable statement is (like fun something)
-                            .takeWhile { it == ' ' } // count indent until statement
-                            .length
-
+                    .map { (textRange, kdocAndIndent) ->
+                        val (kdoc, indent) = kdocAndIndent
                         val newKdoc = kdoc.toKdoc(indent).trimStart()
 
-                        // get a new range with just the kdoc content
-                        val start = query.indexOf("/**")
-                        val end = query.lastIndexOf("*/")
-                        val newRange = (textRange.startOffset + start)..(textRange.startOffset + end + 1)
-
-                        newRange to newKdoc
+                        val range = textRange.startOffset until textRange.endOffset
+                        range to newKdoc
                     }.toMap()
 
                 val fileRange = content.indices.associateWith { content[it].toString() }.toMutableMap()
@@ -419,4 +416,21 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
 //            }
 //            .toKdoc(indent)
 //    }
+}
+
+/**
+ * Last index of not [char] moving from startIndex down to 0.
+ * Returns 0 if char is not found (since last index looked at is 0).
+ * Returns `this.size` if [char] is found at [startIndex].
+ *
+ * @receiver
+ * @param char Char
+ * @param startIndex Start index
+ * @return
+ */
+private fun String.lastIndexOfNot(char: Char, startIndex: Int = lastIndex): Int {
+    for (i in startIndex downTo 0) {
+        if (this[i] == char) return i + 1
+    }
+    return 0
 }
