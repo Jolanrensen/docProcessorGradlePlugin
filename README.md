@@ -1,7 +1,10 @@
 # KDoc @include Gradle Plugin
 
-Adds the @include modifier to KDocs to reuse written docs. At the moment, only classes, objects and interfaces can function as a Kdoc source to include. `@include` links are package specific, but visibility modifiers and nesting are ignored (since the files are accessed as plain text).
-JavaDoc and ScalaDoc are also supported but will probably remain experimental. Add the extensions to `fileExtensions` in the plugin setup to use them.
+Adds the @include modifier to KDocs to reuse written docs. 
+Anything you can target with `[target]` with KDoc can be included in the current KDoc and will replace the `@include` line with the other content one to one.
+Visibility modifiers are ignored for now.
+JavaDoc is also supported. Add the `"java"` extension to `fileExtensions` in the plugin setup to use it.
+You can even cross include between Java and Kotlin but no conversion whatsoever will be done at the moment.
 
 For example:
 ```kotlin
@@ -73,7 +76,8 @@ private interface Test2
  * This is a large example of how the plugin will work
  * 
  * @param name The name of the person to greet
- * @see [com.example.plugin.KdocIncludePlugin] */
+ * @see [com.example.plugin.KdocIncludePlugin] 
+ */
 fun someFun() {
     println("Hello World!")
 }
@@ -86,7 +90,8 @@ fun someFun() {
  * This is a large example of how the plugin will work
  * 
  * @param name The name of the person to greet
- * @see [com.example.plugin.KdocIncludePlugin] */
+ * @see [com.example.plugin.KdocIncludePlugin] 
+ */
 fun someMoreFun() {
     println("Hello World!")
 }
@@ -173,3 +178,16 @@ tasks.withType<org.jetbrains.dokka.gradle.AbstractDokkaLeafTask> {
     }
 }
 ```
+## How it works
+
+The sources provided to the plugin are read and analysed by 
+[Dokka's default SourceToDocumentableTranslators](https://kotlin.github.io/dokka/1.6.0/developer_guide/extension_points/#creating-documentation-models).
+All [Documentable](https://kotlin.github.io/dokka/1.6.0/developer_guide/data_model/#documentable-model) 
+elements are filtered to be "linkable" and have documentation, after which they are saved in a map by their 
+path (e.g. `com.example.plugin.Class1.function1`).
+Next, the documentation contents, location in the file, and indents are collected from each documentable 
+in the map.
+All documentables are then iterated over and the `@include` lines are replaced with the documentation 
+of the target documentable if found.
+Finally, all files from the source are copied over to a destination folder and if there are any modifications that
+need to be made in a file, the specified ranges for each documentation are replaced with the new documentation.

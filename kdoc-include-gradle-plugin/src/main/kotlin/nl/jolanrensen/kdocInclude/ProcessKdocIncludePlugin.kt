@@ -7,5 +7,4 @@ class KdocIncludePlugin : Plugin<Project> {
     override fun apply(project: Project) {
         project.tasks.register("processKdocInclude", ProcessKdocIncludeTask::class.java)
     }
-
 }

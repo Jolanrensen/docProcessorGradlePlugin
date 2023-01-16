@@ -33,6 +33,14 @@ import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import java.util.*
 
 /**
+ * Many of the contents of this file are copied from Dokka's
+ * [org.jetbrains.dokka.base.translators.psi.parsers.DocComment]
+ * since many of these methods were internal or private.
+ * However, there's no other way to access JavaDoc than with [findClosestDocComment].
+ * See https://github.com/Kotlin/dokka/blob/master/plugins/base/src/main/kotlin/translators/psi/parsers/PsiCommentsUtils.kt
+ */
+
+/**
  * Is [linkable element](https://kotlinlang.org/docs/kotlin-doc.html#links-to-elements)
  *
  * @receiver [Documentable]
@@ -70,6 +78,7 @@ internal fun DocComment.getDocumentString(): String = when (this) {
     is JavaDocComment -> comment.text
     is KotlinDocComment -> comment.text
 }.getKdocContent()
+
 
 internal data class JavaDocComment(val comment: PsiDocComment) : DocComment {
     override fun hasTag(tag: JavadocTag): Boolean = comment.hasTag(tag)

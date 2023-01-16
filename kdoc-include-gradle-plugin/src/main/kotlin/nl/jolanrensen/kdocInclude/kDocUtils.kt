@@ -16,9 +16,10 @@ fun String.getKdocContent() = this
 
 
 /**
- * Turns multi-line String into valid kdoc.
+ * Turns multi-line String into valid KDoc (or JavaDoc).
  */
-fun String.toKdoc(indent: Int = 0) = this
+fun String.toKdoc(indent: Int = 0) =
+    this
     .split('\n')
     .toMutableList()
     .let {

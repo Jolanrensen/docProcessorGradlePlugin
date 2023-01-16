@@ -41,6 +41,9 @@ class KdocIncludePluginFunctionalTest {
          */
 
         private interface TestA
+
+        /** Single line */
+        private interface TestB
         
         /**
          * Hello World 2!
@@ -56,7 +59,7 @@ class KdocIncludePluginFunctionalTest {
             println("Hello World!")
         }
 
-        /** @include [com.example.plugin.Test] */
+        /** @include [com.example.plugin.TestB] */
         fun someMoreFun() {
             println("Hello World!")
         }
@@ -79,6 +82,9 @@ class KdocIncludePluginFunctionalTest {
                  */
         
                 private interface TestA {}
+
+                /** Single line */
+                private interface TestB {}
                 
                 /**
                  * Hello World 2!
@@ -91,54 +97,16 @@ class KdocIncludePluginFunctionalTest {
                  * Some extra text
                  * @include Test */
                 void someFun(
-                    /** test */
                     String name
                 ) {
                     System.out.println("Hello World!");
                 }
         
-                /** @include <code>com.example.plugin.JavaMain.Main2.Test</code> */
+                /** @include <code>com.example.plugin.JavaMain.Main2.TestB</code> */
                 void someMoreFun() {
                     System.out.println("Hello World!");
                 }
             }
-        }
-    """.trimIndent()
-
-    @Language("scala")
-    private val scalaFile = """
-        package com.example.plugin
-
-        /**
-         * Hello World!
-         * 
-         * This is a large example of how the plugin will work
-         * 
-         * @param name The name of the person to greet
-         * @see [[com.example.plugin.KdocIncludePlugin]]
-         */
-
-        private trait TestA
-        
-        /**
-         * Hello World 2!
-         *
-         * @include [[TestA]]
-         */
-        @AnnotationTest(a = 24)
-        private trait Test
-
-        /** 
-         * Some extra text
-         *
-         * @include [[Test]] */
-        def someFun(): Unit = {
-            println("Hello World!")
-        }
-
-        /** @include [[com.example.plugin.Test]] */
-        def someMoreFun(): Unit = {
-            println("Hello World!")
         }
     """.trimIndent()
 
@@ -160,9 +128,6 @@ class KdocIncludePluginFunctionalTest {
 
         File(projectDir, "src/main/java/com/example/plugin/JavaMain.java")
             .writeString(javaFile)
-
-        File(projectDir, "src/main/scala/com/example/plugin/ScalaMain.scala")
-            .writeString(scalaFile)
 
         // Run the build
         val result = GradleRunner.create()
