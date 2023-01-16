@@ -180,14 +180,14 @@ tasks.withType<org.jetbrains.dokka.gradle.AbstractDokkaLeafTask> {
 ```
 ## How it works
 
-The sources provided to the plugin are read and analysed by 
+ - The sources provided to the plugin are read and analysed by 
 [Dokka's default SourceToDocumentableTranslators](https://kotlin.github.io/dokka/1.6.0/developer_guide/extension_points/#creating-documentation-models).
-All [Documentable](https://kotlin.github.io/dokka/1.6.0/developer_guide/data_model/#documentable-model) 
+ - All [Documentable](https://kotlin.github.io/dokka/1.6.0/developer_guide/data_model/#documentable-model) 
 elements are filtered to be "linkable" and have documentation, after which they are saved in a map by their 
 path (e.g. `com.example.plugin.Class1.function1`).
-Next, the documentation contents, location in the file, and indents are collected from each documentable 
+ - Next, the documentation contents, location in the file, and indents are collected from each documentable 
 in the map.
-All documentables are then iterated over and the `@include` lines are replaced with the documentation 
+ - All documentables are then iterated over and the `@include` lines are replaced with the documentation 
 of the target documentable if found.
-Finally, all files from the source are copied over to a destination folder and if there are any modifications that
+ - Finally, all files from the source are copied over to a destination folder and if there are any modifications that
 need to be made in a file, the specified ranges for each documentation are replaced with the new documentation.
