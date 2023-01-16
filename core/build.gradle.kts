@@ -33,8 +33,8 @@ dependencies {
     implementation("org.jetbrains.dokka:dokka-base-test-utils:1.7.20")
     implementation("org.jetbrains.dokka:dokka-gradle-plugin:1.7.20")
 
-    // need to be compileOnly, for tests to work
-    compileOnly("org.jetbrains.dokka:dokka-analysis:1.7.20")
+    // this is causing issues
+    implementation("org.jetbrains.dokka:dokka-analysis:1.7.20")
 
     // get included with dokka-analysis
 //    compileOnly("org.jetbrains.dokka:kotlin-analysis-compiler:1.7.20")
