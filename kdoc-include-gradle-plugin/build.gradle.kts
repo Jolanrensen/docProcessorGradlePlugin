@@ -6,17 +6,10 @@ plugins {
     java
     kotlin("jvm") version "1.8.0"
     id("com.gradle.plugin-publish") version "1.0.0"
-//    id("org.jetbrains.intellij") version "1.11.0"
-//    id("org.jetbrains.dokka") version "1.7.20"
     idea
 }
 
-//intellij {
-//    version.set("2021.3")
-//    type.set("IC") // Target IDE Platform
-//}
-
-group = "nl.jolanrensen"
+group = "nl.jolanrensen.kdocInclude"
 version = "1.0-SNAPSHOT"
 
 publishing {
@@ -39,18 +32,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-assertions-core:5.5.4")
     implementation(gradleApi())
-    implementation("org.jetbrains:markdown:0.3.5")
-//    compileOnly("org.jetbrains.intellij.plugins:gradle-intellij-plugin:1.11.0")
-    implementation("org.jetbrains.dokka:dokka-core:1.7.20")
-    compileOnly("org.jetbrains.dokka:dokka-analysis:1.7.20")
-//    implementation("org.jetbrains.dokka:kotlin-analysis-intellij:1.7.20")
-//    implementation("org.jetbrains.dokka:kotlin-analysis-compiler:1.7.20")
-    implementation("org.jetbrains.dokka:dokka-base:1.7.20")
-    implementation("org.jetbrains.dokka:dokka-base-test-utils:1.7.20")
-//    implementation("org.jetbrains.dokka:templating-plugin:1.7.20")
-//    implementation("org.jetbrains.dokka:gfm-template-processing-plugin:1.7.20")
-    implementation("org.jetbrains.dokka:dokka-gradle-plugin:1.7.20")
-    implementation("org.jetbrains.dokka:dokka-test-api:1.7.20")
+    implementation(project(":core"))
 }
 
 gradlePlugin {
@@ -67,7 +49,8 @@ gradlePlugin {
 val functionalTest: SourceSet by sourceSets.creating
 gradlePlugin.testSourceSets(functionalTest)
 
-configurations[functionalTest.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[functionalTest.implementationConfigurationName]
+    .extendsFrom(configurations.testImplementation.get())
 
 val functionalTestTask = tasks.register<Test>("functionalTest") {
     testClassesDirs = functionalTest.output.classesDirs

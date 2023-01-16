@@ -22,6 +22,7 @@ class KdocIncludePluginFunctionalTest {
         val processKdocIncludeMain by tasks.creating(nl.jolanrensen.kdocInclude.ProcessKdocIncludeTask::class) {
             sources.set(kotlinMainSources)
             fileExtensions.set(listOf("kt", "java", "scala"))
+            debug.set(true)
         }
         
         tasks.compileKotlin { dependsOn(processKdocIncludeMain) }

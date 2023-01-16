@@ -1,5 +1,6 @@
 rootProject.name = "kdoc-include-gradle-plugin"
 
+include("core")
 include("kdoc-include-gradle-plugin")
 
 //buildscript {
