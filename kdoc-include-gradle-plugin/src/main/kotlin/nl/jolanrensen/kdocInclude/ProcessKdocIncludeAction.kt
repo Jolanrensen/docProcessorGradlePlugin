@@ -1,19 +1,14 @@
 package nl.jolanrensen.kdocInclude
 
-import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.jetbrains.dokka.CoreExtensions
-import org.jetbrains.dokka.DokkaConfiguration
 import org.jetbrains.dokka.DokkaConfigurationImpl
 import org.jetbrains.dokka.DokkaGenerator
-import org.jetbrains.dokka.DokkaSourceSetID
 import org.jetbrains.dokka.DokkaSourceSetImpl
 import org.jetbrains.dokka.base.DokkaBase
 import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
 import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
-import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
 import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.withDescendants
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
@@ -23,12 +18,15 @@ private val includeRegex = Regex("""@include(\s+)(\[?)(.+)(]?)""")
 
 abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Parameters> {
     interface Parameters : WorkParameters {
-        var pluginsClasspath: Set<File>
         var baseDir: File
         var sources: DokkaSourceSetImpl
         var sourceRoots: MutableList<File>
         var target: File?
         var debug: Boolean
+    }
+
+    private fun println(message: String) {
+        if (parameters.debug) kotlin.io.println(message)
     }
 
     override fun execute() {
@@ -58,11 +56,10 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
         copyAndModifySources(modifiedDocumentablesPerFile)
     }
 
-    private fun analyseSourcesWithDokka(): Map<String, DocumentableWithSource> {
+    private fun analyseSourcesWithDokka(): Map<String, List<DocumentableWithSource>> {
         // initialize dokka with the sources
         val configuration = DokkaConfigurationImpl(
             sourceSets = listOf(parameters.sources),
-            // pluginsClasspath = parameters.pluginsClasspath.toList(),
         )
         val logger = DokkaConsoleLogger()
 
@@ -106,52 +103,57 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
                 }
         }
 
-        return documentables.associateBy { it.path }
+        return documentables.groupBy { it.path }
     }
 
-    private fun replaceIncludeTags(sourceDocs: Map<String, DocumentableWithSource>): Map<String, DocumentableWithSource> {
-        val mutableSourceDocs = sourceDocs.toMutableMap()
+    private fun replaceIncludeTags(sourceDocs: Map<String, List<DocumentableWithSource>>): Map<String, List<DocumentableWithSource>> {
+        val mutableSourceDocs = sourceDocs
+            .mapValues { (_, docs) -> docs.toMutableList() }
 
         var i = 0
-        while (mutableSourceDocs.any { it.value.hasInclude }) {
+        while (mutableSourceDocs.any { it.value.any { it.hasInclude } }) {
             if (i++ > 10_000) {
                 val circularRefs = mutableSourceDocs
-                    .filter { it.value.hasInclude }
+                    .filter { it.value.any { it.hasInclude } }
                     .entries
-                    .joinToString(",\n") { (path, content) ->
+                    .joinToString(",\n") { (path, documentables) ->
                         buildString {
                             appendLine(path)
-                            appendLine(content.kdocContent?.toKdoc())
+                            appendLine(documentables.map { it.kdocContent?.toKdoc() })
                         }
                     }
                 error("Circular references detected in @include statements:\n$circularRefs")
             }
 
             mutableSourceDocs
-                .filter { it.value.hasInclude }
-                .forEach { (path, content) ->
-                    val kdoc = content.kdocContent!!
-                    val processedKdoc = kdoc.replace(includeRegex) { match ->
-                        // get the full include path
-                        val includePath = match.value.getAtSymbolTargetName("include")
-                        val parentPath = path.take(path.lastIndexOf('.').coerceAtLeast(0))
-                        val includeQuery = expandInclude(includePath, parentPath)
+                .filter { it.value.any { it.hasInclude } }
+                .forEach { (path, documentables) ->
+                    documentables.replaceAll { documentable ->
+                        val kdoc = documentable.kdocContent!!
+                        val processedKdoc = kdoc.replace(includeRegex) { match ->
+                            // get the full include path
+                            val includePath = match.value.getAtSymbolTargetName("include")
+                            val parentPath = path.take(path.lastIndexOf('.').coerceAtLeast(0))
+                            val includeQuery = expandInclude(includePath, parentPath)
 
-                        // query the tree for the include path
-                        val queried = mutableSourceDocs[includeQuery]
+                            // query the tree for the include path
+                            val queried = mutableSourceDocs[includeQuery]
 
-                        // replace the include statement with the kdoc of the queried node (if found)
-                        queried?.kdocContent ?: match.value
-                    }
+                            // replace the include statement with the kdoc of the queried node (if found)
+                            queried?.firstOrNull()?.kdocContent ?: match.value
+                        }
 
-                    val wasModified = kdoc != processedKdoc
+                        val wasModified = kdoc != processedKdoc
 
-                    if (wasModified) {
-                        mutableSourceDocs[path] = content.copy(
-                            kdocContent = processedKdoc,
-                            hasInclude = processedKdoc.contains(includeRegex),
-                            wasModified = true,
-                        )
+                        if (wasModified) {
+                            documentable.copy(
+                                kdocContent = processedKdoc,
+                                hasInclude = processedKdoc.contains(includeRegex),
+                                wasModified = true,
+                            )
+                        } else {
+                            documentable
+                        }
                     }
                 }
         }
@@ -159,14 +161,13 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
     }
 
     private fun getModifiedDocumentablesPerFile(
-        modifiedSourceDocs: Map<String, DocumentableWithSource>,
-    ): Map<File, List<DocumentableWithSource>> = modifiedSourceDocs
-        .filter { it.value.wasModified }
-        .entries
-        .groupBy { it.value.file }
-        .mapValues { (_, nodes) ->
-            nodes.map { it.value }
-        }
+        modifiedSourceDocs: Map<String, List<DocumentableWithSource>>,
+    ): Map<File, List<DocumentableWithSource>> =
+        modifiedSourceDocs
+            .entries
+            .flatMap { it.value.filter { it.wasModified } }
+            .groupBy { it.file }
+
 
     private fun copyAndModifySources(modifiedDocumentablesPerFile: Map<File, List<DocumentableWithSource>>) {
         for (source in parameters.sourceRoots) {

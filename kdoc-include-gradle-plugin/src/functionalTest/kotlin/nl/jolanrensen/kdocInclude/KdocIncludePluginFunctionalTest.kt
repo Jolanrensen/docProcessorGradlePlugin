@@ -130,6 +130,7 @@ class KdocIncludePluginFunctionalTest {
         File(projectDir, "settings.gradle.kts")
             .writeString(settingsFile)
 
+        println("NOTE!! make sure you have the plugin installed in your local maven repo")
         File(projectDir, "build.gradle.kts")
             .writeString(buildFile)
 

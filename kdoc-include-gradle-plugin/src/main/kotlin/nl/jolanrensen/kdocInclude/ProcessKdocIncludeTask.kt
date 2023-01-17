@@ -69,12 +69,6 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
         .property(Boolean::class.java)
         .convention(false)
 
-
-    // Dokka uses these two, but they don't seem to do much in this project.
-
-    @Classpath
-    val pluginsClasspath: Configuration = project.maybeCreateDokkaPluginConfiguration()
-
     @Classpath
     val classpath: Configuration = project.maybeCreateRuntimeConfiguration()
 
@@ -86,17 +80,6 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:1.7.20"))
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:1.7.20"))
         }
-
-    private fun Project.maybeCreateDokkaPluginConfiguration(
-        additionalDependencies: Collection<Dependency> = emptySet(),
-    ): Configuration = project.configurations.maybeCreate("kotlinKdocIncludePlugin") {
-        attributes.attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage::class.java, "java-runtime"))
-        isCanBeConsumed = false
-        dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-analysis:1.7.20")) // compileOnly in base plugin
-        dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:1.7.20"))
-        dependencies.addAll(additionalDependencies)
-    }
-
 
     private fun println(message: String) {
         if (debug.get()) kotlin.io.println(message)
@@ -113,7 +96,6 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
         val fileExtensions = fileExtensions.get()
         val sourceRoots = sources.get()
         val target = target.get()
-        val pluginsClasspath = pluginsClasspath.resolve()
         val runtime = classpath.resolve()
 
         val relativeSources = sourceRoots.map { it.relativeTo(baseDir.get()) }
@@ -130,12 +112,7 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
         println("Using source folders: $sourceRoots")
         println("Using target folders: ${targets.files.toList()}")
         println("Using file extensions: $fileExtensions")
-        println("Using plugin classpath: ${pluginsClasspath.joinToString("\n")}")
         println("Using runtime classpath: ${runtime.joinToString("\n")}")
-
-        val workQueue = workerExecutor.classLoaderIsolation {
-            it.classpath.setFrom(runtime)
-        }
 
         val sourceSetName = "sourceSet"
         val sources = GradleDokkaSourceSetBuilder(
@@ -148,8 +125,11 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
             }
         }.build()
 
+        val workQueue = workerExecutor.classLoaderIsolation {
+            it.classpath.setFrom(runtime)
+        }
+
         workQueue.submit(ProcessKdocIncludeAction::class.java) {
-            it.pluginsClasspath = pluginsClasspath
             it.baseDir = baseDir.get()
             it.sources = sources
             it.sourceRoots = sourceRoots
