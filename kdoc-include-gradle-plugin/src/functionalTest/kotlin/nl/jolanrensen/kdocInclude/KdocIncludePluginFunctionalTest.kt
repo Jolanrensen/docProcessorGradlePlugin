@@ -108,14 +108,12 @@ class KdocIncludePluginFunctionalTest {
                 /** 
                  * Some extra text
                  * @include Test */
-                void someFun(
-                    String name
-                ) {
+                void someFun(int a) {
                     System.out.println("Hello World!");
                 }
         
                 /** @include <code>com.example.plugin.JavaMain.Main2.TestB</code> */
-                void someMoreFun() {
+                void someFun(String b) {
                     System.out.println("Hello World!");
                 }
             }
