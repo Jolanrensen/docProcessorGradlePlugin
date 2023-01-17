@@ -51,15 +51,15 @@ internal data class DocumentableWithSource(
             """
                 |Could not find start of comment.
                 |Path: $path
-                |Comment: ${docComment.documentString}
-                |Query: $query""".trimMargin()
+                |Comment Content: "${docComment.documentString}"
+                |Query: "$query"""".trimMargin()
         }
         require(endComment != -1) {
             """
                 |Could not find end of comment.
                 |Path: $path
-                |Comment: ${docComment.documentString}
-                |Query: $query""".trimMargin()
+                |Comment Content: "${docComment.documentString}"
+                |Query: "$query"""".trimMargin()
         }
 
         TextRange(ogRange.startOffset + startComment, ogRange.startOffset + endComment + 2)

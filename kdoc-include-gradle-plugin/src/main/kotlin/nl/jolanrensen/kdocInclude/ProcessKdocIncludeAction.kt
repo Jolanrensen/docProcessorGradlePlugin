@@ -93,9 +93,12 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
         val documentables = modules.flatMap {
             it.withDescendants()
                 .filter { it.isLinkableElement() && it.hasDocumentation() && it is WithSources }
-                .map {
+                .mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
-                    DocumentableWithSource(
+
+                    // TODO convert DocumentableWithSource such that it returns null if it cannot create it with all arguments not null
+                    if (!File(source.path).exists()) null
+                    else DocumentableWithSource(
                         documentable = it,
                         source = source,
                         logger = logger,
