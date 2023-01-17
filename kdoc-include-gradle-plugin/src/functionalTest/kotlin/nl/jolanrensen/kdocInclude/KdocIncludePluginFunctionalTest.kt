@@ -11,10 +11,21 @@ import java.io.IOException
 class KdocIncludePluginFunctionalTest {
 
     @Language("kts")
+    private val settingsFile = """
+        pluginManagement {
+            repositories {
+                mavenLocal()
+                gradlePluginPortal()
+                mavenCentral()
+            }
+        }
+    """.trimIndent()
+
+    @Language("kts")
     private val buildFile = """
         plugins {  
             kotlin("jvm") version "1.8.0"
-            id("nl.jolanrensen.kdocInclude")
+            id("nl.jolanrensen.kdocInclude") version "1.0-SNAPSHOT"
         }
         
         val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
@@ -111,15 +122,13 @@ class KdocIncludePluginFunctionalTest {
         }
     """.trimIndent()
 
-    @Test
-    @Throws(IOException::class)
-    fun canRunTask() {
+    private fun setup(): File {
         // Set up the test build
         val projectDir = File("build/functionalTest")
         projectDir.mkdirs()
 
         File(projectDir, "settings.gradle.kts")
-            .writeString("")
+            .writeString(settingsFile)
 
         File(projectDir, "build.gradle.kts")
             .writeString(buildFile)
@@ -130,10 +139,35 @@ class KdocIncludePluginFunctionalTest {
         File(projectDir, "src/main/java/com/example/plugin/JavaMain.java")
             .writeString(javaFile)
 
+        return projectDir
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun canRunTaskWithPluginClasspath() {
+        val projectDir = setup()
+
         // Run the build
         val result = GradleRunner.create()
             .forwardOutput()
             .withPluginClasspath()
+            .withArguments("processKdocIncludeMain")
+            .withProjectDir(projectDir)
+            .withDebug(true)
+            .build()
+
+        // Verify the result
+        Assert.assertTrue(result.output.contains("Hello from plugin 'nl.jolanrensen.kdocInclude'"))
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun canRunTaskWithoutPluginClasspath() {
+        val projectDir = setup()
+
+        // Run the build
+        val result = GradleRunner.create()
+            .forwardOutput()
             .withArguments("processKdocIncludeMain")
             .withProjectDir(projectDir)
             .withDebug(true)

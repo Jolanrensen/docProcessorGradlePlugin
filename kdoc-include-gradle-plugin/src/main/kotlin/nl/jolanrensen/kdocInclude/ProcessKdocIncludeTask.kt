@@ -1,11 +1,16 @@
 package nl.jolanrensen.kdocInclude
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.attributes.Usage
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
@@ -57,9 +62,40 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         .property(Boolean::class.java)
         .convention(false)
 
+
+    // Dokka uses these two, but they don't seem to do much in this project.
+
+    @Classpath
+    val pluginsClasspath: Configuration = project.maybeCreateDokkaPluginConfiguration()
+
+    @Classpath
+    val runtime: Configuration = project.maybeCreateDokkaRuntimeConfiguration()
+
+    private fun Project.maybeCreateDokkaPluginConfiguration(
+        additionalDependencies: Collection<Dependency> = emptySet(),
+    ): Configuration = project.configurations.maybeCreate("kotlinKdocIncludePlugin") {
+        attributes.attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage::class.java, "java-runtime"))
+        isCanBeConsumed = false
+        dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-analysis:1.7.20")) // compileOnly in base plugin
+        dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:1.7.20"))
+//        dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:1.7.20"))
+        dependencies.addAll(additionalDependencies)
+    }
+
+    private fun Project.maybeCreateDokkaRuntimeConfiguration(): Configuration =
+        project.configurations.maybeCreate("kotlinKdocIncludePluginRuntime") {
+            attributes.attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage::class.java, "java-runtime"))
+            isCanBeConsumed = false
+            defaultDependencies { dependencies ->
+                dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:1.7.20"))
+            }
+        }
+
+
     private fun println(message: String) {
         if (debug.get()) kotlin.io.println(message)
     }
+
     init {
         outputs.upToDateWhen { false }
     }
@@ -71,6 +107,7 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         val fileExtensions = fileExtensions.get()
         val sources = sources.get()
         val target = target.get()
+        val classpath = pluginsClasspath.resolve()
 
         val relativeSources = sources.map { it.relativeTo(baseDir.get()) }
         (targets as ConfigurableFileCollection).setFrom(
@@ -86,7 +123,13 @@ open class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory) : 
         println("Using source folders: $sources")
         println("Using target folders: ${targets.files.toList()}")
         println("Using file extensions: $fileExtensions")
+        println("Using classpath: ${classpath.joinToString("\n")}")
 
-        process(baseDir.get(), project, sources, target)
+        try {
+            process(runtime, classpath, baseDir.get(), project, sources, target)
+        } catch (e: Throwable) {
+            if (debug.get()) e.printStackTrace()
+            throw e
+        }
     }
 }

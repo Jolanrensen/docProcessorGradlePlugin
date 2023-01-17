@@ -4,9 +4,10 @@ plugins {
     // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
     `java-gradle-plugin`
     java
-    kotlin("jvm") version "1.8.0"
+    kotlin("jvm") version "1.7.20"
     id("com.gradle.plugin-publish") version "1.0.0"
     idea
+    id("org.jetbrains.dokka") version "1.7.20"
 }
 
 group = "nl.jolanrensen.kdocInclude"
@@ -35,7 +36,19 @@ dependencies {
     implementation(project(":core"))
 }
 
+// Maybe something like this could work somewhere?
+//val kdocIncludeDependencies: Configuration by configurations.creating {
+//    isCanBeConsumed = false
+//
+//    val dokkaAnalysis = project.dependencies.create("org.jetbrains.dokka:dokka-analysis:1.7.20")
+//    val dokkaBase = project.dependencies.create("org.jetbrains.dokka:dokka-base:1.7.20")
+//
+//    dependencies.add(dokkaAnalysis)
+//    dependencies.add(dokkaBase)
+//}
+
 gradlePlugin {
+
     // Define the plugin
     val kdocInclude by plugins.creating {
         id = "nl.jolanrensen.kdocInclude"
@@ -54,7 +67,8 @@ configurations[functionalTest.implementationConfigurationName]
 
 val functionalTestTask = tasks.register<Test>("functionalTest") {
     testClassesDirs = functionalTest.output.classesDirs
-    classpath = configurations[functionalTest.runtimeClasspathConfigurationName] + functionalTest.output
+    classpath = configurations[functionalTest.runtimeClasspathConfigurationName] +
+            functionalTest.output
 }
 
 tasks.check {

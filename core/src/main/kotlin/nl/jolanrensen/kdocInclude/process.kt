@@ -1,24 +1,42 @@
 package nl.jolanrensen.kdocInclude
 
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.jetbrains.dokka.CoreExtensions
+import org.jetbrains.dokka.DokkaBootstrapImpl
 import org.jetbrains.dokka.DokkaConfigurationImpl
 import org.jetbrains.dokka.DokkaGenerator
 import org.jetbrains.dokka.DokkaSourceSetID
 import org.jetbrains.dokka.base.DokkaBase
 import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
 import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
+import org.jetbrains.dokka.gradle.DokkaBootstrap
+import org.jetbrains.dokka.gradle.DokkaPlugin
 import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
 import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.withDescendants
+import org.jetbrains.dokka.toJsonString
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
+import org.jetbrains.dokka.utilities.DokkaLogger
 import java.io.File
+import java.net.URLClassLoader
+import java.util.function.BiConsumer
+import kotlin.jvm.Throws
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 
 private val includeRegex = Regex("""@include(\s+)(\[?)(.+)(]?)""")
 
-fun process(baseDir: File, project: Project, sources: MutableList<File>, target: File?) {
+fun process(
+    runtime: Configuration,
+    pluginsClasspath: Set<File>,
+    baseDir: File,
+    project: Project,
+    sources: MutableList<File>,
+    target: File?,
+) {
     // analyse the sources with dokka to get the documentables
-    val sourceDocs = analyseSourcesWithDokka(project, sources)
+    val sourceDocs = analyseSourcesWithDokka(runtime, pluginsClasspath, project, sources)
 
     println("Found ${sourceDocs.size} source docs: $sourceDocs")
 
@@ -34,7 +52,12 @@ fun process(baseDir: File, project: Project, sources: MutableList<File>, target:
     copyAndModifySources(baseDir, sources, target, modifiedDocumentablesPerFile)
 }
 
-private fun analyseSourcesWithDokka(project: Project, sourceRoots: List<File>): Map<String, DocumentableWithSource> {
+private fun analyseSourcesWithDokka(
+    runtime: Configuration,
+    pluginsClasspath: Set<File>,
+    project: Project,
+    sourceRoots: List<File>,
+): Map<String, DocumentableWithSource> {
     // gather sources for dokka
     val sourceSetName = "sourceSet"
     val sources = GradleDokkaSourceSetBuilder(
@@ -47,15 +70,15 @@ private fun analyseSourcesWithDokka(project: Project, sourceRoots: List<File>): 
         }
     }.build()
 
+
     // initialize dokka with the sources
     val configuration = DokkaConfigurationImpl(
         sourceSets = listOf(sources),
+        pluginsClasspath = pluginsClasspath.toList(),
     )
     val logger = DokkaConsoleLogger()
-    val dokkaGenerator = DokkaGenerator(
-        configuration = configuration,
-        logger = logger,
-    )
+
+    val dokkaGenerator = DokkaGenerator(configuration, logger)
 
     // get the sourceToDocumentableTranslators from DokkaBase, both for java and kotlin files
     val context = dokkaGenerator.initializePlugins(configuration, logger, listOf(DokkaBase()))
@@ -205,3 +228,4 @@ private fun copyAndModifySources(
         }
     }
 }
+
