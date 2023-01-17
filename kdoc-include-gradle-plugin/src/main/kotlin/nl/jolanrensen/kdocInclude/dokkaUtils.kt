@@ -1,5 +1,6 @@
 package nl.jolanrensen.kdocInclude
 
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
@@ -11,18 +12,22 @@ import com.intellij.psi.javadoc.PsiDocComment
 import com.intellij.psi.javadoc.PsiDocTag
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.dokka.DokkaConfiguration
+import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
+import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.analysis.from
 import org.jetbrains.dokka.links.DRI
 import org.jetbrains.dokka.model.Callable
 import org.jetbrains.dokka.model.DClasslike
 import org.jetbrains.dokka.model.DParameter
 import org.jetbrains.dokka.model.Documentable
+import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.model.doc.TagWrapper
 import org.jetbrains.dokka.utilities.DokkaLogger
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
 import org.jetbrains.kotlin.idea.kdoc.findKDoc
 import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
+import org.jetbrains.kotlin.js.resolve.diagnostics.findPsi
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocTag
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtDeclaration
@@ -74,10 +79,36 @@ sealed interface DocComment {
     fun tagsByName(tag: JavadocTag, param: String? = null): List<DocumentationContent>
 }
 
-internal fun DocComment.getDocumentString(): String = when (this) {
-    is JavaDocComment -> comment.text
-    is KotlinDocComment -> comment.text
-}.getKdocContent()
+/**
+ * Get Kdoc content. Note! This doesn't include the @ Kdoc tags.
+ *
+ * @receiver [DocComment]
+ * @return
+ */
+internal val DocComment.documentString: String
+    get() = when (this) {
+        is JavaDocComment -> comment.text
+        is KotlinDocComment -> comment.text
+    }.getKdocContent()
+
+/**
+ * Get text range of Kdoc/JavaDoc comment from /** to */
+ *
+ * @receiver [DocComment]
+ * @return [TextRange]
+ */
+internal val DocComment.textRange: TextRange
+    get() = when (this) {
+        is JavaDocComment -> comment.textRange
+        is KotlinDocComment -> comment.parent.textRange
+    }
+
+internal val DocumentableSource.psi: PsiNamedElement?
+    get() = when (this) {
+        is PsiDocumentableSource -> psi
+        is DescriptorDocumentableSource -> descriptor.findPsi() as PsiNamedElement
+        else -> null
+    }
 
 
 internal data class JavaDocComment(val comment: PsiDocComment) : DocComment {

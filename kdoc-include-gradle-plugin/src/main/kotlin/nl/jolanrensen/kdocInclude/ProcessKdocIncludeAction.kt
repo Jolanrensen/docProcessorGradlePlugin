@@ -101,6 +101,7 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
                         logger = logger,
                     )
                 }
+                .filter { it.docComment != null }
         }
 
         return documentables.groupBy { it.path }
@@ -118,7 +119,7 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
                     .entries
                     .joinToString(",\n") { (path, documentables) ->
                         buildString {
-                            appendLine(path)
+                            appendLine("`$path`:")
                             appendLine(documentables.map { it.kdocContent?.toKdoc() })
                         }
                     }
@@ -139,8 +140,20 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
                             // query the tree for the include path
                             val queried = mutableSourceDocs[includeQuery]
 
+                            // detect self-reference
+                            if (queried?.all { it == documentable } == true) {
+                                val circularRef = buildString {
+                                    appendLine("`$path`:")
+                                    appendLine(documentable.kdocContent.toKdoc())
+                                }
+                                error("Self-reference detected in @include statement:\n$circularRef")
+                            }
+
                             // replace the include statement with the kdoc of the queried node (if found)
-                            queried?.firstOrNull()?.kdocContent ?: match.value
+                            queried
+                                ?.firstOrNull { it != documentable }
+                                ?.kdocContent
+                                ?: match.value
                         }
 
                         val wasModified = kdoc != processedKdoc
@@ -182,7 +195,7 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
                 val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 
                 val modificationsByRange = modifications
-                    .groupBy { it.textRange }
+                    .groupBy { it.textRange!! }
                     .mapValues { it.value.single().let { Pair(it.kdocContent!!, it.indent) } }
                     .toSortedMap(compareBy { it.startOffset })
                     .map { (textRange, kdocAndIndent) ->

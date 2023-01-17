@@ -34,38 +34,47 @@ internal data class DocumentableWithSource(
     private val logger: DokkaConsoleLogger,
 
     val docComment: DocComment? = findClosestDocComment(
-        element = source.let { s ->
-            when (s) {
-                is PsiDocumentableSource -> s.psi
-                is DescriptorDocumentableSource -> s.descriptor.findPsi() as PsiNamedElement
-                else -> null
-            }
-        },
+        element = source.psi,
         logger = logger,
     ),
     val path: String = documentable.dri.path,
     val file: File = File(source.path),
     val fileText: String = file.readText(),
-    val textRange: TextRange = run {
-        val ogRange = when (docComment) {
-            is JavaDocComment -> docComment.comment.textRange // includes just comment
-            is KotlinDocComment -> docComment.descriptor.findPsi()!!.textRange // includes comment and descriptor
-            else -> error("Unknown doc comment type")
-        }
+    val textRange: TextRange? = run {
+        val ogRange = docComment?.textRange ?: return@run null
+
         val query = ogRange.substring(fileText)
         val startComment = query.indexOf("/**")
-        val endComment = query.indexOf("*/")
+        val endComment = query.lastIndexOf("*/")
 
-        require(startComment != -1) { "Could not find start of comment" }
-        require(endComment != -1) { "Could not find end of comment" }
+        require(startComment != -1) {
+            """
+                |Could not find start of comment.
+                |Path: $path
+                |Comment: ${docComment.documentString}
+                |Query: $query""".trimMargin()
+        }
+        require(endComment != -1) {
+            """
+                |Could not find end of comment.
+                |Path: $path
+                |Comment: ${docComment.documentString}
+                |Query: $query""".trimMargin()
+        }
 
         TextRange(ogRange.startOffset + startComment, ogRange.startOffset + endComment + 2)
     },
 
-    val indent: Int = textRange.startOffset - fileText.lastIndexOfNot('\n', textRange.startOffset),
-    val kdocContent: String? = docComment?.getDocumentString(),
+    val indent: Int =
+        if (textRange == null) {
+            0
+        } else {
+            textRange.startOffset -
+                    fileText.lastIndexOfNot('\n', textRange.startOffset)
+        },
+    val kdocContent: String? = textRange?.substring(fileText)?.getKdocContent(),
     val hasInclude: Boolean = docComment?.hasTag(JavadocTag.INCLUDE) ?: false,
     val wasModified: Boolean = false,
 ) {
-    fun queryFile(): String = textRange.substring(file.readText())
+    fun queryFile(): String = textRange!!.substring(fileText)
 }
