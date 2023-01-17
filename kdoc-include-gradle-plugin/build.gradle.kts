@@ -7,7 +7,6 @@ plugins {
     kotlin("jvm") version "1.7.20"
     id("com.gradle.plugin-publish") version "1.0.0"
     idea
-    id("org.jetbrains.dokka") version "1.7.20"
 }
 
 group = "nl.jolanrensen.kdocInclude"
@@ -33,19 +32,25 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-assertions-core:5.5.4")
     implementation(gradleApi())
-    implementation(project(":core"))
-}
 
-// Maybe something like this could work somewhere?
-//val kdocIncludeDependencies: Configuration by configurations.creating {
-//    isCanBeConsumed = false
-//
-//    val dokkaAnalysis = project.dependencies.create("org.jetbrains.dokka:dokka-analysis:1.7.20")
-//    val dokkaBase = project.dependencies.create("org.jetbrains.dokka:dokka-base:1.7.20")
-//
-//    dependencies.add(dokkaAnalysis)
-//    dependencies.add(dokkaBase)
-//}
+
+    // this is causing issues
+    compileOnly("org.jetbrains.dokka:dokka-analysis:1.7.20")
+
+    // Use JUnit test framework for unit tests
+    testImplementation(kotlin("test"))
+    testImplementation("io.kotest:kotest-assertions-core:5.5.4")
+    implementation(gradleApi())
+    implementation("org.jetbrains.dokka:dokka-base:1.7.20")
+    implementation("org.jetbrains.dokka:dokka-core:1.7.20")
+    implementation("org.jetbrains.dokka:dokka-base-test-utils:1.7.20")
+    implementation("org.jetbrains.dokka:dokka-gradle-plugin:1.7.20")
+
+    // get included with dokka-analysis
+//    compileOnly("org.jetbrains.dokka:kotlin-analysis-compiler:1.7.20")
+//    compileOnly("org.jetbrains.dokka:kotlin-analysis-intellij:1.7.20")
+
+}
 
 gradlePlugin {
 
