@@ -97,11 +97,48 @@ fun someMoreFun() {
 }
 ```
 
-## How to use
+## How to get it
+
+### From sources
 
 Clone the project and run `./gradlew publishToMavenLocal` in the source folder.
 
-In your project's `build.gradle.kts` add `mavenLocal()` to `repositories {}` and add `id("nl.jolanrensen.kdocInclude") version "1.0-SNAPSHOT"` to `plugins {}`.
+In your project's `settings.gradle.kts` add 
+```kts
+pluginManagement { 
+    repositories { 
+        mavenLocal()
+    } 
+}
+```
+
+In `build.gradle.kts` add `id("nl.jolanrensen.kdocInclude") version "1.0-SNAPSHOT"` to `plugins {}`.
+
+### From JitPack
+
+In your project's `settings.gradle.kts` add 
+```kts
+pluginManagement { 
+    repositories { 
+        maven(url = "https://jitpack.io")
+    }
+    resolutionStrategy {
+        eachPlugin {
+            requested.apply {
+                // careful with other com.github.* plugins, change to "com.github.jolanrensen.kdocIncludeGradlePlugin" if needed
+                if ("$id".startsWith("com.github.")) {
+                    val (_, _, user, name) = "$id".split(".", limit = 4)
+                    useModule("com.github.$user:$name:$version")
+                }
+            }
+        }
+    }
+}
+```
+
+In `build.gradle.kts` add `id("com.github.jolanrensen.kdocIncludeGradlePlugin") version "main-SNAPSHOT"` to `plugins {}`.
+
+## How to use
 
 Say you want to create a task that will run when you're making a sources Jar such that the modified files appear in the Jar:
 
@@ -112,7 +149,11 @@ import org.gradle.jvm.tasks.Jar
 ...
 
 plugins {
+    // When taking the plugin from sources
     id("nl.jolanrensen.kdocInclude") version "1.0-SNAPSHOT"
+    
+    // When taking the plugin from JitPack
+    id("com.github.jolanrensen.kdocIncludeGradlePlugin") version "main-SNAPSHOT"
     ...
 }
 
@@ -128,14 +169,17 @@ val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
 
 // Create the processing task
 val processKdocIncludeMain by tasks.creating(ProcessKdocIncludeTask::class) {
-    // Point it to the right souces. This can also be the test sources for instance
+    // Point it to the right sources. This can also be the test sources for instance.
     sources.set(kotlinMainSources)
     
-    // Optional. Filter file extensions, by default [kt, kts]
+    // Optional. Filter file extensions, by default [kt, kts].
     fileExtensions.set(listOf(...))
     
-    // Optional. The target folder of the processed files. By default ${project.buildDir}/kdocInclude/${taskName}
+    // Optional. The target folder of the processed files. By default ${project.buildDir}/kdocInclude/${taskName}.
     target.set(...)
+    
+    // Optional. If you want to see more logging. By default false.
+    debug.set(true)
 }
 
 // Modify all Jar tasks such that before running the Kotlin sources are set to 
@@ -148,9 +192,7 @@ tasks.withType<Jar> {
         kotlin {
             sourceSets {
                 main {
-                    kotlin.setSrcDirs(
-                        processKdocIncludeMain.targets
-                    )
+                    kotlin.setSrcDirs(processKdocIncludeMain.targets)
                 }
             }
         }
@@ -173,7 +215,8 @@ tasks.withType<Jar> {
 tasks.withType<org.jetbrains.dokka.gradle.AbstractDokkaLeafTask> {
     dokkaSourceSets {
         all {
-            sourceRoot(processKdocIncludeMain.target.get())
+            for (root in processKdocIncludeMain.targets)
+                sourceRoot(root)
         }
     }
 }
