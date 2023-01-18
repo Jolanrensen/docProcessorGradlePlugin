@@ -78,6 +78,8 @@ sealed interface DocComment {
     fun hasTag(tag: JavadocTag): Boolean
     fun hasTagWithExceptionOfType(tag: JavadocTag, exceptionFqName: String): Boolean
     fun tagsByName(tag: JavadocTag, param: String? = null): List<DocumentationContent>
+
+    val tagNames: List<String>
 }
 
 /**
@@ -121,6 +123,9 @@ internal data class JavaDocComment(val comment: PsiDocComment) : DocComment {
 
     override fun tagsByName(tag: JavadocTag, param: String?): List<DocumentationContent> =
         comment.tagsByName(tag).map { PsiDocumentationContent(it, tag) }
+
+    override val tagNames: List<String>
+        get() = comment.tags.map { it.name }
 }
 
 internal data class KotlinDocComment(val comment: KDocTag, val descriptor: DeclarationDescriptor?) : DocComment {
@@ -141,6 +146,9 @@ internal data class KotlinDocComment(val comment: KDocTag, val descriptor: Decla
                 .filter { it.name == "$tag" && param?.let { param -> it.hasExceptionWithName(param) } != false }
                 .map { DescriptorDocumentationContent(descriptor, it, tag) }
         }
+
+    override val tagNames: List<String>
+        get() = tagsWithContent.mapNotNull { it.name }
 
     private val tagsWithContent: List<KDocTag> = comment.children.mapNotNull { (it as? KDocTag) }
 

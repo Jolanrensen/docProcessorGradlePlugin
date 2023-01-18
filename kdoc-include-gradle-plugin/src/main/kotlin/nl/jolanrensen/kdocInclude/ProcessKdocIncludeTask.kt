@@ -3,13 +3,12 @@ package nl.jolanrensen.kdocInclude
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
-import org.gradle.api.attributes.Usage
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
@@ -61,13 +60,24 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
         .property(File::class.java)
         .convention(File(project.buildDir, "kdocInclude${File.separatorChar}${taskIdentity.name}"))
 
+    /**
+     * Where the generated sources are placed.
+     */
     @get:OutputFiles
     val targets: FileCollection = factory.fileCollection()
 
+    /**
+     * Whether to print debug information.
+     */
     @get:Input
     val debug: Property<Boolean> = factory
         .property(Boolean::class.java)
         .convention(false)
+
+    @get:Input
+    val processors: SetProperty<DocsProcessor> = factory
+        .setProperty(DocsProcessor::class.java)
+        .convention(listOf(IncludeDocsProcessor))
 
     @Classpath
     val classpath: Configuration = project.maybeCreateRuntimeConfiguration()
@@ -97,6 +107,7 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
         val sourceRoots = sources.get()
         val target = target.get()
         val runtime = classpath.resolve()
+        val processors = processors.get()
 
         val relativeSources = sourceRoots.map { it.relativeTo(baseDir.get()) }
         (targets as ConfigurableFileCollection).setFrom(
@@ -129,11 +140,12 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
             it.classpath.setFrom(runtime)
         }
 
-        workQueue.submit(ProcessKdocIncludeAction::class.java) {
+        workQueue.submit(ProcessDocsAction::class.java) {
             it.baseDir = baseDir.get()
             it.sources = sources
             it.sourceRoots = sourceRoots
             it.target = target
+            it.processors = processors
         }
     }
 }

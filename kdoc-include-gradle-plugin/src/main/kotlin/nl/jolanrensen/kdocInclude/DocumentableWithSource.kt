@@ -21,26 +21,26 @@ import java.io.File
  * @property textRange The text range of the [file] where the original comment can be found.
  * @property indent The amount of spaces the comment is indented with.
  * @property kdocContent Just the contents of the comment, without the `*`-stuff.
- * @property hasInclude Whether the comment has an `@include` tag.
- * @property wasModified Whether the [kdocContent] was modified.
+ * @property tags Set of tag names present in this documentable.
+ * @property isModified Whether the [kdocContent] was modified.
  * @constructor Create [DocumentableWithSource]
  */
 @Suppress("DataClassPrivateConstructor")
-internal data class DocumentableWithSource private constructor(
-    val documentable: Documentable,
-    val source: DocumentableSource,
+open class DocumentableWithSource private constructor(
+    open val documentable: Documentable,
+    open val source: DocumentableSource,
     private val logger: DokkaConsoleLogger,
 
-    val docComment: DocComment,
-    val path: String,
-    val file: File,
-    val fileText: String,
-    val textRange: TextRange,
-    val indent: Int,
+    open val docComment: DocComment,
+    open val path: String,
+    open val file: File,
+    open val fileText: String,
+    open val textRange: TextRange,
+    open val indent: Int,
 
-    val kdocContent: String,
-    val hasInclude: Boolean,
-    val wasModified: Boolean,
+    open val kdocContent: String,
+    open val tags: Set<String>,
+    open val isModified: Boolean,
 ) {
 
     companion object {
@@ -104,7 +104,8 @@ internal data class DocumentableWithSource private constructor(
             val textRange = TextRange(ogRange.startOffset + startComment, ogRange.startOffset + endComment + 2)
             val indent = textRange.startOffset - fileText.lastIndexOfNot('\n', textRange.startOffset)
             val kdocContent = textRange.substring(fileText).getKdocContent()
-            val hasInclude = docComment.hasTag(JavadocTag.INCLUDE)
+
+            val tags = docComment.tagNames
             val wasModified = false
 
             return DocumentableWithSource(
@@ -118,11 +119,31 @@ internal data class DocumentableWithSource private constructor(
                 textRange = textRange,
                 indent = indent,
                 kdocContent = kdocContent,
-                hasInclude = hasInclude,
-                wasModified = wasModified,
+                tags = tags.toSet(),
+                isModified = wasModified,
             )
         }
     }
 
     fun queryFile(): String = textRange.substring(fileText)
+
+    fun copy(
+        kdocContent: String = this.kdocContent,
+        tags: Set<String> = this.tags,
+        wasModified: Boolean = this.isModified,
+    ): DocumentableWithSource =
+        DocumentableWithSource(
+            documentable = documentable,
+            source = source,
+            logger = logger,
+            docComment = docComment,
+            path = path,
+            file = file,
+            fileText = fileText,
+            textRange = textRange,
+            indent = indent,
+            kdocContent = kdocContent,
+            tags = tags,
+            isModified = wasModified,
+        )
 }

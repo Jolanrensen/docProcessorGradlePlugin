@@ -34,6 +34,7 @@ class KdocIncludePluginFunctionalTest {
             sources.set(kotlinMainSources)
             fileExtensions.set(listOf("kt", "java", "scala"))
             debug.set(true)
+            processors.set()
         }
         
         tasks.compileKotlin { dependsOn(processKdocIncludeMain) }
