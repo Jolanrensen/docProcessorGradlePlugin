@@ -117,10 +117,12 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
                 val circularRefs = mutableSourceDocs
                     .filter { it.value.any { it.hasInclude } }
                     .entries
-                    .joinToString(",\n") { (path, documentables) ->
+                    .joinToString("\n\n") { (path, documentables) ->
                         buildString {
-                            appendLine("`$path`:")
-                            appendLine(documentables.map { it.kdocContent?.toKdoc() })
+                            appendLine("$path:")
+                            appendLine(documentables.joinToString("\n\n") {
+                                it.queryFile().getKdocContent().toKdoc(4)
+                            })
                         }
                     }
                 error("Circular references detected in @include statements:\n$circularRefs")
@@ -130,24 +132,15 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
                 .filter { it.value.any { it.hasInclude } }
                 .forEach { (path, documentables) ->
                     documentables.replaceAll { documentable ->
-                        val kdoc = documentable.kdocContent!!
+                        val kdoc = documentable.kdocContent
                         val processedKdoc = kdoc.replace(includeRegex) { match ->
                             // get the full include path
                             val includePath = match.value.getAtSymbolTargetName("include")
                             val parentPath = path.take(path.lastIndexOf('.').coerceAtLeast(0))
-                            val includeQuery = expandInclude(includePath, parentPath)
+                            val includeQuery = expandInclude(include = includePath, parent = parentPath)
 
                             // query the tree for the include path
                             val queried = mutableSourceDocs[includeQuery]
-
-                            // detect self-reference
-                            if (queried?.all { it == documentable } == true) {
-                                val circularRef = buildString {
-                                    appendLine("`$path`:")
-                                    appendLine(documentable.kdocContent.toKdoc())
-                                }
-                                error("Self-reference detected in @include statement:\n$circularRef")
-                            }
 
                             // replace the include statement with the kdoc of the queried node (if found)
                             queried
@@ -195,8 +188,8 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
                 val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 
                 val modificationsByRange = modifications
-                    .groupBy { it.textRange!! }
-                    .mapValues { it.value.single().let { Pair(it.kdocContent!!, it.indent) } }
+                    .groupBy { it.textRange }
+                    .mapValues { it.value.single().let { Pair(it.kdocContent, it.indent) } }
                     .toSortedMap(compareBy { it.startOffset })
                     .map { (textRange, kdocAndIndent) ->
                         val (kdoc, indent) = kdocAndIndent
