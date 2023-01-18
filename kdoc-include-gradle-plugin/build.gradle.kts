@@ -61,6 +61,13 @@ gradlePlugin {
         description = "KDoc @include Gradle Plugin"
         implementationClass = "nl.jolanrensen.kdocInclude.KdocIncludePlugin"
     }
+
+    val kdocIncludeJitpack by plugins.creating {
+        id = "com.github.Jolanrensen"
+        displayName = "KDoc @include Gradle Plugin"
+        description = "KDoc @include Gradle Plugin"
+        implementationClass = "nl.jolanrensen.kdocInclude.KdocIncludePlugin"
+    }
 }
 
 // Add a source set and a task for a functional test suite
