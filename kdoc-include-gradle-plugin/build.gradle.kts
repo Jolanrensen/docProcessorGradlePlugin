@@ -63,7 +63,7 @@ gradlePlugin {
     }
 
     val kdocIncludeJitpack by plugins.creating {
-        id = "com.github.Jolanrensen.kdocIncludeGradlePlugin"
+        id = "com.github.jolanrensen.kdocIncludeGradlePlugin"
         displayName = "KDoc @include Gradle Plugin"
         description = "KDoc @include Gradle Plugin"
         implementationClass = "nl.jolanrensen.kdocInclude.KdocIncludePlugin"
