@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
 import org.jetbrains.kotlin.idea.kdoc.findKDoc
 import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
+import org.jetbrains.kotlin.idea.util.hasComments
 import org.jetbrains.kotlin.js.resolve.diagnostics.findPsi
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocTag
 import org.jetbrains.kotlin.name.FqName
@@ -106,7 +107,7 @@ internal val DocComment.textRange: TextRange
 internal val DocumentableSource.psi: PsiNamedElement?
     get() = when (this) {
         is PsiDocumentableSource -> psi
-        is DescriptorDocumentableSource -> descriptor.findPsi() as PsiNamedElement
+        is DescriptorDocumentableSource -> descriptor.findPsi() as PsiNamedElement?
         else -> null
     }
 
@@ -122,7 +123,7 @@ internal data class JavaDocComment(val comment: PsiDocComment) : DocComment {
         comment.tagsByName(tag).map { PsiDocumentationContent(it, tag) }
 }
 
-internal data class KotlinDocComment(val comment: KDocTag, val descriptor: DeclarationDescriptor) : DocComment {
+internal data class KotlinDocComment(val comment: KDocTag, val descriptor: DeclarationDescriptor?) : DocComment {
 
     override fun hasTag(tag: JavadocTag): Boolean =
         when (tag) {
@@ -158,7 +159,7 @@ internal data class PsiDocumentationContent(val psiElement: PsiElement, override
     DocumentationContent
 
 internal data class DescriptorDocumentationContent(
-    val descriptor: DeclarationDescriptor,
+    val descriptor: DeclarationDescriptor?,
     val element: KDocTag,
     override val tag: JavadocTag
 ) : DocumentationContent
@@ -271,15 +272,19 @@ internal fun findClosestDocComment(element: PsiNamedElement?, logger: DokkaLogge
 }
 
 internal fun PsiNamedElement.toKdocComment(): KotlinDocComment? =
-    (navigationElement as? KtElement)?.findKDoc { DescriptorToSourceUtils.descriptorToDeclaration(it) }
-        ?.run {
-            (this@toKdocComment.navigationElement as? KtDeclaration)?.descriptor?.let {
-                KotlinDocComment(
-                    this,
-                    it
-                )
-            }
+    if (!hasComments()) {
+        null
+    } else {
+        (navigationElement as? KtElement)?.findKDoc {
+            // TODO This returns the wrong file if named the same!
+            DescriptorToSourceUtils.descriptorToDeclaration(it)
+        }?.run {
+            KotlinDocComment(
+                comment = this,
+                descriptor = (this@toKdocComment.navigationElement as? KtDeclaration)?.descriptor,
+            )
         }
+    }
 
 internal fun PsiDocTag.resolveToElement(): PsiElement? =
     dataElements.firstOrNull()?.firstChild?.referenceElementOrSelf()?.resolveToGetDri()

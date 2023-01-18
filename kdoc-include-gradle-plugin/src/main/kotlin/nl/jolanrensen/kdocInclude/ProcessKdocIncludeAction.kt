@@ -96,15 +96,12 @@ abstract class ProcessKdocIncludeAction : WorkAction<ProcessKdocIncludeAction.Pa
                 .mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
 
-                    // TODO convert DocumentableWithSource such that it returns null if it cannot create it with all arguments not null
-                    if (!File(source.path).exists()) null
-                    else DocumentableWithSource(
+                    DocumentableWithSource.createOrNull(
                         documentable = it,
                         source = source,
                         logger = logger,
                     )
                 }
-                .filter { it.docComment != null }
         }
 
         return documentables.groupBy { it.path }
