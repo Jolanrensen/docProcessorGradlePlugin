@@ -1,14 +1,10 @@
 package nl.jolanrensen.kdocInclude
 
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.PsiNamedElement
-import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
-import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.model.doc.Param
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
-import org.jetbrains.kotlin.js.resolve.diagnostics.findPsi
 import java.io.File
 
 /**
