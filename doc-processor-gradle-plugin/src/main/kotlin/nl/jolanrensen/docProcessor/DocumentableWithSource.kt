@@ -107,13 +107,16 @@ open class DocumentableWithSource private constructor(
                     // if there is no comment, we give the text range for where the comment could be.
                     // throws an exception if it's not in the file
                     val sourceTextRange = source.textRange!!
-                    TextRange(sourceTextRange.startOffset, sourceTextRange.startOffset)
+                    TextRange(sourceTextRange.startOffset - 1, sourceTextRange.startOffset)
                 } catch (_: Throwable) {
                     null
                 }
             }
 
-            val docIndent = docTextRange?.let{ docTextRange.startOffset - fileText.lastIndexOfNot('\n', docTextRange.startOffset)}
+            val docIndent = docTextRange?.let {
+                docTextRange.startOffset - fileText.lastIndexOfNot('\n', docTextRange.startOffset)
+            }?.coerceAtLeast(0)
+
             val docContent = docTextRange?.substring(fileText)?.getDocContent()
 
             val tags = docComment?.tagNames ?: emptyList()

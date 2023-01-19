@@ -1,2 +1,3 @@
 nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor
 nl.jolanrensen.docProcessor.defaultProcessors.NoDocProcessor
+nl.jolanrensen.docProcessor.defaultProcessors.TodoDocProcessor

@@ -37,7 +37,8 @@ class KdocIncludePluginFunctionalTest {
            
             fileExtensions = listOf("kt", "java")
             debug = true
-            processors += INCLUDE_DOC_PROCESSOR
+//            processors += INCLUDE_DOC_PROCESSOR
+            processors += TODO_DOC_PROCESSOR
         }
         
         tasks.compileKotlin { dependsOn(processKdocIncludeMain) }

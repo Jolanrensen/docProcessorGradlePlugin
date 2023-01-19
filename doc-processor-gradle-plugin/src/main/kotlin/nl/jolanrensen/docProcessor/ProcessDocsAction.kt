@@ -139,7 +139,6 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
             .flatMap {
                 it.value.filter {
                     it.isModified && // filter out unmodified documentables and those without a place to put the docs
-                            it.docComment != null &&
                             it.docTextRange != null &&
                             it.docIndent != null
                 }
@@ -188,6 +187,12 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
                 for ((range, kdoc) in modificationsByRange) {
                     range.forEach { fileRange.remove(it) }
                     fileRange[range.first] = kdoc
+
+                    // TODO attempt to fix newline after newly placed kdoc?
+//                    if (fileRange[range.first + 1] != "\n") {
+//                        val indent = kdoc.takeWhile { it == ' ' }
+//                        fileRange[range.first] += "\n$indent"
+//                    }
                 }
 
                 val processedContent = fileRange.toSortedMap().values.joinToString("")
