@@ -112,7 +112,7 @@ pluginManagement {
 }
 ```
 
-In `build.gradle.kts` add `id("nl.jolanrensen.kdocInclude") version "1.0-SNAPSHOT"` to `plugins {}`.
+In `build.gradle.kts` add `id("nl.jolanrensen.docProcessor") version "1.0-SNAPSHOT"` to `plugins {}`.
 
 ### From JitPack
 
@@ -143,14 +143,14 @@ In `build.gradle.kts` add `id("com.github.jolanrensen.kdocIncludeGradlePlugin") 
 Say you want to create a task that will run when you're making a sources Jar such that the modified files appear in the Jar:
 
 ```kts
-import nl.jolanrensen.kdocInclude.ProcessKdocIncludeTask
+import nl.jolanrensen.docProcessor.ProcessKdocIncludeTask
 import org.gradle.jvm.tasks.Jar
 
 ...
 
 plugins {
     // When taking the plugin from sources
-    id("nl.jolanrensen.kdocInclude") version "1.0-SNAPSHOT"
+    id("nl.jolanrensen.docProcessorr") version "1.0-SNAPSHOT"
     
     // When taking the plugin from JitPack
     id("com.github.jolanrensen.kdocIncludeGradlePlugin") version "main-SNAPSHOT"
@@ -175,7 +175,7 @@ val processKdocIncludeMain by tasks.creating(ProcessKdocIncludeTask::class) {
     // Optional. Filter file extensions, by default [kt, kts].
     fileExtensions.set(listOf(...))
     
-    // Optional. The target folder of the processed files. By default ${project.buildDir}/kdocInclude/${taskName}.
+    // Optional. The target folder of the processed files. By default ${project.buildDir}/docProcessor/${taskName}.
     target.set(...)
     
     // Optional. If you want to see more logging. By default false.

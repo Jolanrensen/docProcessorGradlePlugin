@@ -1,3 +1,3 @@
-rootProject.name = "kdoc-include-gradle-plugin"
+rootProject.name = "doc-processor-gradle-plugin"
 
-include("kdoc-include-gradle-plugin")
+include("doc-processor-gradle-plugin")
