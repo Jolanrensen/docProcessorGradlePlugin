@@ -106,7 +106,7 @@ open class DocumentableWithSource private constructor(
             val kdocContent = textRange.substring(fileText).getKdocContent()
 
             val tags = docComment.tagNames
-            val wasModified = false
+            val isModified = false
 
             return DocumentableWithSource(
                 documentable = documentable,
@@ -120,7 +120,7 @@ open class DocumentableWithSource private constructor(
                 indent = indent,
                 kdocContent = kdocContent,
                 tags = tags.toSet(),
-                isModified = wasModified,
+                isModified = isModified,
             )
         }
     }
@@ -130,7 +130,7 @@ open class DocumentableWithSource private constructor(
     fun copy(
         kdocContent: String = this.kdocContent,
         tags: Set<String> = this.tags,
-        wasModified: Boolean = this.isModified,
+        isModified: Boolean = this.isModified,
     ): DocumentableWithSource =
         DocumentableWithSource(
             documentable = documentable,
@@ -144,6 +144,6 @@ open class DocumentableWithSource private constructor(
             indent = indent,
             kdocContent = kdocContent,
             tags = tags,
-            isModified = wasModified,
+            isModified = isModified,
         )
 }

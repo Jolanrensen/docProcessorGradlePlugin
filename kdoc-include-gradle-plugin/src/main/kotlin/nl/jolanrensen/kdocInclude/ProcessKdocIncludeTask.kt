@@ -75,9 +75,11 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
         .convention(false)
 
     @get:Input
-    val processors: SetProperty<DocsProcessor> = factory
-        .setProperty(DocsProcessor::class.java)
-        .convention(listOf(IncludeDocsProcessor))
+    val processors: SetProperty<String> = factory
+        .setProperty(String::class.java)
+        .convention(
+            setOf("nl.jolanrensen.kdocInclude.IncludeDocsProcessor")
+        )
 
     @Classpath
     val classpath: Configuration = project.maybeCreateRuntimeConfiguration()
@@ -89,6 +91,7 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-analysis:1.7.20")) // compileOnly in base plugin
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:1.7.20"))
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:1.7.20"))
+//            dependencies.add(project.dependencies.create(project(":")))
         }
 
     private fun println(message: String) {
@@ -146,6 +149,7 @@ abstract class ProcessKdocIncludeTask @Inject constructor(factory: ObjectFactory
             it.sourceRoots = sourceRoots
             it.target = target
             it.processors = processors
+            it.debug = debug.get()
         }
     }
 }

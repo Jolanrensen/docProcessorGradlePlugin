@@ -1,6 +1,6 @@
 package nl.jolanrensen.kdocInclude
 
-object IncludeDocsProcessor: DocsProcessor {
+class IncludeDocsProcessor: DocsProcessor {
 
     private val includeRegex = Regex("""@include(\s+)(\[?)(.+)(]?)""")
 
@@ -64,7 +64,7 @@ object IncludeDocsProcessor: DocsProcessor {
                             documentable.copy(
                                 kdocContent = processedKdoc,
                                 tags = newTags,
-                                wasModified = true,
+                                isModified = true,
                             )
                         } else {
                             documentable

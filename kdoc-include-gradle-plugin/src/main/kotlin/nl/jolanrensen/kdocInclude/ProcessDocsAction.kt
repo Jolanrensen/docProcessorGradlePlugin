@@ -14,6 +14,7 @@ import org.jetbrains.dokka.model.withDescendants
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import java.io.File
 import java.io.Serializable
+import java.util.*
 
 
 fun interface DocsProcessor : Serializable {
@@ -31,6 +32,7 @@ fun interface DocsProcessor : Serializable {
     fun process(docsByPath: Map<String, List<DocumentableWithSource>>): Map<String, List<DocumentableWithSource>>
 }
 
+
 abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
     interface Parameters : WorkParameters {
         var baseDir: File
@@ -38,7 +40,7 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
         var sourceRoots: List<File>
         var target: File?
         var debug: Boolean
-        var processors: Set<DocsProcessor>
+        var processors: Set<String>
     }
 
     private fun println(message: String) {
@@ -60,9 +62,23 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
 
         println("Found ${sourceDocs.size} source docs: $sourceDocs")
 
+
+        val availableProcessors: Set<DocsProcessor> =
+            ServiceLoader.load(DocsProcessor::class.java).toSet()
+
+        val filteredProcessors = availableProcessors
+            .filter { it::class.qualifiedName in parameters.processors }
+            .toSet()
+
+        if (filteredProcessors.isEmpty()) {
+            error("No processors found")
+        } else {
+            println("Found processors: ${filteredProcessors.map { it::class.qualifiedName }}")
+        }
+
         // Run all processors
         val modifiedDocumentables =
-            parameters.processors.fold(sourceDocs) { acc, processor ->
+            filteredProcessors.fold(sourceDocs) { acc, processor ->
                 processor.process(acc)
             }
 
