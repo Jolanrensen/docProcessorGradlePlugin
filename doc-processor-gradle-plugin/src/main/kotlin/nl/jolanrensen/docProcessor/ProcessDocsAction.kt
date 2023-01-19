@@ -40,28 +40,22 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
     }
 
     private fun process() {
-        val availableProcessors: Set<DocProcessor> =
-            ServiceLoader.load(DocProcessor::class.java).toSet()
-
-        val filteredProcessors = parameters.processors
-            .mapNotNull { name ->
-                availableProcessors.find { it::class.qualifiedName == name }
-            }
-
-        if (filteredProcessors.isEmpty()) {
-            println("No processors found")
-        } else {
-            println("Found processors: ${filteredProcessors.map { it::class.qualifiedName }}")
-        }
-
         // analyse the sources with dokka to get the documentables
         val sourceDocs = analyseSourcesWithDokka()
 
         println("Found ${sourceDocs.size} source docs: $sourceDocs")
 
+        // Find all processors
+        val processors = findProcessors()
+
+        if (processors.isEmpty())
+            println("No processors found")
+        else
+            println("Found processors: ${processors.map { it::class.qualifiedName }}")
+
         // Run all processors
         val modifiedDocumentables =
-            filteredProcessors.fold(sourceDocs) { acc, processor ->
+            processors.fold(sourceDocs) { acc, processor ->
                 processor.process(acc)
             }
 
@@ -72,6 +66,17 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
 
         // copy the sources to the target folder while replacing all docs in modified documentables
         copyAndModifySources(modifiedDocumentablesPerFile)
+    }
+
+    private fun findProcessors(): List<DocProcessor> {
+        val availableProcessors: Set<DocProcessor> =
+            ServiceLoader.load(DocProcessor::class.java).toSet()
+
+        val filteredProcessors = parameters.processors
+            .mapNotNull { name ->
+                availableProcessors.find { it::class.qualifiedName == name }
+            }
+        return filteredProcessors
     }
 
     private fun analyseSourcesWithDokka(): Map<String, List<DocumentableWithSource>> {
@@ -114,6 +119,7 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
                 .mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
 
+                    // TODO include docs without sources to make @sample work
                     DocumentableWithSource.createOrNull(
                         documentable = it,
                         source = source,
