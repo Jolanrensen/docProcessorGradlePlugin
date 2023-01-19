@@ -3,6 +3,7 @@ package nl.jolanrensen.docProcessor
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
@@ -14,6 +15,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.dependencies
 import org.gradle.workers.WorkerExecutor
 import org.jetbrains.dokka.DokkaSourceSetID
 import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
@@ -91,11 +93,31 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-analysis:1.7.20")) // compileOnly in base plugin
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:1.7.20"))
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:1.7.20"))
-//            dependencies.add(
-//                project.dependencies.create("nl.jolanrensen:DataFrameTest:1.0-SNAPSHOT")
-//            )
-//            dependencies.add(project.dependencies.create(project(":")))
         }
+
+    /**
+     * Adds dependency to plugin.
+     * Don't forget to add any new processor to the [processors] list.
+     *
+     * @param dependencyNotation Dependency notation
+     *
+     * @see org.gradle.api.artifacts.dsl.DependencyHandler.create
+     */
+    fun addPlugins(vararg dependencyNotation: Any) {
+        classpath.dependencies.addAll(
+            dependencyNotation.map { project.dependencies.create(it) }
+        )
+    }
+
+    /**
+     * Adds dependency to plugin.
+     * Don't forget to add any new processor to the [processors] list.
+     *
+     * @param dependency Dependency
+     */
+    fun addPlugins(vararg dependency: Dependency) {
+        classpath.dependencies.addAll(dependency)
+    }
 
     private fun println(message: String) {
         if (debug.get()) kotlin.io.println(message)
