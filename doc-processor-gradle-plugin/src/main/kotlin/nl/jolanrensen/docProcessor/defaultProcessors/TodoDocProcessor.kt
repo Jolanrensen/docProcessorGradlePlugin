@@ -4,7 +4,7 @@ import nl.jolanrensen.docProcessor.DocProcessor
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 
 /**
- * @see NoDocProcessor
+ * @see TodoDocProcessor
  */
 const val TODO_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.TodoDocProcessor"
 
