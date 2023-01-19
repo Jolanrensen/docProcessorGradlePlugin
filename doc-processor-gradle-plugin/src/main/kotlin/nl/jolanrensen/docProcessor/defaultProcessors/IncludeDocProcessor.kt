@@ -13,16 +13,27 @@ import nl.jolanrensen.docProcessor.toDoc
  */
 const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor"
 
-
 /**
- * TODO add docs
+ * Allows you to @include docs from other linkable elements.
+ *
+ * For example:
+ * ```kotlin
+ * /**
+ *  * @include [SomeClass]
+ *  */
+ * ```
+ * would turn into
+ * ```kotlin
+ * /**
+ *  * This is the docs of SomeClass
+ *  */
  */
 class IncludeDocProcessor : DocProcessor {
 
-    private val includeRegex = Regex("""@include(\s+)(\[?)(.+)(]?)""")
+    val tag = "include"
 
     private val DocumentableWithSource.hasInclude
-        get() = tags.any { it == "include" }
+        get() = tags.any { it == tag }
 
     override fun process(
         documentablesByPath: Map<String, List<DocumentableWithSource>>,
@@ -60,41 +71,47 @@ class IncludeDocProcessor : DocProcessor {
                 .filter { it.value.any { it.hasInclude } }
                 .forEach { (path, documentables) ->
                     documentables.replaceAll { documentable ->
-                        val kdoc = documentable.docContent
-                        val processedKdoc = kdoc.replace(includeRegex) { match ->
-                            // get the full include path
-                            val includePath = match.value.getAtSymbolTargetName("include")
-                            val parentPath = path.take(path.lastIndexOf('.').coerceAtLeast(0))
-                            val includeQuery = expandInclude(include = includePath, parent = parentPath)
+                        val doc = documentable.docContent
+                        val processedDoc = doc
+                            .split('\n')
+                            .map { line ->
+                                if (!line.startsWith("@$tag")) return@map line
 
-                            // query the tree for the include path
-                            val queried = mutableSourceDocs[includeQuery]
+                                // get the full include path
+                                val includePath = line.getAtSymbolTargetName(tag)
+                                val parentPath = path.take(path.lastIndexOf('.').coerceAtLeast(0))
+                                val includeQuery = expandInclude(include = includePath, parent = parentPath)
 
-                            // replace the include statement with the kdoc of the queried node (if found)
-                            queried
-                                ?.firstOrNull { it != documentable }
-                                ?.docContent
-                                ?: match.value
-                        }
+                                // query the tree for the include path
+                                val queried = mutableSourceDocs[includeQuery]
 
-                        val wasModified = kdoc != processedKdoc
+                                // replace the include statement with the kdoc of the queried node (if found)
+                                queried
+                                    ?.firstOrNull { it != documentable }
+                                    ?.docContent
+                                    ?: line
+                            }
+
+                            .joinToString("\n")
+
+                        val wasModified = doc != processedDoc
 
                         if (wasModified) {
-                            val hasInclude = processedKdoc
+                            val hasInclude = processedDoc
                                 .split('\n')
-                                .any { it.trim().startsWith("@include") }
+                                .any { it.trim().startsWith("@$tag") }
 
                             val newTags = documentable.tags.let { tags ->
                                 if (hasInclude) {
-                                    if ("include" !in tags) tags + "include"
+                                    if (tag !in tags) tags + tag
                                     else tags
                                 } else {
-                                    tags.filterNot { it == "include" }
+                                    tags.filterNot { it == tag }
                                 }
                             }
 
                             documentable.copy(
-                                docContent = processedKdoc,
+                                docContent = processedDoc,
                                 tags = newTags,
                                 isModified = true,
                             )
