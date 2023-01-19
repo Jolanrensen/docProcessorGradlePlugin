@@ -119,7 +119,7 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
                 .mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
 
-                    // TODO include docs without sources to make @sample work
+                    // TODO include documentables without docs to make @sample work
                     DocumentableWithSource.createOrNull(
                         documentable = it,
                         source = source,
