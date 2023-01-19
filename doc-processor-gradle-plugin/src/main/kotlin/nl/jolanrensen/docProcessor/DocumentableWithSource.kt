@@ -128,7 +128,7 @@ open class DocumentableWithSource private constructor(
     fun queryFile(): String = textRange.substring(fileText)
 
     fun copy(
-        kdocContent: String = this.docContent,
+        docContent: String = this.docContent,
         tags: Set<String> = this.tags,
         isModified: Boolean = this.isModified,
     ): DocumentableWithSource =
@@ -142,7 +142,7 @@ open class DocumentableWithSource private constructor(
             fileText = fileText,
             textRange = textRange,
             indent = indent,
-            docContent = kdocContent,
+            docContent = docContent,
             tags = tags,
             isModified = isModified,
         )

@@ -77,11 +77,9 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         .convention(false)
 
     @get:Input
-    val processors: SetProperty<String> = factory
-        .setProperty(String::class.java)
-        .convention(
-            setOf(IncludeDocProcessor::class.qualifiedName!!)
-        )
+    val processors: ListProperty<String> = factory
+        .listProperty(String::class.java)
+        .convention(emptyList())
 
     @Classpath
     val classpath: Configuration = project.maybeCreateRuntimeConfiguration()

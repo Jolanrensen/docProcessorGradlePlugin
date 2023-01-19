@@ -1,6 +1,8 @@
 package nl.jolanrensen.docProcessor
 
-class IncludeDocProcessor: DocProcessor {
+const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.IncludeDocProcessor"
+
+class IncludeDocProcessor : DocProcessor {
 
     private val includeRegex = Regex("""@include(\s+)(\[?)(.+)(]?)""")
 
@@ -62,7 +64,7 @@ class IncludeDocProcessor: DocProcessor {
                             }
 
                             documentable.copy(
-                                kdocContent = processedKdoc,
+                                docContent = processedKdoc,
                                 tags = newTags,
                                 isModified = true,
                             )

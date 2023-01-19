@@ -69,7 +69,7 @@ value class ProcessDocTaskDsl private constructor(public val task: ProcessDocTas
             task.debug.set(value)
         }
 
-    var processors: Set<String>
+    var processors: List<String>
         get() = task.processors.get()
         set(value) {
             task.processors.set(value)

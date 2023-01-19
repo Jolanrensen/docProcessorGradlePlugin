@@ -13,24 +13,7 @@ import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.withDescendants
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import java.io.File
-import java.io.Serializable
 import java.util.*
-
-
-fun interface DocProcessor : Serializable {
-
-    /**
-     * Process given [docsByPath].
-     * You can use [DocumentableWithSource.copy] to create a new [DocumentableWithSource] with modified
-     * [DocumentableWithSource.docContent].
-     * Mark the docs that were modified with [DocumentableWithSource.isModified] and
-     * don't forget to update [DocumentableWithSource.tags] accordingly.
-     *
-     * @param docsByPath Docs by path
-     * @return modified docs by path
-     */
-    fun process(docsByPath: Map<String, List<DocumentableWithSource>>): Map<String, List<DocumentableWithSource>>
-}
 
 
 abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
@@ -40,7 +23,7 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
         var sourceRoots: List<File>
         var target: File?
         var debug: Boolean
-        var processors: Set<String>
+        var processors: List<String>
     }
 
     private fun println(message: String) {
@@ -60,16 +43,16 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
         val availableProcessors: Set<DocProcessor> =
             ServiceLoader.load(DocProcessor::class.java).toSet()
 
-        val filteredProcessors = availableProcessors
-            .filter { it::class.qualifiedName in parameters.processors }
-            .toSet()
+        val filteredProcessors = parameters.processors
+            .mapNotNull { name ->
+                availableProcessors.find { it::class.qualifiedName == name }
+            }
 
         if (filteredProcessors.isEmpty()) {
             println("No processors found")
         } else {
             println("Found processors: ${filteredProcessors.map { it::class.qualifiedName }}")
         }
-
 
         // analyse the sources with dokka to get the documentables
         val sourceDocs = analyseSourcesWithDokka()
