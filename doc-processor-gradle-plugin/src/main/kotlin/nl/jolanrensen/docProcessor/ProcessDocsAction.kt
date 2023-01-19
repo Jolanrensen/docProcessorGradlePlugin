@@ -115,7 +115,7 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
         // collect the right documentables from the modules (only linkable elements with docs)
         val documentables = modules.flatMap {
             it.withDescendants()
-                .filter { it.isLinkableElement() && it.hasDocumentation() && it is WithSources }
+                .filter { /*it.isLinkableElement() && it.hasDocumentation() &&*/ it is WithSources }
                 .mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
 
@@ -136,7 +136,14 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
     ): Map<File, List<DocumentableWithSource>> =
         modifiedSourceDocs
             .entries
-            .flatMap { it.value.filter { it.isModified } }
+            .flatMap {
+                it.value.filter {
+                    it.isModified && // filter out unmodified documentables and those without a place to put the docs
+                            it.docComment != null &&
+                            it.docTextRange != null &&
+                            it.docIndent != null
+                }
+            }
             .groupBy { it.file }
 
 
@@ -153,11 +160,15 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
                 val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 
                 val modificationsByRange = modifications
-                    .groupBy { it.textRange }
-                    .mapValues { it.value.single().let { Pair(it.docContent, it.indent) } }
+                    .groupBy { it.docTextRange!! }
+                    .mapValues { it.value.single().let { Pair(it.docContent, it.docIndent) } }
                     .toSortedMap(compareBy { it.startOffset })
                     .map { (textRange, kdocAndIndent) ->
+                        val range = textRange!!.startOffset until textRange.endOffset
                         val (kdoc, indent) = kdocAndIndent
+
+                        if (kdoc.isBlank())
+                            return@map range to "" // don't create empty kdoc, just remove it altogether
 
                         var fixedKdoc = kdoc.trim()
 
@@ -167,9 +178,9 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
                             if (fixedKdoc.last() != '\n') fixedKdoc = "$fixedKdoc\n"
                         }
 
-                        val newKdoc = fixedKdoc.toDoc(indent).trimStart()
+                        val newKdoc = fixedKdoc.toDoc(indent!!).trimStart()
 
-                        val range = textRange.startOffset until textRange.endOffset
+
                         range to newKdoc
                     }.toMap()
 

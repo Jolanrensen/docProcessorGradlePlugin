@@ -3,7 +3,6 @@ package nl.jolanrensen.docProcessor
 import com.intellij.openapi.util.TextRange
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
-import org.jetbrains.dokka.model.doc.Param
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import java.io.File
 
@@ -18,10 +17,10 @@ import java.io.File
  * @property path The path of the [documentable].
  * @property file The file of the [documentable]'s [source].
  * @property fileText The text of the [documentable]'s [file].
- * @property textRange The text range of the [file] where the original comment can be found.
- * @property indent The amount of spaces the comment is indented with.
+ * @property docTextRange The text range of the [file] where the original comment can be found.
+ * @property docIndent The amount of spaces the comment is indented with.
  * @property docContent Just the contents of the comment, without the `*`-stuff.
- * @property tags Set of tag names present in this documentable.
+ * @property tags List of tag names present in this documentable.
  * @property isModified Whether the [docContent] was modified.
  * @constructor Create [DocumentableWithSource]
  */
@@ -31,15 +30,15 @@ open class DocumentableWithSource private constructor(
     open val source: DocumentableSource,
     private val logger: DokkaConsoleLogger,
 
-    open val docComment: DocComment,
+    open val docComment: DocComment?,
     open val path: String,
     open val file: File,
     open val fileText: String,
-    open val textRange: TextRange,
-    open val indent: Int,
+    open val docTextRange: TextRange?,
+    open val docIndent: Int?,
 
     open val docContent: String,
-    open val tags: Set<String>,
+    open val tags: List<String>,
     open val isModified: Boolean,
 ) {
 
@@ -54,21 +53,21 @@ open class DocumentableWithSource private constructor(
                 logger = logger,
             )
 
-            if (docComment == null) {
-                when {
-                    documentable.documentation.values.all { it.children.all { it is Param } } -> {
-                        // this is a function with only params, so it's probably a constructor
-                        // and it doesn't have a doc comment, so we can ignore it
-                        println("Warning: Could not find doc comment for ${documentable.dri.path}. This is probably because it's mentioned in an @param and not directly here.")
-                    }
-
-                    else -> {
-                        println("Warning: Could not find doc comment for ${documentable.dri.path}. It might be defined in a super method.")
-                    }
-                }
-
-                return null
-            }
+//            if (docComment == null) {
+//                when {
+//                    documentable.documentation.values.all { it.children.all { it is Param } } -> {
+//                        // this is a function with only params, so it's probably a constructor
+//                        // and it doesn't have a doc comment, so we can ignore it
+//                        println("Warning: Could not find doc comment for ${documentable.dri.path}. This is probably because it's mentioned in an @param and not directly here.")
+//                    }
+//
+//                    else -> {
+//                        println("Warning: Could not find doc comment for ${documentable.dri.path}. It might be defined in a super method.")
+//                    }
+//                }
+//
+//                return null
+//            }
 
             val path = documentable.dri.path
             val file = File(source.path)
@@ -80,32 +79,44 @@ open class DocumentableWithSource private constructor(
 
             val fileText: String = file.readText()
 
-            val ogRange = docComment.textRange
+            val ogRange = docComment?.textRange
 
-            val query = ogRange.substring(fileText)
-            val startComment = query.indexOf("/**")
-            val endComment = query.lastIndexOf("*/")
+            val docTextRange = if (ogRange != null) {
+                val query = ogRange.substring(fileText)
+                val startComment = query.indexOf("/**")
+                val endComment = query.lastIndexOf("*/")
 
-            require(startComment != -1) {
-                """
-                |Could not find start of comment.
-                |Path: $path
-                |Comment Content: "${docComment.documentString}"
-                |Query: "$query"""".trimMargin()
+                require(startComment != -1) {
+                    """
+                    |Could not find start of comment.
+                    |Path: $path
+                    |Comment Content: "${docComment.documentString}"
+                    |Query: "$query"""".trimMargin()
+                }
+                require(endComment != -1) {
+                    """
+                    |Could not find end of comment.
+                    |Path: $path
+                    |Comment Content: "${docComment.documentString}"
+                    |Query: "$query"""".trimMargin()
+                }
+
+                TextRange(ogRange.startOffset + startComment, ogRange.startOffset + endComment + 2)
+            } else {
+                try {
+                    // if there is no comment, we give the text range for where the comment could be.
+                    // throws an exception if it's not in the file
+                    val sourceTextRange = source.textRange!!
+                    TextRange(sourceTextRange.startOffset, sourceTextRange.startOffset)
+                } catch (_: Throwable) {
+                    null
+                }
             }
-            require(endComment != -1) {
-                """
-                |Could not find end of comment.
-                |Path: $path
-                |Comment Content: "${docComment.documentString}"
-                |Query: "$query"""".trimMargin()
-            }
 
-            val textRange = TextRange(ogRange.startOffset + startComment, ogRange.startOffset + endComment + 2)
-            val indent = textRange.startOffset - fileText.lastIndexOfNot('\n', textRange.startOffset)
-            val kdocContent = textRange.substring(fileText).getDocContent()
+            val docIndent = docTextRange?.let{ docTextRange.startOffset - fileText.lastIndexOfNot('\n', docTextRange.startOffset)}
+            val docContent = docTextRange?.substring(fileText)?.getDocContent()
 
-            val tags = docComment.tagNames
+            val tags = docComment?.tagNames ?: emptyList()
             val isModified = false
 
             return DocumentableWithSource(
@@ -116,20 +127,20 @@ open class DocumentableWithSource private constructor(
                 path = path,
                 file = file,
                 fileText = fileText,
-                textRange = textRange,
-                indent = indent,
-                docContent = kdocContent,
-                tags = tags.toSet(),
+                docTextRange = docTextRange,
+                docIndent = docIndent,
+                docContent = docContent ?: "",
+                tags = tags,
                 isModified = isModified,
             )
         }
     }
 
-    fun queryFile(): String = textRange.substring(fileText)
+    fun queryFile(): String? = docTextRange?.substring(fileText)
 
     fun copy(
         docContent: String = this.docContent,
-        tags: Set<String> = this.tags,
+        tags: List<String> = this.tags,
         isModified: Boolean = this.isModified,
     ): DocumentableWithSource =
         DocumentableWithSource(
@@ -140,10 +151,11 @@ open class DocumentableWithSource private constructor(
             path = path,
             file = file,
             fileText = fileText,
-            textRange = textRange,
-            indent = indent,
+            docTextRange = docTextRange,
+            docIndent = docIndent,
             docContent = docContent,
             tags = tags,
             isModified = isModified,
         )
 }
+

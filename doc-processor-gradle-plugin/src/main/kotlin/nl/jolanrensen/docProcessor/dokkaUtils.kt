@@ -113,6 +113,12 @@ internal val DocumentableSource.psi: PsiNamedElement?
         else -> null
     }
 
+internal val DocumentableSource.textRange: TextRange?
+    get() = when (this) {
+        is PsiDocumentableSource -> psi.textRange
+        is DescriptorDocumentableSource -> descriptor.findPsi()?.textRange
+        else -> null
+    }
 
 internal data class JavaDocComment(val comment: PsiDocComment) : DocComment {
     override fun hasTag(tag: JavadocTag): Boolean = comment.hasTag(tag)

@@ -1,1 +1,2 @@
-nl.jolanrensen.docProcessor.IncludeDocProcessor
+nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor
+nl.jolanrensen.docProcessor.defaultProcessors.NoDocProcessor

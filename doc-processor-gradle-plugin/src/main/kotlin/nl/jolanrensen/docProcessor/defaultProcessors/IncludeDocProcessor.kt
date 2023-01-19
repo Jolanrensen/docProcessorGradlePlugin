@@ -1,7 +1,22 @@
-package nl.jolanrensen.docProcessor
+package nl.jolanrensen.docProcessor.defaultProcessors
 
-const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.IncludeDocProcessor"
+import nl.jolanrensen.docProcessor.DocProcessor
+import nl.jolanrensen.docProcessor.DocumentableWithSource
+import nl.jolanrensen.docProcessor.expandInclude
+import nl.jolanrensen.docProcessor.getAtSymbolTargetName
+import nl.jolanrensen.docProcessor.getDocContent
+import nl.jolanrensen.docProcessor.isLinkableElement
+import nl.jolanrensen.docProcessor.toDoc
 
+/**
+ * @see IncludeDocProcessor
+ */
+const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor"
+
+
+/**
+ * TODO add docs
+ */
 class IncludeDocProcessor : DocProcessor {
 
     private val includeRegex = Regex("""@include(\s+)(\[?)(.+)(]?)""")
@@ -9,9 +24,20 @@ class IncludeDocProcessor : DocProcessor {
     private val DocumentableWithSource.hasInclude
         get() = tags.any { it == "include" }
 
-    override fun process(docsByPath: Map<String, List<DocumentableWithSource>>): Map<String, List<DocumentableWithSource>> {
-        val mutableSourceDocs = docsByPath
-            .mapValues { (_, docs) -> docs.toMutableList() }
+    override fun process(
+        documentablesByPath: Map<String, List<DocumentableWithSource>>,
+    ): Map<String, List<DocumentableWithSource>> {
+        // split the documentables into ones that have comments and are linkable and those that can be skipped
+        val (include, skipped) = documentablesByPath
+            .entries
+            .flatMap { (path, docs) -> docs.map { path to it } }
+            .partition { (_, it) -> it.documentable.isLinkableElement() && it.docComment != null }
+
+        val mutableSourceDocs = buildMap<String, MutableList<DocumentableWithSource>> {
+            for ((path, docs) in include) {
+                getOrPut(path) { mutableListOf() }.add(docs)
+            }
+        }
 
         var i = 0
         while (mutableSourceDocs.any { it.value.any { it.hasInclude } }) {
@@ -23,7 +49,7 @@ class IncludeDocProcessor : DocProcessor {
                         buildString {
                             appendLine("$path:")
                             appendLine(documentables.joinToString("\n\n") {
-                                it.queryFile().getDocContent().toDoc(4)
+                                it.queryFile()?.getDocContent()?.toDoc(4) ?: ""
                             })
                         }
                     }
@@ -58,9 +84,13 @@ class IncludeDocProcessor : DocProcessor {
                                 .split('\n')
                                 .any { it.trim().startsWith("@include") }
 
-                            val newTags = documentable.tags.let {
-                                if (hasInclude) it + "include"
-                                else it - "include"
+                            val newTags = documentable.tags.let { tags ->
+                                if (hasInclude) {
+                                    if ("include" !in tags) tags + "include"
+                                    else tags
+                                } else {
+                                    tags.filterNot { it == "include" }
+                                }
                             }
 
                             documentable.copy(
@@ -74,6 +104,13 @@ class IncludeDocProcessor : DocProcessor {
                     }
                 }
         }
-        return mutableSourceDocs
+
+        // add the skipped documentables back to the map
+        val finalMap = mutableSourceDocs.toMutableMap()
+        for ((path, docs) in skipped) {
+            finalMap.getOrPut(path) { mutableListOf() }.add(docs)
+        }
+
+        return finalMap
     }
 }

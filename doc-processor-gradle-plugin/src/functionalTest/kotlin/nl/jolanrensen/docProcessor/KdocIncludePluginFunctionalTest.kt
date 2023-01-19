@@ -23,6 +23,9 @@ class KdocIncludePluginFunctionalTest {
 
     @Language("kts")
     private val buildFile = """
+        import nl.jolanrensen.docProcessor.*
+        import nl.jolanrensen.docProcessor.defaultProcessors.*
+
         plugins {  
             kotlin("jvm") version "1.8.0"
             id("nl.jolanrensen.docProcessor") version "1.0-SNAPSHOT"
@@ -30,11 +33,11 @@ class KdocIncludePluginFunctionalTest {
         
         val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
         
-        val processKdocIncludeMain by tasks.creating(nl.jolanrensen.docProcessor.ProcessDocTask::class) {
-            sources.set(kotlinMainSources)
-            fileExtensions.set(listOf("kt", "java", "scala"))
-            debug.set(true)
-            processors.set()
+        val processKdocIncludeMain by creatingProcessDocTask(sources = kotlinMainSources) {
+           
+            fileExtensions = listOf("kt", "java")
+            debug = true
+            processors += INCLUDE_DOC_PROCESSOR
         }
         
         tasks.compileKotlin { dependsOn(processKdocIncludeMain) }
