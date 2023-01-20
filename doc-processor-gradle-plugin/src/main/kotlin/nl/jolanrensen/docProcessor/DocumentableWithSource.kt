@@ -25,20 +25,20 @@ import java.io.File
  * @constructor Create [DocumentableWithSource]
  */
 @Suppress("DataClassPrivateConstructor")
-open class DocumentableWithSource private constructor(
-    open val documentable: Documentable,
-    open val source: DocumentableSource,
+open class DocumentableWithSource internal constructor(
+    val documentable: Documentable,
+    val source: DocumentableSource,
     private val logger: DokkaConsoleLogger,
 
-    open val docComment: DocComment?,
-    open val path: String,
-    open val file: File,
-    open val fileText: String,
-    open val docTextRange: TextRange?,
-    open val docIndent: Int?,
+    val docComment: DocComment?,
+    val path: String,
+    val file: File,
+    val fileText: String,
+    val docTextRange: TextRange?,
+    val docIndent: Int?,
 
     open val docContent: String,
-    open val tags: List<String>,
+    open val tags: Set<String>,
     open val isModified: Boolean,
 ) {
 
@@ -52,22 +52,6 @@ open class DocumentableWithSource private constructor(
                 element = source.psi,
                 logger = logger,
             )
-
-//            if (docComment == null) {
-//                when {
-//                    documentable.documentation.values.all { it.children.all { it is Param } } -> {
-//                        // this is a function with only params, so it's probably a constructor
-//                        // and it doesn't have a doc comment, so we can ignore it
-//                        println("Warning: Could not find doc comment for ${documentable.dri.path}. This is probably because it's mentioned in an @param and not directly here.")
-//                    }
-//
-//                    else -> {
-//                        println("Warning: Could not find doc comment for ${documentable.dri.path}. It might be defined in a super method.")
-//                    }
-//                }
-//
-//                return null
-//            }
 
             val path = documentable.dri.path
             val file = File(source.path)
@@ -133,7 +117,7 @@ open class DocumentableWithSource private constructor(
                 docTextRange = docTextRange,
                 docIndent = docIndent,
                 docContent = docContent ?: "",
-                tags = tags,
+                tags = tags.toSet(),
                 isModified = isModified,
             )
         }
@@ -141,9 +125,26 @@ open class DocumentableWithSource private constructor(
 
     fun queryFile(): String? = docTextRange?.substring(fileText)
 
+    fun asMutable(): MutableDocumentableWithSource =
+        if (this is MutableDocumentableWithSource) this
+        else MutableDocumentableWithSource(
+            documentable = documentable,
+            source = source,
+            logger = logger,
+            docComment = docComment,
+            path = path,
+            file = file,
+            fileText = fileText,
+            docTextRange = docTextRange,
+            docIndent = docIndent,
+            docContent = docContent,
+            tags = tags,
+            isModified = isModified,
+        )
+
     fun copy(
         docContent: String = this.docContent,
-        tags: List<String> = this.tags,
+        tags: Set<String> = this.tags,
         isModified: Boolean = this.isModified,
     ): DocumentableWithSource =
         DocumentableWithSource(
@@ -161,4 +162,34 @@ open class DocumentableWithSource private constructor(
             isModified = isModified,
         )
 }
+
+open class MutableDocumentableWithSource internal constructor(
+    documentable: Documentable,
+    source: DocumentableSource,
+    logger: DokkaConsoleLogger,
+
+    docComment: DocComment?,
+    path: String,
+    file: File,
+    fileText: String,
+    docTextRange: TextRange?,
+    docIndent: Int?,
+
+    override var docContent: String,
+    override var tags: Set<String>,
+    override var isModified: Boolean,
+) : DocumentableWithSource(
+    documentable = documentable,
+    source = source,
+    logger = logger,
+    docComment = docComment,
+    path = path,
+    file = file,
+    fileText = fileText,
+    docTextRange = docTextRange,
+    docIndent = docIndent,
+    docContent = docContent,
+    tags = tags,
+    isModified = isModified,
+)
 

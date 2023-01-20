@@ -16,14 +16,26 @@ import java.io.File
 import java.util.*
 
 
-abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
+abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameters> {
+
     interface Parameters : WorkParameters {
-        var baseDir: File
-        var sources: DokkaSourceSetImpl
-        var sourceRoots: List<File>
-        var target: File?
-        var debug: Boolean
-        var processors: List<String>
+        val baseDir: File
+        val sources: DokkaSourceSetImpl
+        val sourceRoots: List<File>
+        val target: File?
+        val debug: Boolean
+        val processors: List<String>
+        val processLimit: Int
+    }
+
+    interface MutableParameters : Parameters {
+        override var baseDir: File
+        override var sources: DokkaSourceSetImpl
+        override var sourceRoots: List<File>
+        override var target: File?
+        override var debug: Boolean
+        override var processors: List<String>
+        override var processLimit: Int
     }
 
     private fun println(message: String) {
@@ -56,7 +68,7 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.Parameters> {
         // Run all processors
         val modifiedDocumentables =
             processors.fold(sourceDocs) { acc, processor ->
-                processor.process(acc)
+                processor.process(parameters, acc)
             }
 
         // filter to only include the modified documentables

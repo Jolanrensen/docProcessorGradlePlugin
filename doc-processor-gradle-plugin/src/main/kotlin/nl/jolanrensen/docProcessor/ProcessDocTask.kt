@@ -9,13 +9,11 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
-import org.gradle.kotlin.dsl.dependencies
 import org.gradle.workers.WorkerExecutor
 import org.jetbrains.dokka.DokkaSourceSetID
 import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
@@ -75,6 +73,11 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     val debug: Property<Boolean> = factory
         .property(Boolean::class.java)
         .convention(false)
+
+    @get:Input
+    val processLimit: Property<Int> = factory
+        .property(Int::class.java)
+        .convention(10_000)
 
     @get:Input
     val processors: ListProperty<String> = factory
@@ -171,8 +174,9 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
             it.sources = sources
             it.sourceRoots = sourceRoots
             it.target = target
-            it.processors = processors
             it.debug = debug.get()
+            it.processors = processors
+            it.processLimit = processLimit.get()
         }
     }
 }

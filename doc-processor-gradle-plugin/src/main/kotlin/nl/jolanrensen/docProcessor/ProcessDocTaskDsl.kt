@@ -1,8 +1,6 @@
 package nl.jolanrensen.docProcessor
 
-import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.FileCollection
 import java.io.File
@@ -67,6 +65,12 @@ value class ProcessDocTaskDsl private constructor(public val task: ProcessDocTas
         get() = task.debug.get()
         set(value) {
             task.debug.set(value)
+        }
+
+    var processLimit: Int
+        get() = task.processLimit.get()
+        set(value) {
+            task.processLimit.set(value)
         }
 
     var processors: List<String>

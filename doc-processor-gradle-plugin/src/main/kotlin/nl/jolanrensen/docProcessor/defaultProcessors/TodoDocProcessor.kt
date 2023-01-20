@@ -2,6 +2,7 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocProcessor
 import nl.jolanrensen.docProcessor.DocumentableWithSource
+import nl.jolanrensen.docProcessor.ProcessDocsAction
 
 /**
  * @see TodoDocProcessor
@@ -15,6 +16,7 @@ const val TODO_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.To
  */
 class TodoDocProcessor : DocProcessor {
     override fun process(
+        parameters: ProcessDocsAction.Parameters,
         documentablesByPath: Map<String, List<DocumentableWithSource>>
     ): Map<String, List<DocumentableWithSource>> =
         documentablesByPath.mapValues { (_, documentables) ->
