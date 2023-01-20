@@ -9,6 +9,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
@@ -38,15 +39,6 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     val baseDir: Property<File> = factory
         .property(File::class.java)
         .convention(project.projectDir)
-
-    /**
-     * List of file extensions to be included into preprocessing.
-     * By default: kt, kts
-     */
-    @get:Input
-    val fileExtensions: ListProperty<String> = factory
-        .listProperty(String::class.java)
-        .convention(listOf("kt", "kts"))
 
     @get:Inject
     abstract val workerExecutor: WorkerExecutor
@@ -132,7 +124,6 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     fun process() {
         println("Hello from plugin 'nl.jolanrensen.docProcessor'")
 
-        val fileExtensions = fileExtensions.get()
         val sourceRoots = sources.get()
         val target = target.get()
         val runtime = classpath.resolve()
@@ -151,7 +142,6 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         println("Using target folder: $target")
         println("Using source folders: $sourceRoots")
         println("Using target folders: ${targets.files.toList()}")
-        println("Using file extensions: $fileExtensions")
         println("Using runtime classpath: ${runtime.joinToString("\n")}")
 
         val sourceSetName = "sourceSet"

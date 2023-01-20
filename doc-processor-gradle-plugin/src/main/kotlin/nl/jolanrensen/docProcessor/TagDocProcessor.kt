@@ -5,7 +5,7 @@ import kotlin.jvm.Throws
 abstract class TagDocProcessor : DocProcessor {
 
     /** The tags to be replaced, like "sample" */
-    open fun tagIsSupported(tag: String): Boolean = false
+    abstract fun tagIsSupported(tag: String): Boolean
 
     /** Returns true if [tagIsSupported] is in this [DocumentableWithSource]. */
     val DocumentableWithSource.hasASupportedTag

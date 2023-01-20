@@ -33,16 +33,6 @@ value class ProcessDocTaskDsl private constructor(public val task: ProcessDocTas
         }
 
     /**
-     * List of file extensions to be included into preprocessing.
-     * By default: kt, kts
-     */
-    var fileExtensions: List<String>
-        get() = task.fileExtensions.get()
-        set(value) {
-            task.fileExtensions.set(value)
-        }
-
-    /**
      * Target folder to place preprocessing result in regular source processing
      * phase.
      */
