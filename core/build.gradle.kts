@@ -5,7 +5,7 @@ plugins {
     id("com.vanniktech.maven.publish") version "0.20.0"
 }
 
-group = "nl.jolanrensen.kdocInclude"
+group = "nl.jolanrensen.docProcessor"
 version = "1.0-SNAPSHOT"
 
 repositories {
