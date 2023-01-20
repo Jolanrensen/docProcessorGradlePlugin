@@ -1,4 +1,4 @@
-# KDoc / JavaDoc Preprocessor Gradle Plugin
+# KDoc / JavaDoc Preprocessor Gradle Plugin (PREVIEW)
 
 This Gradle plugin allows you to preprocess your KDoc / JavaDoc comments with custom preprocessors.
 These preprocessors can be used to add custom tags to your KDoc / JavaDoc comments or change the entirety of the comment.
@@ -278,7 +278,10 @@ class ExampleDocProcessor : TagDocProcessor() {
         allDocumentables: Map<String, List<DocumentableWithSource>>,
     ): String {
         // We can get the content after the @example tag.
-        val contentWithoutTag = tagWithContent.removePrefix("@example")
+        val contentWithoutTag = tagWithContent
+            .removePrefix("@example")
+            .removeSurrounding("\n")
+            .trim()
         
         // While we can play with the other arguments, let's just return some simple modified content
         
@@ -293,5 +296,32 @@ For the processor to be detectable we need to add it to the
 com.example.plugin.ExampleDocProcessor
 ```
 and then publish the project somewhere it can be used in other projects.
+
+Add the published project as dependency in your other project's `build.gradle.kts` file in your created
+doc process task (as described in the [How to Use](#how-to-use) section), both in the dependencies
+and in the `processors` list.
+
+Now, if that project contains a function like:
+```kotlin
+/**
+ * Main function.
+ * @example Example
+ */
+fun main() {
+    println("Hello World!")
+}
+```
+
+The output will be:
+```kotlin
+
+/**
+ * Main function.
+ * Hi from the example doc processor! Here's the content after the @example tag: "Example"
+ */
+fun main() {
+    println("Hello World!")
+}
+```
 
 See the `defaultProcessor` folder in the project for more examples!

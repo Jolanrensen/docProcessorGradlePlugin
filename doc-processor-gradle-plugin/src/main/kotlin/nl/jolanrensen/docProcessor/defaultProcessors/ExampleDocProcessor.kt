@@ -18,7 +18,10 @@ class ExampleDocProcessor : TagDocProcessor() {
         allDocumentables: Map<String, List<DocumentableWithSource>>,
     ): String {
         // We can get the content after the @example tag.
-        val contentWithoutTag = tagWithContent.removePrefix("@example")
+        val contentWithoutTag = tagWithContent
+            .removePrefix("@example")
+            .removeSurrounding("\n")
+            .trim()
 
         // While we can play with the other arguments, let's just return some simple modified content
 
