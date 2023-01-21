@@ -34,10 +34,17 @@ class IncludeDocProcessor : TagDocProcessor() {
 
     override fun tagIsSupported(tag: String): Boolean = tag == this.tag
 
+    /**
+     * Filter documentables to only include linkable elements (classes, functions, properties, etc) and
+     * have any documentation. This will save performance when looking up the target of the @include tag.
+     */
     override fun <T : DocumentableWithSource> filterDocumentables(documentable: T): Boolean =
         documentable.documentable.isLinkableElement() &&
                 documentable.docComment != null
 
+    /**
+     * Provides a helpful message when a circular reference is detected.
+     */
     override fun onProcesLimitReached(
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>
@@ -56,6 +63,10 @@ class IncludeDocProcessor : TagDocProcessor() {
         error("Circular references detected in @include statements:\n$circularRefs")
     }
 
+    /**
+     * Queries the path targeted by the @include tag and returns the docs of that element to
+     * overwrite the @include tag.
+     */
     override fun processTagWithContent(
         tagWithContent: String,
         path: String,
@@ -64,17 +75,17 @@ class IncludeDocProcessor : TagDocProcessor() {
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>
     ): String {
-        // get the full include path
+        // get the full @include path
         val includePath = tagWithContent.getTagTarget(tag)
         val includeQuery = includePath.expandPath(currentFullPath = path)
 
-        // query the tree for the include path
+        // query the filtered documentables for the include path
         val queried = filteredDocumentables[includeQuery]
 
-        // replace the include statement with the kdoc of the queried node (if found)
+        // replace the include statement with the kdoc of the queried node (if found) else return the original
         return queried
             ?.firstOrNull { it != documentable }
             ?.docContent
-            ?: tagWithContent
+            ?: error("IncludeDocProcessor ERROR: Include not found: $includeQuery. Called from $path")
     }
 }

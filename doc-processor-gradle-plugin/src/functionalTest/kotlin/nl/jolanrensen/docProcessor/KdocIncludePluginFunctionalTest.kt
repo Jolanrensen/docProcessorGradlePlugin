@@ -34,10 +34,9 @@ class KdocIncludePluginFunctionalTest {
         val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
         
         val processKdocIncludeMain by creatingProcessDocTask(sources = kotlinMainSources) {
-           
-            fileExtensions = listOf("kt", "java")
             debug = true
             processors += INCLUDE_DOC_PROCESSOR
+            processors += SAMPLE_DOC_PROCESSOR
 //            processors += TODO_DOC_PROCESSOR
         }
         
@@ -80,6 +79,18 @@ class KdocIncludePluginFunctionalTest {
         fun someFun(b: String) {
             println("Hello World!")
         }
+
+        /**
+         * Some constant
+         * @sample [someFun]
+         */
+        const val someLanguages = "Kotlin"
+
+        /**
+         * Some constant
+         * @sampleNoComments [JavaMain]
+         */
+        const val someOtherLanguages = "Kotlin"
     """.trimIndent()
 
     @Language("java")
@@ -113,7 +124,8 @@ class KdocIncludePluginFunctionalTest {
                 /** 
                  * Some extra text
                  * @include Test */
-                void someFun(int a) {
+                @AnnotationTest(a = 24)
+                <T> void someFun(int a) {
                     System.out.println("Hello World!");
                 }
         
@@ -121,6 +133,18 @@ class KdocIncludePluginFunctionalTest {
                 void someFun(String b) {
                     System.out.println("Hello World!");
                 }
+                
+                /**
+                 * Some constant
+                 * @sample someFun
+                 */
+                final String someLanguages = "Kotlin";
+                
+                /**
+                 * Some other constant
+                 * @sampleNoComments Main2
+                 */
+                final String someOtherLanguages = "Kotlin";
             }
         }
     """.trimIndent()

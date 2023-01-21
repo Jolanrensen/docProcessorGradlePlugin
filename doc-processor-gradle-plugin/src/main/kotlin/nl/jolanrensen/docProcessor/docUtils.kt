@@ -124,20 +124,4 @@ fun String.splitDocContent(): List<String> = buildList {
     add(currentLine)
 }
 
-//fun main() {
-//    val text = """
-//        /**
-//         * Hello World!
-//         * @tag something
-//         * something @tag
-//         * @tag b B
-//         * @tag c C
-//         */
-//    """.trimIndent().getDocContent()
-//
-//    println(
-//        text.splitDocContent()
-//            .joinToString("\n")
-////            .joinToString(prefix = "\"", postfix = "\"", separator = "\", \"")
-//    )
-//}
+val docRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")

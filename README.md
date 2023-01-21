@@ -3,8 +3,8 @@
 This Gradle plugin allows you to preprocess your KDoc / JavaDoc comments with custom preprocessors.
 These preprocessors can be used to add custom tags to your KDoc / JavaDoc comments or change the entirety of the comment.
 Examples include: 
- - @include tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor)
- - @sample tag to include code samples into your KDoc / JavaDoc (TODO)
+ - `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor)
+ - `@sample` / `@sampleNoComments` tag to include code samples into your KDoc / JavaDoc
  - A processor that removes all KDoc / JavaDoc comments
  - A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment
  - A processor that makes all KDoc / JavaDoc comments uppercase (try and make this for fun!)

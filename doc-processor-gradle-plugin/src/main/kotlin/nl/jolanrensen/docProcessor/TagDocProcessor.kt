@@ -29,8 +29,11 @@ abstract class TagDocProcessor : DocProcessor {
 
     /**
      * Optionally, you can filter the [DocumentableWithSource]s that will appear in [processTagWithContent].
+     * By default, all documentables are filtered to contain a supported tag.
+     * Override if you want to filter them differently.
      */
-    open fun <T : DocumentableWithSource> filterDocumentables(documentable: T): Boolean = true
+    open fun <T : DocumentableWithSource> filterDocumentables(documentable: T): Boolean =
+        documentable.hasASupportedTag
 
     /**
      * Provide a more meaningful error message when the given process limit is reached.

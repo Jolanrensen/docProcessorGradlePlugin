@@ -11,6 +11,7 @@ import com.intellij.psi.impl.source.tree.JavaDocElementType
 import com.intellij.psi.javadoc.PsiDocComment
 import com.intellij.psi.javadoc.PsiDocTag
 import com.intellij.psi.util.PsiTreeUtil
+import com.jetbrains.rd.util.remove
 import org.jetbrains.dokka.DokkaConfiguration
 import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
@@ -29,6 +30,7 @@ import org.jetbrains.kotlin.idea.kdoc.findKDoc
 import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
 import org.jetbrains.kotlin.idea.util.hasComments
 import org.jetbrains.kotlin.js.resolve.diagnostics.findPsi
+import org.jetbrains.kotlin.kdoc.psi.api.KDoc
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocTag
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtDeclaration
@@ -88,7 +90,7 @@ sealed interface DocComment {
  * @receiver [DocComment]
  * @return
  */
-internal val DocComment.documentString: String
+val DocComment.documentString: String
     get() = when (this) {
         is JavaDocComment -> comment.text
         is KotlinDocComment -> comment.text
@@ -100,27 +102,44 @@ internal val DocComment.documentString: String
  * @receiver [DocComment]
  * @return [TextRange]
  */
-internal val DocComment.textRange: TextRange
+val DocComment.textRange: TextRange
     get() = when (this) {
         is JavaDocComment -> comment.textRange
         is KotlinDocComment -> comment.parent.textRange
     }
 
-internal val DocumentableSource.psi: PsiNamedElement?
+/**
+ * Gets the [PsiNamedElement] from the [DocumentableSource] if it can find it.
+ */
+val DocumentableSource.psi: PsiNamedElement?
     get() = when (this) {
         is PsiDocumentableSource -> psi
         is DescriptorDocumentableSource -> descriptor.findPsi() as PsiNamedElement?
         else -> null
     }
 
-internal val DocumentableSource.textRange: TextRange?
+/**
+ * Get the text range in the file for this [DocumentableSource].
+ */
+val DocumentableSource.textRange: TextRange?
+    get() = psi?.textRange
+
+val DocumentableSource.sourceWithoutDocs: List<PsiElement>
     get() = when (this) {
-        is PsiDocumentableSource -> psi.textRange
-        is DescriptorDocumentableSource -> descriptor.findPsi()?.textRange
-        else -> null
+        is PsiDocumentableSource -> psi.children.toList().let {
+            if (it.first() is PsiDocComment) it.drop(1)
+            else it
+        }
+
+        is DescriptorDocumentableSource -> psi?.children?.toList()?.let {
+            if (it.first() is KDoc) it.drop(1)
+            else it
+        } ?: emptyList()
+
+        else -> emptyList()
     }
 
-internal data class JavaDocComment(val comment: PsiDocComment) : DocComment {
+data class JavaDocComment(val comment: PsiDocComment) : DocComment {
     override fun hasTag(tag: JavadocTag): Boolean = comment.hasTag(tag)
     override fun hasTagWithExceptionOfType(tag: JavadocTag, exceptionFqName: String): Boolean =
         comment.hasTag(tag) && comment.tagsByName(tag).firstIsInstanceOrNull<PsiDocTag>()
@@ -134,7 +153,7 @@ internal data class JavaDocComment(val comment: PsiDocComment) : DocComment {
         get() = comment.tags.map { it.name }
 }
 
-internal data class KotlinDocComment(val comment: KDocTag, val descriptor: DeclarationDescriptor?) : DocComment {
+data class KotlinDocComment(val comment: KDocTag, val descriptor: DeclarationDescriptor?) : DocComment {
 
     override fun hasTag(tag: JavadocTag): Boolean =
         when (tag) {
@@ -169,22 +188,22 @@ interface DocumentationContent {
     val tag: JavadocTag
 }
 
-internal data class PsiDocumentationContent(val psiElement: PsiElement, override val tag: JavadocTag) :
+data class PsiDocumentationContent(val psiElement: PsiElement, override val tag: JavadocTag) :
     DocumentationContent
 
-internal data class DescriptorDocumentationContent(
+data class DescriptorDocumentationContent(
     val descriptor: DeclarationDescriptor?,
     val element: KDocTag,
     override val tag: JavadocTag
 ) : DocumentationContent
 
-internal fun PsiDocComment.hasTag(tag: JavadocTag): Boolean =
+fun PsiDocComment.hasTag(tag: JavadocTag): Boolean =
     when (tag) {
         JavadocTag.DESCRIPTION -> descriptionElements.isNotEmpty()
         else -> findTagByName(tag.toString()) != null
     }
 
-internal fun PsiDocComment.tagsByName(tag: JavadocTag): List<PsiElement> =
+fun PsiDocComment.tagsByName(tag: JavadocTag): List<PsiElement> =
     when (tag) {
         JavadocTag.DESCRIPTION -> descriptionElements.toList()
         else -> findTagsByName(tag.toString()).toList()
@@ -209,11 +228,11 @@ enum class JavadocTag {
      */
 }
 
-internal fun PsiClass.implementsInterface(fqName: FqName): Boolean {
+fun PsiClass.implementsInterface(fqName: FqName): Boolean {
     return allInterfaces().any { it.getKotlinFqName() == fqName }
 }
 
-internal fun PsiClass.allInterfaces(): Sequence<PsiClass> {
+fun PsiClass.allInterfaces(): Sequence<PsiClass> {
     return sequence {
         this.yieldAll(interfaces.toList())
         interfaces.forEach { yieldAll(it.allInterfaces()) }
@@ -226,7 +245,7 @@ internal fun PsiClass.allInterfaces(): Sequence<PsiClass> {
  * This might be resolved once ultra light classes are enabled for dokka
  * See [KT-39518](https://youtrack.jetbrains.com/issue/KT-39518)
  */
-internal fun PsiMethod.findSuperMethodsOrEmptyArray(logger: DokkaLogger): Array<PsiMethod> {
+fun PsiMethod.findSuperMethodsOrEmptyArray(logger: DokkaLogger): Array<PsiMethod> {
     return try {
         /*
         We are not even attempting to call "findSuperMethods" on all methods called "getGetter" or "getSetter"
@@ -249,7 +268,7 @@ internal fun PsiMethod.findSuperMethodsOrEmptyArray(logger: DokkaLogger): Array<
     }
 }
 
-internal fun findClosestDocComment(element: PsiNamedElement?, logger: DokkaLogger): DocComment? {
+fun findClosestDocComment(element: PsiNamedElement?, logger: DokkaLogger): DocComment? {
     if (element == null) return null
     (element as? PsiDocCommentOwner)?.docComment?.run { return JavaDocComment(this) }
     element.toKdocComment()?.run { return this }
@@ -285,12 +304,12 @@ internal fun findClosestDocComment(element: PsiNamedElement?, logger: DokkaLogge
     return element.children.firstIsInstanceOrNull<PsiDocComment>()?.let { JavaDocComment(it) }
 }
 
-internal fun PsiNamedElement.toKdocComment(): KotlinDocComment? =
+fun PsiNamedElement.toKdocComment(): KotlinDocComment? =
     if (!hasComments()) {
         null
     } else {
         (navigationElement as? KtElement)?.findKDoc {
-            // TODO This returns the wrong file if named the same!
+            // TODO This returns the wrong file if named the same and no comment was found!
             DescriptorToSourceUtils.descriptorToDeclaration(it)
         }?.run {
             KotlinDocComment(
@@ -300,15 +319,15 @@ internal fun PsiNamedElement.toKdocComment(): KotlinDocComment? =
         }
     }
 
-internal fun PsiDocTag.resolveToElement(): PsiElement? =
+fun PsiDocTag.resolveToElement(): PsiElement? =
     dataElements.firstOrNull()?.firstChild?.referenceElementOrSelf()?.resolveToGetDri()
 
-internal fun PsiElement.referenceElementOrSelf(): PsiElement? =
+fun PsiElement.referenceElementOrSelf(): PsiElement? =
     if (node.elementType == JavaDocElementType.DOC_REFERENCE_HOLDER) {
         PsiTreeUtil.findChildOfType(this, PsiJavaCodeReferenceElement::class.java)
     } else this
 
-internal fun PsiElement.resolveToGetDri(): PsiElement? =
+fun PsiElement.resolveToGetDri(): PsiElement? =
     reference?.resolve()
 
 val DRI.path: String
