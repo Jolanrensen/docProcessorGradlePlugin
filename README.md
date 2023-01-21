@@ -2,6 +2,9 @@
 
 This Gradle plugin allows you to preprocess your KDoc / JavaDoc comments with custom preprocessors.
 These preprocessors can be used to add custom tags to your KDoc / JavaDoc comments or change the entirety of the comment.
+This is not a Dokka plugin, meaning you can actually get a `sources.jar` file with the modified comments instead of just
+having the comments modified in a `javadoc.jar` or a Dokka HTML website.
+
 Examples include: 
  - `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor) (`INCLUDE_DOC_PROCESSOR`)
  - `@sample` / `@sampleNoComments` tag to include code samples into your KDoc / JavaDoc (`SAMPLE_DOC_PROCESSOR`)
