@@ -1,3 +1,5 @@
+[![](https://jitpack.io/v/Jolanrensen/docProcessorGradlePlugin.svg)](https://jitpack.io/#Jolanrensen/docProcessorGradlePlugin)
+
 # KDoc / JavaDoc Preprocessor Gradle Plugin (PREVIEW)
 
 This Gradle plugin allows you to preprocess your KDoc / JavaDoc comments with custom preprocessors.
@@ -52,7 +54,7 @@ pluginManagement {
 }
 ```
 
-In `build.gradle.kts` add `id("com.github.jolanrensen.docProcessorGradlePlugin") version "main-SNAPSHOT"` to `plugins {}`.
+In `build.gradle.kts` add `id("com.github.jolanrensen.docProcessorGradlePlugin") version "v0.0.1"` to `plugins {}`.
 
 ## How to use
 
