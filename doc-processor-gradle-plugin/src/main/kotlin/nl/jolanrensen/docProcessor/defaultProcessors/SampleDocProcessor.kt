@@ -42,36 +42,48 @@ class SampleDocProcessor : TagDocProcessor() {
         allDocumentables: Map<String, List<DocumentableWithSource>>
     ): String {
         val noComments = tagWithContent.startsWith("@$sampleNoComments")
+        val queriedPaths = mutableListOf<String>()
 
         // get the full @sample / @sampleNoComments path
-        val samplePath = tagWithContent.let {
-            if (noComments) it.getTagTarget(sampleNoComments)
-            else it.getTagTarget(sampleTag)
+        val samplePath = tagWithContent.split('\n').first()
+            .let {
+                if (noComments) it.getTagTarget(sampleNoComments)
+                else it.getTagTarget(sampleTag)
+            }
+
+        val subPaths = buildList {
+            val current = path.split(".").toMutableList()
+            while (current.isNotEmpty()) {
+                add(current.joinToString("."))
+                current.removeLast()
+            }
         }
 
-        val sampleQuery = samplePath.expandPath(currentFullPath = path)
+        // get all possible full @sample paths with all possible sub paths
+        val sampleQueries = subPaths.map { samplePath.expandPath(currentFullPath = it) }
 
         // query all documents for the sample path
-        val queried = allDocumentables[sampleQuery]
-            ?.firstOrNull()
-            ?: run {
-                // if the include path is not found, check the imports
-                val imports = documentable.getImports()
+        val queried = sampleQueries.firstNotNullOfOrNull { query ->
+            queriedPaths.add(query)
+            allDocumentables[query]?.firstOrNull()
+        } ?: run {
+            // if the include path is not found, check the imports
+            val imports = documentable.getImports()
 
-                imports.firstNotNullOfOrNull {
-                    val query = if (it.hasStar) {
-                        it.pathStr.removeSuffix("*") + samplePath
-                    } else {
-                        if (!samplePath.startsWith(it.importedName!!.identifier))
-                            return@firstNotNullOfOrNull null
+            imports.firstNotNullOfOrNull {
+                val query = if (it.hasStar) {
+                    it.pathStr.removeSuffix("*") + samplePath
+                } else {
+                    if (!samplePath.startsWith(it.importedName!!.identifier))
+                        return@firstNotNullOfOrNull null
 
-                        samplePath.replaceFirst(it.importedName!!.identifier, it.pathStr)
-                    }
-
-                    filteredDocumentables[query]
-                        ?.firstOrNull { it != documentable }
+                    samplePath.replaceFirst(it.importedName!!.identifier, it.pathStr)
                 }
+
+                queriedPaths.add(query)
+                allDocumentables[query]?.firstOrNull()
             }
+        }
 
         return queried?.let {
             val indent = queried.docIndent?.let { " ".repeat(it) } ?: ""
@@ -103,6 +115,6 @@ class SampleDocProcessor : TagDocProcessor() {
                     appendLine("```")
                 }
             }
-        } ?: error("SampleDocProcessor ERROR: Sample not found: $sampleQuery. Called from $path")
+        } ?: error("SampleDocProcessor ERROR: Sample not found: $samplePath. Called from $path. Attempted queries: [${queriedPaths.joinToString("\n")}]")
     }
 }
