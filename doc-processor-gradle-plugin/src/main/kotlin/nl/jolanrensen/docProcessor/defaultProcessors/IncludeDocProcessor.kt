@@ -3,8 +3,9 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.expandPath
-import nl.jolanrensen.docProcessor.getTagTarget
 import nl.jolanrensen.docProcessor.getDocContent
+import nl.jolanrensen.docProcessor.getTagTarget
+import nl.jolanrensen.docProcessor.hasStar
 import nl.jolanrensen.docProcessor.isLinkableElement
 import nl.jolanrensen.docProcessor.toDoc
 
@@ -81,10 +82,28 @@ class IncludeDocProcessor : TagDocProcessor() {
 
         // query the filtered documentables for the include path
         val queried = filteredDocumentables[includeQuery]
-
-        // replace the include statement with the kdoc of the queried node (if found) else return the original
-        return queried
             ?.firstOrNull { it != documentable }
+            ?: run {
+                // if the include path is not found, check the imports
+                val imports = documentable.getImports()
+
+                imports.firstNotNullOfOrNull {
+                    val query = if (it.hasStar) {
+                        it.pathStr.removeSuffix("*") + includePath
+                    } else {
+                        if (!includePath.startsWith(it.importedName!!.identifier))
+                            return@firstNotNullOfOrNull null
+
+                        includePath.replaceFirst(it.importedName!!.identifier, it.pathStr)
+                    }
+
+                    filteredDocumentables[query]
+                        ?.firstOrNull { it != documentable }
+                }
+            }
+
+        // replace the include statement with the kdoc of the queried node (if found) else throw an error
+        return queried
             ?.docContent
             ?: error("IncludeDocProcessor ERROR: Include not found: $includeQuery. Called from $path")
     }

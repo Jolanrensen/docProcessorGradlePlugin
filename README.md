@@ -152,7 +152,7 @@ tasks.withType<org.jetbrains.dokka.gradle.AbstractDokkaLeafTask> {
 
 Adds the @include modifier to KDocs to reuse written docs.
 Anything you can target with `[target]` with KDoc can be included in the current KDoc and will replace the `@include` line with the other content one to one.
-Visibility modifiers are ignored for now.
+Visibility modifiers are ignored for now. Import statements are taken into account, however!
 JavaDoc is also supported. Add the `"java"` extension to `fileExtensions` in the plugin setup to use it.
 You can even cross include between Java and Kotlin but no conversion whatsoever will be done at the moment.
 

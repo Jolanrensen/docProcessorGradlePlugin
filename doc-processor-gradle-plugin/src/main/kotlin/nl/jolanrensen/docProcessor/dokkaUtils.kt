@@ -11,7 +11,6 @@ import com.intellij.psi.impl.source.tree.JavaDocElementType
 import com.intellij.psi.javadoc.PsiDocComment
 import com.intellij.psi.javadoc.PsiDocTag
 import com.intellij.psi.util.PsiTreeUtil
-import com.jetbrains.rd.util.remove
 import org.jetbrains.dokka.DokkaConfiguration
 import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
@@ -36,6 +35,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
+import org.jetbrains.kotlin.resolve.ImportPath
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import java.util.*
@@ -336,3 +336,6 @@ val DRI.path: String
                     classNames?.split('.').orEmpty() +
                     listOfNotNull(callable?.name)
             ).joinToString(".")
+
+val ImportPath.hasStar: Boolean
+    get() = isAllUnder

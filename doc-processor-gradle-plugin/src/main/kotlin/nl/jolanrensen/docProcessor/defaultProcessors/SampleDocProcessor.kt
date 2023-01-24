@@ -5,6 +5,7 @@ import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.docRegex
 import nl.jolanrensen.docProcessor.expandPath
 import nl.jolanrensen.docProcessor.getTagTarget
+import nl.jolanrensen.docProcessor.hasStar
 import nl.jolanrensen.docProcessor.psi
 import org.apache.commons.lang.StringEscapeUtils
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
@@ -51,7 +52,26 @@ class SampleDocProcessor : TagDocProcessor() {
         val sampleQuery = samplePath.expandPath(currentFullPath = path)
 
         // query all documents for the sample path
-        val queried = allDocumentables[sampleQuery]?.firstOrNull()
+        val queried = allDocumentables[sampleQuery]
+            ?.firstOrNull()
+            ?: run {
+                // if the include path is not found, check the imports
+                val imports = documentable.getImports()
+
+                imports.firstNotNullOfOrNull {
+                    val query = if (it.hasStar) {
+                        it.pathStr.removeSuffix("*") + samplePath
+                    } else {
+                        if (!samplePath.startsWith(it.importedName!!.identifier))
+                            return@firstNotNullOfOrNull null
+
+                        samplePath.replaceFirst(it.importedName!!.identifier, it.pathStr)
+                    }
+
+                    filteredDocumentables[query]
+                        ?.firstOrNull { it != documentable }
+                }
+            }
 
         return queried?.let {
             val indent = queried.docIndent?.let { " ".repeat(it) } ?: ""

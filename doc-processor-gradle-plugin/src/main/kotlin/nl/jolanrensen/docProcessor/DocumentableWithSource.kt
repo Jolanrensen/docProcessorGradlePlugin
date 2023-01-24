@@ -1,9 +1,13 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
+import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
+import org.jetbrains.kotlin.load.kotlin.toSourceElement
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.resolve.source.PsiSourceFile
 import java.io.File
 
 /**
@@ -124,6 +128,15 @@ open class DocumentableWithSource internal constructor(
     }
 
     fun queryFile(): String? = docTextRange?.substring(fileText)
+
+    fun getImports() =
+        source.psi
+            ?.containingFile
+            .let { it as? KtFile }
+            ?.importDirectives
+            ?.mapNotNull { it.importPath }
+            ?: emptyList()
+
 
     fun asMutable(): MutableDocumentableWithSource =
         if (this is MutableDocumentableWithSource) this
