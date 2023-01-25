@@ -22,6 +22,9 @@ const val SAMPLE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.
  *
  * `@sampleNoComments` will include the code of the target element in the docs, but will remove all its comments first.
  *
+ * If, in the target, the comments "`// SampleStart`" and "`// SampleEnd`" exist, only the code between those comments
+ * will be included.
+ *
  * For JavaDoc, the code will be presented as a `<pre>` block with escaped characters.
  *
  * For KDoc, the code will be presented as a Markdown code block with syntax highlighting depending on the language you
@@ -33,6 +36,9 @@ class SampleDocProcessor : TagDocProcessor() {
     private val sampleNoComments = "sampleNoComments"
     override fun tagIsSupported(tag: String): Boolean = tag in listOf(sampleTag, sampleNoComments)
 
+    private val sampleStartRegex = Regex(" *// *SampleStart *\n")
+    private val sampleEndRegex = Regex(" *// *SampleEnd *\n")
+
     override fun processTagWithContent(
         tagWithContent: String,
         path: String,
@@ -42,47 +48,24 @@ class SampleDocProcessor : TagDocProcessor() {
         allDocumentables: Map<String, List<DocumentableWithSource>>
     ): String {
         val noComments = tagWithContent.startsWith("@$sampleNoComments")
-        val queriedPaths = mutableListOf<String>()
+
+        // tagWithContent is the content after the @sample tag, e.g. "[SomeClass]"
+        // including any new lines below. We will only replace the first line and save the rest
+        // for later.
+        val tagWithContentPerLine = tagWithContent.split('\n')
 
         // get the full @sample / @sampleNoComments path
-        val samplePath = tagWithContent.split('\n').first()
+        val samplePath = tagWithContentPerLine.first()
             .let {
                 if (noComments) it.getTagTarget(sampleNoComments)
                 else it.getTagTarget(sampleTag)
             }
 
-        val subPaths = buildList {
-            val current = path.split(".").toMutableList()
-            while (current.isNotEmpty()) {
-                add(current.joinToString("."))
-                current.removeLast()
-            }
-        }
-
-        // get all possible full @sample paths with all possible sub paths
-        val sampleQueries = subPaths.map { samplePath.expandPath(currentFullPath = it) }
+        val queries = documentable.getAllFullPathsFromHereForTargetPath(samplePath)
 
         // query all documents for the sample path
-        val queried = sampleQueries.firstNotNullOfOrNull { query ->
-            queriedPaths.add(query)
+        val queried = queries.firstNotNullOfOrNull { query ->
             allDocumentables[query]?.firstOrNull()
-        } ?: run {
-            // if the include path is not found, check the imports
-            val imports = documentable.getImports()
-
-            imports.firstNotNullOfOrNull {
-                val query = if (it.hasStar) {
-                    it.pathStr.removeSuffix("*") + samplePath
-                } else {
-                    if (!samplePath.startsWith(it.importedName!!.identifier))
-                        return@firstNotNullOfOrNull null
-
-                    samplePath.replaceFirst(it.importedName!!.identifier, it.pathStr)
-                }
-
-                queriedPaths.add(query)
-                allDocumentables[query]?.firstOrNull()
-            }
         }
 
         return queried?.let {
@@ -96,6 +79,17 @@ class SampleDocProcessor : TagDocProcessor() {
                 ?: return@let null
             val queriedSource = (indent + rawQueriedSource).trimIndent()
 
+            val hasSampleComments = sampleStartRegex.containsMatchIn(queriedSource) &&
+                    sampleEndRegex.containsMatchIn(queriedSource)
+
+            val content = if (hasSampleComments) {
+                val start = sampleStartRegex.find(queriedSource)!!.range.last + 1
+                val end = sampleEndRegex.find(queriedSource)!!.range.first - 1
+                queriedSource.substring(start, end)
+            } else {
+                queriedSource
+            }
+
             val currentIsJava = documentable.source is PsiDocumentableSource
             val queriedIsJava = queried.source is PsiDocumentableSource
 
@@ -103,7 +97,7 @@ class SampleDocProcessor : TagDocProcessor() {
                 if (currentIsJava) {
                     appendLine("<pre>")
                     appendLine(
-                        StringEscapeUtils.escapeHtml(queriedSource)
+                        StringEscapeUtils.escapeHtml(content)
                             .replace("@", "&#64;")
                             .replace("*/", "&#42;&#47;")
                     )
@@ -111,10 +105,14 @@ class SampleDocProcessor : TagDocProcessor() {
                 } else {
                     append("```")
                     appendLine(if (queriedIsJava) "java" else "kotlin")
-                    appendLine(queriedSource)
+                    appendLine(content)
                     appendLine("```")
                 }
+
+                // add other lines back
+                appendLine()
+                append(tagWithContentPerLine.drop(1).joinToString("\n"))
             }
-        } ?: error("SampleDocProcessor ERROR: Sample not found: $samplePath. Called from $path. Attempted queries: [${queriedPaths.joinToString("\n")}]")
+        } ?: error("SampleDocProcessor ERROR: Sample not found: $samplePath. Called from $path. Attempted queries: [\n${queries.joinToString("\n")}]")
     }
 }

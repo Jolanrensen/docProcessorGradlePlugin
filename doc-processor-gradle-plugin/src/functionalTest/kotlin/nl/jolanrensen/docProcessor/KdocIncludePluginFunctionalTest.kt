@@ -64,6 +64,7 @@ class KdocIncludePluginFunctionalTest {
         /**
          * Hello World 2!
          * @include [TestA]
+         * blah blah 
          */
         @AnnotationTest(a = 24)
         private interface Test

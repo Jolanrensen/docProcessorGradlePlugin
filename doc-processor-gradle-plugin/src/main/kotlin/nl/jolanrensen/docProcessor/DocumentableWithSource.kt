@@ -7,6 +7,7 @@ import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import org.jetbrains.kotlin.load.kotlin.toSourceElement
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.resolve.ImportPath
 import org.jetbrains.kotlin.resolve.source.PsiSourceFile
 import java.io.File
 
@@ -129,7 +130,7 @@ open class DocumentableWithSource internal constructor(
 
     fun queryFile(): String? = docTextRange?.substring(fileText)
 
-    fun getImports() =
+    fun getImports(): List<ImportPath> =
         source.psi
             ?.containingFile
             .let { it as? KtFile }
@@ -137,6 +138,35 @@ open class DocumentableWithSource internal constructor(
             ?.mapNotNull { it.importPath }
             ?: emptyList()
 
+    fun getAllFullPathsFromHereForTargetPath(targetPath: String): List<String> {
+        val subPaths = buildList {
+            val current = path.split(".").toMutableList()
+            while (current.isNotEmpty()) {
+                add(current.joinToString("."))
+                current.removeLast()
+            }
+        }
+
+        val queries = buildList {
+            // get all possible full @target paths with all possible sub paths
+            for (subPath in subPaths) {
+                this += targetPath.expandPath(currentFullPath = subPath)
+            }
+
+            // check imports too
+            for (import in getImports()) {
+                val identifier = import.importedName?.identifier
+
+                if (import.hasStar) {
+                    this += import.pathStr.removeSuffix("*") + targetPath
+                } else if (targetPath.startsWith(identifier!!)) {
+                    this += targetPath.replaceFirst(identifier, import.pathStr)
+                }
+            }
+        }
+
+        return queries
+    }
 
     fun asMutable(): MutableDocumentableWithSource =
         if (this is MutableDocumentableWithSource) this

@@ -76,49 +76,27 @@ class IncludeDocProcessor : TagDocProcessor() {
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>
     ): String {
-        val queriedPaths = mutableListOf<String>()
-        val includePath = tagWithContent.split('\n').first()
-            .getTagTarget(tag)
+        // tagWithContent is the content after the @include tag, e.g. "[SomeClass]"
+        // including any new lines below. We will only replace the first line and save the rest
+        // for later.
+        val tagWithContentPerLine = tagWithContent.split('\n')
+        val includePath = tagWithContentPerLine.first().getTagTarget(tag)
 
-        val subPaths = buildList {
-            val current = path.split(".").toMutableList()
-            while (current.isNotEmpty()) {
-                add(current.joinToString("."))
-                current.removeLast()
-            }
-        }
+        val queries = documentable.getAllFullPathsFromHereForTargetPath(includePath)
 
-        // get all possible full @include paths with all possible sub paths
-        val includeQueries = subPaths.map {
-            includePath.expandPath(currentFullPath = it)
-        }
-
-        // query the filtered documentables for the include path
-        val queried = includeQueries.firstNotNullOfOrNull { query ->
-            queriedPaths.add(query)
+        // query the filtered documentables for the @include paths
+        val queried = queries.firstNotNullOfOrNull { query ->
             filteredDocumentables[query]?.firstOrNull { it != documentable }
-        } ?: run {
-            // if the include path is not found, check the imports
-            val imports = documentable.getImports()
-
-            imports.firstNotNullOfOrNull {
-                val query = if (it.hasStar) {
-                    it.pathStr.removeSuffix("*") + includePath
-                } else {
-                    if (!includePath.startsWith(it.importedName!!.identifier))
-                        return@firstNotNullOfOrNull null
-
-                    includePath.replaceFirst(it.importedName!!.identifier, it.pathStr)
-                }
-
-                queriedPaths.add(query)
-                filteredDocumentables[query]?.firstOrNull { it != documentable }
-            }
         }
 
-        // replace the include statement with the kdoc of the queried node (if found) else throw an error
-        return queried
-            ?.docContent
-            ?: error("IncludeDocProcessor ERROR: Include not found: $includePath. Called from $path. Attempted queries: [${queriedPaths.joinToString("\n")}]")
+        queried ?: error(
+            "IncludeDocProcessor ERROR: Include not found: $includePath. Called from $path. Attempted queries: [\n${
+                queries.joinToString("\n")
+            }]"
+        )
+
+        // replace the include statement with the kdoc of the queried node (if found),
+        // add other lines back
+        return queried.docContent + '\n' + tagWithContentPerLine.drop(1).joinToString("\n")
     }
 }
