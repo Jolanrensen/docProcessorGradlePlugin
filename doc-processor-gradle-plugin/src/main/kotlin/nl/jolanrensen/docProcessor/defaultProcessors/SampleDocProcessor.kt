@@ -29,6 +29,8 @@ const val SAMPLE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.
  *
  * For KDoc, the code will be presented as a Markdown code block with syntax highlighting depending on the language you
  * target.
+ *
+ * `@sample` and `@sampleNoComments` keeps the content of the block below the statement intact.
  */
 class SampleDocProcessor : TagDocProcessor() {
 

@@ -16,17 +16,20 @@ const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
 
 /**
  * Allows you to @include docs from other linkable elements.
+ * `@include` keeps the content of the block below the include statement intact.
  *
  * For example:
  * ```kotlin
  * /**
  *  * @include [SomeClass]
+ *  * Hi
  *  */
  * ```
  * would turn into
  * ```kotlin
  * /**
  *  * This is the docs of SomeClass
+ *  * Hi
  *  */
  */
 class IncludeDocProcessor : TagDocProcessor() {

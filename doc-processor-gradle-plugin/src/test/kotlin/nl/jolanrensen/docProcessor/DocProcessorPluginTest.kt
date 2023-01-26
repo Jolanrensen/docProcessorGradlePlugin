@@ -2,7 +2,6 @@ package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
 import org.gradle.testfixtures.ProjectBuilder
-import org.junit.Assert
 import org.junit.Test
 
 class DocProcessorPluginTest {
@@ -11,9 +10,6 @@ class DocProcessorPluginTest {
         // Create a test project and apply the plugin
         val project = ProjectBuilder.builder().build()
         project.plugins.apply("nl.jolanrensen.docProcessor")
-
-        // Verify the result
-//        Assert.assertNotNull(project.tasks.findByName("processKdocInclude"))
     }
 
     /**
@@ -30,7 +26,7 @@ class DocProcessorPluginTest {
      * ```
      * @g Test
      */
-    private val text =
+    private val difficultKdoc =
         """|blablah
            |  @a a
            |Some extra text. @b nothing, this is skipped
@@ -63,8 +59,8 @@ class DocProcessorPluginTest {
             """|@g Test""",
         ).map { it.trimMargin() }
 
-        text.splitDocContent() shouldBe expected
-        text.splitDocContent().joinToString("\n") shouldBe text
+        difficultKdoc.splitDocContent() shouldBe expected
+        difficultKdoc.splitDocContent().joinToString("\n") shouldBe difficultKdoc
     }
 
     @Test
@@ -88,15 +84,15 @@ class DocProcessorPluginTest {
                |@g Test"""
         ).map { it.trimMargin() }
 
-        text.splitDocContentOnInnerTags() shouldBe expected
-        text.splitDocContentOnInnerTags().joinToString("") shouldBe text
+        difficultKdoc.splitDocContentOnInnerTags() shouldBe expected
+        difficultKdoc.splitDocContentOnInnerTags().joinToString("") shouldBe difficultKdoc
     }
 
     @Test
     fun `Test Kdoc utils`() {
         val kdoc1 = """
             /**
-             * Hello World!
+             *       Hello World!
              * 
              * @see [com.example.plugin.KdocIncludePlugin]
              */
@@ -132,6 +128,22 @@ class DocProcessorPluginTest {
         """.trimIndent()
 
         kdoc5.getDocContent().toDoc() shouldBe kdoc5
+
+        // this is not a pretty kdoc, but we can still parse it and correct the indentation
+        val kdoc6 = """
+            /**
+             *Hello World!
+             */
+        """.trimIndent()
+
+        val kdoc6a = """
+            /**
+             * Hello World!
+             */
+        """.trimIndent()
+
+
+        kdoc6.getDocContent().toDoc() shouldBe kdoc6a
     }
 }
 

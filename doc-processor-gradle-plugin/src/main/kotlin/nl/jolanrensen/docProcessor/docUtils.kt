@@ -7,11 +7,14 @@ fun String.getDocContent() = this
     .split('\n')
     .joinToString("\n") {
         it
-            .trim()
+            .trimStart()
             .removePrefix("/**")
             .removeSuffix("*/")
             .removePrefix("*")
-            .trim()
+            .let {
+                if (it.startsWith(" ")) it.drop(1)
+                else it
+            }
     }
 
 

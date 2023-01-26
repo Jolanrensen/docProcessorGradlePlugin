@@ -13,6 +13,7 @@ Examples include:
  - `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor) (`INCLUDE_DOC_PROCESSOR`)
  - `@sample` / `@sampleNoComments` tag to include code samples into your KDoc / JavaDoc (`SAMPLE_DOC_PROCESSOR`)
  - `@includeFile` tag to include file content into your KDoc / JavaDoc (`INCLUDE_FILE_DOC_PROCESSOR`)
+ - `@comment` tag to comment out parts of your modified KDoc / JavaDoc (`COMMENT_DOC_PROCESSOR`)
  - A processor that removes all KDoc / JavaDoc comments (`NO_DOC_PROCESSOR`)
  - A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment (`TODO_DOC_PROCESSOR`)
  - A processor that makes all KDoc / JavaDoc comments uppercase (try and make this for fun!)

@@ -16,6 +16,8 @@ const val INCLUDE_FILE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProce
  * For example:
  * `@includeFile (../../someFile.txt)`
  *
+ * `@includeFile` keeps the content of the block below the includeFile statement intact.
+ *
  * TODO include settings for filtering in the file, optional triple quotes, etc.
  */
 class IncludeFileDocProcessor : TagDocProcessor() {
