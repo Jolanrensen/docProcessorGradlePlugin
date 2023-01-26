@@ -53,19 +53,44 @@ abstract class TagDocProcessor : DocProcessor {
     /**
      * Process a tag with content ([tagWithContent]) into whatever you like.
      *
-     * @param tagWithContent Tag with content to process.
+     * @param tagWithContent Tag with content block to process.
      *  For example: `@tag Some content`
-     *  Can contain newlines and does include tag.
+     *  Can contain newlines, and does include tag.
+     *  The block continues until the next tag block starts.
      * @param path The path of the doc where the tag is found.
      * @param documentable The Documentable beloning to the current tag.
      * @param docContent The content of the entire doc beloning to the current tag.
-     * @param filteredDocumentables Filtered documentables by [filterDocumentables].
-     *   The [DocumentableWithSource]s in this map are the same objects as in [allDocumentables], just a subset.
+     * @param filteredDocumentables Filtered documentables by [filterDocumentables], which, by default, filters the
+     *  documentables to have a supported tag in them. The [DocumentableWithSource]s in this map are the same objects as in [allDocumentables], just a subset.
      * @param allDocumentables All documentables in the source set.
      *
      * @return A [String] that will replace the tag with content entirely.
      */
     abstract fun processTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>,
+    ): String
+
+    /**
+     * Process an inner tag with content ([tagWithContent]) into whatever you like.
+     *
+     * @param tagWithContent Tag with content to process.
+     *  For example: `{@tag Some content}`
+     *  Contains {} and tag.
+     * @param path The path of the doc where the tag is found.
+     * @param documentable The Documentable beloning to the current tag.
+     * @param docContent The content of the entire doc beloning to the current tag.
+     * @param filteredDocumentables Filtered documentables by [filterDocumentables], which, by default, filters the
+     *  documentables to have a supported tag in them. The [DocumentableWithSource]s in this map are the same objects as in [allDocumentables], just a subset.
+     * @param allDocumentables All documentables in the source set.
+     *
+     * @return A [String] that will replace the tag with content entirely.
+     */
+    abstract fun processInnerTagWithContent(
         tagWithContent: String,
         path: String,
         documentable: DocumentableWithSource,
@@ -111,12 +136,38 @@ abstract class TagDocProcessor : DocProcessor {
                     if (!documentable.hasASupportedTag) continue
 
                     val docContent = documentable.docContent
-                    val processedDoc = docContent
+
+                    // Process the inner tags first
+                    val processedInnerTagsDoc = docContent
+                        .splitDocContentOnInnerTags()
+                        .joinToString("") { split ->
+                            val shouldProcess =
+                                split.startsWith("{@") &&
+                                        split.getTagNameOrNull()
+                                            ?.let(::tagIsSupported) == true
+
+                            if (shouldProcess) {
+                                processInnerTagWithContent(
+                                    tagWithContent = split,
+                                    path = path,
+                                    documentable = documentable,
+                                    docContent = docContent,
+                                    filteredDocumentables = filteredDocumentables,
+                                    allDocumentables = allDocumentables,
+                                )
+                            } else {
+                                split
+                            }
+                        }
+
+                    // Then process the normal tags
+                    val processedDoc = processedInnerTagsDoc
                         .splitDocContent()
                         .joinToString("\n") { split ->
-                            val shouldProcess = split
-                                .getTagNameOrNull()
-                                ?.let(::tagIsSupported) == true
+                            val shouldProcess =
+                                split.trimStart().startsWith("@") &&
+                                        split.getTagNameOrNull()
+                                            ?.let(::tagIsSupported) == true
 
                             if (shouldProcess) {
                                 processTagWithContent(
@@ -134,10 +185,7 @@ abstract class TagDocProcessor : DocProcessor {
 
                     val wasModified = docContent != processedDoc
                     if (wasModified) {
-                        val tags = processedDoc
-                            .splitDocContent()
-                            .mapNotNull { it.getTagNameOrNull() }
-                            .toSet()
+                        val tags = processedDoc.findTagsInDocContent().toSet()
 
                         documentable.apply {
                             this.docContent = processedDoc

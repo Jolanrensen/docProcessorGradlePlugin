@@ -9,6 +9,17 @@ class ExampleDocProcessor : TagDocProcessor() {
     override fun tagIsSupported(tag: String): Boolean =
         tag == "example"
 
+    /** How `{@inner tags}` are processed. */
+    override fun processInnerTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>,
+    ): String = processContent(tagWithContent)
+
+    /** How @normal tags are processed. */
     override fun processTagWithContent(
         tagWithContent: String,
         path: String,
@@ -16,9 +27,14 @@ class ExampleDocProcessor : TagDocProcessor() {
         docContent: String,
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>,
-    ): String {
+    ): String = processContent(tagWithContent)
+
+    // We can use the same function for both processInnerTagWithContent and processTagWithContent
+    private fun processContent(tagWithContent: String): String {
         // We can get the content after the @example tag.
         val contentWithoutTag = tagWithContent
+            .removePrefix("{") // for if it's an inner tag
+            .removeSuffix("}")
             .removePrefix("@example")
             .removeSurrounding("\n")
             .trim()

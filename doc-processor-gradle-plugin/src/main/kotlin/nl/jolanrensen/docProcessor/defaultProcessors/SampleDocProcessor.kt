@@ -39,27 +39,17 @@ class SampleDocProcessor : TagDocProcessor() {
     private val sampleStartRegex = Regex(" *// *SampleStart *\n")
     private val sampleEndRegex = Regex(" *// *SampleEnd *\n")
 
-    override fun processTagWithContent(
+    private fun processContent(
         tagWithContent: String,
-        path: String,
+        line: String,
         documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        allDocumentables: Map<String, List<DocumentableWithSource>>,
+        path: String
     ): String {
         val noComments = tagWithContent.startsWith("@$sampleNoComments")
 
-        // tagWithContent is the content after the @sample tag, e.g. "[SomeClass]"
-        // including any new lines below. We will only replace the first line and save the rest
-        // for later.
-        val tagWithContentPerLine = tagWithContent.split('\n')
-
         // get the full @sample / @sampleNoComments path
-        val samplePath = tagWithContentPerLine.first()
-            .let {
-                if (noComments) it.getTagTarget(sampleNoComments)
-                else it.getTagTarget(sampleTag)
-            }
+        val samplePath = line.getTagTarget(if (noComments) sampleNoComments else sampleTag)
 
         val queries = documentable.getAllFullPathsFromHereForTargetPath(samplePath)
 
@@ -108,11 +98,49 @@ class SampleDocProcessor : TagDocProcessor() {
                     appendLine(content)
                     appendLine("```")
                 }
-
-                // add other lines back
-                appendLine()
-                append(tagWithContentPerLine.drop(1).joinToString("\n"))
             }
-        } ?: error("SampleDocProcessor ERROR: Sample not found: $samplePath. Called from $path. Attempted queries: [\n${queries.joinToString("\n")}]")
+        } ?: error(
+            "SampleDocProcessor ERROR: Sample not found: $samplePath. Called from $path. Attempted queries: [\n${
+                queries.joinToString("\n")
+            }]"
+        )
     }
+
+    override fun processInnerTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>
+    ): String = processContent(
+        tagWithContent = tagWithContent,
+        line = docContent,
+        documentable = documentable,
+        allDocumentables = allDocumentables,
+        path = path,
+    )
+
+    override fun processTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>
+    ): String = tagWithContent.split('\n').mapIndexed { i, line ->
+        // tagWithContent is the content after the @sample tag, e.g. "[SomeClass]"
+        // including any new lines below. We will only replace the first line and skip the rest.
+        if (i == 0) {
+            processContent(
+                tagWithContent = tagWithContent,
+                line = line,
+                documentable = documentable,
+                allDocumentables = allDocumentables,
+                path = path,
+            )
+        } else {
+            line
+        }
+    }.joinToString("\n")
 }

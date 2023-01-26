@@ -68,19 +68,13 @@ class IncludeDocProcessor : TagDocProcessor() {
      * Queries the path targeted by the @include tag and returns the docs of that element to
      * overwrite the @include tag.
      */
-    override fun processTagWithContent(
-        tagWithContent: String,
-        path: String,
+    private fun processContent(
+        line: String,
         documentable: DocumentableWithSource,
-        docContent: String,
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        path: String
     ): String {
-        // tagWithContent is the content after the @include tag, e.g. "[SomeClass]"
-        // including any new lines below. We will only replace the first line and save the rest
-        // for later.
-        val tagWithContentPerLine = tagWithContent.split('\n')
-        val includePath = tagWithContentPerLine.first().getTagTarget(tag)
+        val includePath = line.getTagTarget(tag)
 
         val queries = documentable.getAllFullPathsFromHereForTargetPath(includePath)
 
@@ -90,13 +84,49 @@ class IncludeDocProcessor : TagDocProcessor() {
         }
 
         queried ?: error(
-            "IncludeDocProcessor ERROR: Include not found: $includePath. Called from $path. Attempted queries: [\n${
+            "IncludeDocProcessor ERROR: Include not found: \"$includePath\". Called from \"$path\". Attempted queries: [\n${
                 queries.joinToString("\n")
             }]"
         )
 
-        // replace the include statement with the kdoc of the queried node (if found),
-        // add other lines back
-        return queried.docContent + '\n' + tagWithContentPerLine.drop(1).joinToString("\n")
+        // replace the include statement with the kdoc of the queried node (if found)
+        return queried.docContent
     }
+
+    override fun processInnerTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>
+    ): String = processContent( // processContent can handle inner tags perfectly fine
+        line = tagWithContent,
+        documentable = documentable,
+        filteredDocumentables = filteredDocumentables,
+        path = path,
+    )
+
+    override fun processTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>
+    ): String = tagWithContent.split('\n').mapIndexed { i: Int, line: String ->
+        // tagWithContent is the content after the @include tag, e.g. "[SomeClass]"
+        // including any new lines below. We will only replace the first line and skip the rest.
+        if (i == 0) {
+            processContent(
+                line = line,
+                documentable = documentable,
+                filteredDocumentables = filteredDocumentables,
+                path = path,
+            )
+        } else {
+            line
+        }
+    }.joinToString("\n")
+
 }

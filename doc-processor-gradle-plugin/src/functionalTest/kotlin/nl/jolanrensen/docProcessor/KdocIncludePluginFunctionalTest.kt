@@ -37,6 +37,7 @@ class KdocIncludePluginFunctionalTest {
             debug = true
             processors += INCLUDE_DOC_PROCESSOR
             processors += SAMPLE_DOC_PROCESSOR
+            processors += INCLUDE_FILE_DOC_PROCESSOR
 //            processors += TODO_DOC_PROCESSOR
         }
         
@@ -71,6 +72,7 @@ class KdocIncludePluginFunctionalTest {
 
         /** 
          * Some extra text @include nothing, this is skipped
+         * Other test {@include [TestA]} 
          * @include [Test] */
         fun someFun(a: Int) {
             println("Hello World!")
@@ -90,6 +92,10 @@ class KdocIncludePluginFunctionalTest {
         /**
          * Some constant
          * @sampleNoComments [JavaMain]
+         * ```kts
+         * {@includeFile (../../../../../../build.gradle.kts)}
+         * ```
+         * 
          */
         const val someOtherLanguages = "Kotlin"
     """.trimIndent()
@@ -123,7 +129,8 @@ class KdocIncludePluginFunctionalTest {
                 private interface Test {}
         
                 /** 
-                 * Some extra text
+                 * Some extra text. @include nothing, this is skipped
+                 * Other test {@include TestA} 
                  * @include Test */
                 @AnnotationTest(a = 24)
                 <T> void someFun(int a) {
@@ -144,6 +151,7 @@ class KdocIncludePluginFunctionalTest {
                 /**
                  * Some other constant
                  * @sampleNoComments Main2
+                 * @includeFile (../../../../../../build.gradle.kts) 
                  */
                 final String someOtherLanguages = "Kotlin";
             }

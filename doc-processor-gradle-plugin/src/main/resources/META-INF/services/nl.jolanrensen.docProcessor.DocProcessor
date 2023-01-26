@@ -3,3 +3,4 @@ nl.jolanrensen.docProcessor.defaultProcessors.NoDocProcessor
 nl.jolanrensen.docProcessor.defaultProcessors.TodoDocProcessor
 nl.jolanrensen.docProcessor.defaultProcessors.SampleDocProcessor
 nl.jolanrensen.docProcessor.defaultProcessors.ExampleDocProcessor
+nl.jolanrensen.docProcessor.defaultProcessors.IncludeFileDocProcessor

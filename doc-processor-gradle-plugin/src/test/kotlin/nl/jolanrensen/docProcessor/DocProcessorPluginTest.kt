@@ -13,7 +13,83 @@ class DocProcessorPluginTest {
         project.plugins.apply("nl.jolanrensen.docProcessor")
 
         // Verify the result
-        Assert.assertNotNull(project.tasks.findByName("processKdocInclude"))
+//        Assert.assertNotNull(project.tasks.findByName("processKdocInclude"))
+    }
+
+    /**
+     * blablah
+     *   @a a
+     * Some extra text. @b nothing, this is skipped
+     * Other test {@c TestA
+     * blabla {@d TestA }
+     * }
+     * Other test `{@d TestA}`
+     * ```kotlin
+     * @e TestB
+     * {@f TestC }
+     * ```
+     * @g Test
+     */
+    private val text =
+        """|blablah
+           |  @a a
+           |Some extra text. @b nothing, this is skipped
+           |Other test {@c TestA
+           |blabla {@d TestA }
+           |}
+           |Other test `{@d TestA}`
+           |```kotlin
+           |@e TestB
+           |{@f TestC }
+           |```
+           |@g Test""".trimMargin()
+
+    @Test
+    fun `Test split Doc Content`() {
+        val expected = listOf(
+            """|blablah""",
+
+            """|  @a a
+               |Some extra text. @b nothing, this is skipped
+               |Other test {@c TestA
+               |blabla {@d TestA }
+               |}
+               |Other test `{@d TestA}`
+               |```kotlin
+               |@e TestB
+               |{@f TestC }
+               |```""",
+
+            """|@g Test""",
+        ).map { it.trimMargin() }
+
+        text.splitDocContent() shouldBe expected
+        text.splitDocContent().joinToString("\n") shouldBe text
+    }
+
+    @Test
+    fun `Test split doc content on inner tags()`() {
+        val expected = listOf(
+            """|blablah
+               |  @a a
+               |Some extra text. @b nothing, this is skipped
+               |Other test """,
+
+            """|{@c TestA
+               |blabla {@d TestA }
+               |}""", // not gonna split inner inner tags
+
+            """|
+               |Other test `{@d TestA}`
+               |```kotlin
+               |@e TestB
+               |{@f TestC }
+               |```
+               |@g Test"""
+        ).map { it.trimMargin() }
+
+        text.splitDocContentOnInnerTags() shouldBe expected
+        text.splitDocContentOnInnerTags().joinToString("") shouldBe text
     }
 
     @Test

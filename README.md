@@ -7,9 +7,12 @@ These preprocessors can be used to add custom tags to your KDoc / JavaDoc commen
 This is not a Dokka plugin, meaning you can actually get a `sources.jar` file with the modified comments instead of just
 having the comments modified in a `javadoc.jar` or a Dokka HTML website.
 
+Note: `{@inline tags}` work in KDoc comments too!
+
 Examples include: 
  - `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor) (`INCLUDE_DOC_PROCESSOR`)
  - `@sample` / `@sampleNoComments` tag to include code samples into your KDoc / JavaDoc (`SAMPLE_DOC_PROCESSOR`)
+ - `@includeFile` tag to include file content into your KDoc / JavaDoc (`INCLUDE_FILE_DOC_PROCESSOR`)
  - A processor that removes all KDoc / JavaDoc comments (`NO_DOC_PROCESSOR`)
  - A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment (`TODO_DOC_PROCESSOR`)
  - A processor that makes all KDoc / JavaDoc comments uppercase (try and make this for fun!)
@@ -274,6 +277,17 @@ class ExampleDocProcessor : TagDocProcessor() {
     override fun tagIsSupported(tag: String): Boolean =
         tag == "example"
 
+    /** How `{@inner tags}` are processed. */
+    override fun processInnerTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>,
+    ): String = processContent(tagWithContent)
+
+    /** How @normal tags are processed. */
     override fun processTagWithContent(
         tagWithContent: String,
         path: String,
@@ -281,15 +295,20 @@ class ExampleDocProcessor : TagDocProcessor() {
         docContent: String,
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>,
-    ): String {
+    ): String = processContent(tagWithContent)
+
+    // We can use the same function for both processInnerTagWithContent and processTagWithContent
+    private fun processContent(tagWithContent: String): String {
         // We can get the content after the @example tag.
         val contentWithoutTag = tagWithContent
+            .removePrefix("{") // for if it's an inner tag
+            .removeSuffix("}")
             .removePrefix("@example")
             .removeSurrounding("\n")
             .trim()
-        
+
         // While we can play with the other arguments, let's just return some simple modified content
-        
+
         return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
     }
 }
