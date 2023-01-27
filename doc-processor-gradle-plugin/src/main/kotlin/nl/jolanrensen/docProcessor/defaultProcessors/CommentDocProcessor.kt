@@ -29,6 +29,9 @@ const val COMMENT_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  * * @otherTag This is not a comment
  * */
  * ```
+ *
+ * NOTE: Careful combining it with [IncludeDocProcessor] as it might remove content in the place
+ * where kdoc with a @comment tag is requested to be included. Use inline tags to prevent this.
  */
 class CommentDocProcessor : TagDocProcessor() {
 

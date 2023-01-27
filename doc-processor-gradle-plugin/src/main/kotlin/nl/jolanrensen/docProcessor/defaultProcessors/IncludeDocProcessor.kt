@@ -93,7 +93,7 @@ class IncludeDocProcessor : TagDocProcessor() {
         )
 
         // replace the include statement with the kdoc of the queried node (if found)
-        return queried.docContent
+        return queried.docContent.trimEnd()
     }
 
     override fun processInnerTagWithContent(

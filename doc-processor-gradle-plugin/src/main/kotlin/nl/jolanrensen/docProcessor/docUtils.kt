@@ -114,18 +114,17 @@ fun String.getTagNameOrNull(): String? =
 fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) next() else null
 
 /**
- * Expands the target path to the full path.
- * For instance, if the target path is `plugin.Class.Class2` and the parent path is `com.example.plugin.Class`,
- * the result will be `com.example.plugin.Class.Class2`
+ * Expands the receiver String path relative to the current full path.
+ * For instance, if the receiver is `plugin.Class.Class2` and the current full path is `com.example.plugin.Class`,
+ * the result will be `com.example.plugin.Class.Class2`.
  */
 fun String.expandPath(currentFullPath: String): String {
-    val parent = currentFullPath.take(currentFullPath.lastIndexOf('.').coerceAtLeast(0))
-    if (isEmpty() && parent.isEmpty()) return ""
-    if (isEmpty()) return parent
-    if (parent.isEmpty()) return this
+    if (isEmpty() && currentFullPath.isEmpty()) return ""
+    if (isEmpty()) return currentFullPath
+    if (currentFullPath.isEmpty()) return this
 
     val targetPath = split(".")
-    val parentPath = parent.split(".")
+    val parentPath = currentFullPath.split(".")
 
     var result = ""
     val targetPathIterator = targetPath.iterator()

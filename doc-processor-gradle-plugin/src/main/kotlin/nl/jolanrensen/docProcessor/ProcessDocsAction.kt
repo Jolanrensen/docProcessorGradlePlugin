@@ -172,7 +172,7 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
 
                 val modificationsByRange = modifications
                     .groupBy { it.docTextRange!! }
-                    .mapValues { it.value.single().let { Pair(it.docContent, it.docIndent) } }
+                    .mapValues { it.value.first().let { Pair(it.docContent, it.docIndent) } }
                     .toSortedMap(compareBy { it.startOffset })
                     .map { (textRange, kdocAndIndent) ->
                         val range = textRange!!.startOffset until textRange.endOffset
