@@ -54,7 +54,9 @@ class KdocIncludePluginFunctionalTest {
          * This is a large example of how the plugin will work
          * 
          * @param name The name of the person to greet
-         * @see [com.example.plugin.KdocIncludePlugin]
+         * @see [Hi][TestB]
+         * @see [TestA]
+         * @see [TestB]
          */
 
         private interface TestA

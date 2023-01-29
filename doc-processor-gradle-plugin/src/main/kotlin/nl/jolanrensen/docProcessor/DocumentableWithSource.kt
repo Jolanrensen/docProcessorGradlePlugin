@@ -2,13 +2,12 @@ package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
 import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
+import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
-import org.jetbrains.kotlin.load.kotlin.toSourceElement
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.ImportPath
-import org.jetbrains.kotlin.resolve.source.PsiSourceFile
 import java.io.File
 
 /**
@@ -127,6 +126,9 @@ open class DocumentableWithSource internal constructor(
             )
         }
     }
+
+    val isJava: Boolean = source is PsiDocumentableSource
+    val isKotlin: Boolean = source is DescriptorDocumentableSource
 
     fun queryFile(): String? = docTextRange?.substring(fileText)
 

@@ -63,6 +63,11 @@ fun String.getTagTarget(tag: String): String =
         .removeSuffix("]")
         .removeSuffix("]")
 
+        .let { // for aliased tags like [Foo][Bar]
+            if ("][" in it) it.substringAfter("][")
+            else it
+        }
+
         .removePrefix("<code>") // for javaDoc
         .removeSuffix("</code>")
 

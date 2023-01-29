@@ -82,11 +82,8 @@ class SampleDocProcessor : TagDocProcessor() {
                 queriedSource
             }
 
-            val currentIsJava = documentable.source is PsiDocumentableSource
-            val queriedIsJava = queried.source is PsiDocumentableSource
-
             buildString {
-                if (currentIsJava) {
+                if (documentable.isJava) {
                     appendLine("<pre>")
                     appendLine(
                         StringEscapeUtils.escapeHtml(content)
@@ -96,7 +93,7 @@ class SampleDocProcessor : TagDocProcessor() {
                     appendLine("</pre>")
                 } else {
                     append("```")
-                    appendLine(if (queriedIsJava) "java" else "kotlin")
+                    appendLine(if (queried.isJava) "java" else "kotlin")
                     appendLine(content)
                     appendLine("```")
                 }
