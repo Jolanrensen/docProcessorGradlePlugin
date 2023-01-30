@@ -41,7 +41,7 @@ open class DocumentableWithSource internal constructor(
     val docTextRange: TextRange?,
     val docIndent: Int?,
 
-    open val docContent: String,
+    open val docContent: DocContent,
     open val tags: Set<String>,
     open val isModified: Boolean,
 ) {
@@ -188,7 +188,7 @@ open class DocumentableWithSource internal constructor(
         )
 
     fun copy(
-        docContent: String = this.docContent,
+        docContent: DocContent = this.docContent,
         tags: Set<String> = this.tags,
         isModified: Boolean = this.isModified,
     ): DocumentableWithSource =
@@ -220,7 +220,7 @@ open class MutableDocumentableWithSource internal constructor(
     docTextRange: TextRange?,
     docIndent: Int?,
 
-    override var docContent: String,
+    override var docContent: DocContent,
     override var tags: Set<String>,
     override var isModified: Boolean,
 ) : DocumentableWithSource(

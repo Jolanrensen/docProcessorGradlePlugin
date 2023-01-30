@@ -35,9 +35,11 @@ class KdocIncludePluginFunctionalTest {
         
         val processKdocIncludeMain by creatingProcessDocTask(sources = kotlinMainSources) {
             debug = true
+            processors += COMMENT_DOC_PROCESSOR
             processors += INCLUDE_DOC_PROCESSOR
-            processors += SAMPLE_DOC_PROCESSOR
             processors += INCLUDE_FILE_DOC_PROCESSOR
+            processors += INCLUDE_ARG_DOC_PROCESSOR
+            processors += SAMPLE_DOC_PROCESSOR
 //            processors += TODO_DOC_PROCESSOR
         }
         
@@ -51,7 +53,7 @@ class KdocIncludePluginFunctionalTest {
         /**
          * Hello World!
          * 
-         * This is a large example of how the plugin will work
+         * This is a large example of how the plugin will work from {@includeArg test}
          * 
          * @param name The name of the person to greet
          * @see [Hi][TestB]
@@ -68,6 +70,7 @@ class KdocIncludePluginFunctionalTest {
          * Hello World 2!
          * @include [TestA]
          * blah blah 
+         * @arg test "Test" 
          */
         @AnnotationTest(a = 24)
         private interface Test
@@ -75,7 +78,9 @@ class KdocIncludePluginFunctionalTest {
         /** 
          * Some extra text @include nothing, this is skipped
          * Other test {@include [TestA]} 
-         * @include [Test] */
+         * 
+         * @include [Test]
+         * @arg test "someFun" */
         fun someFun(a: Int) {
             println("Hello World!")
         }

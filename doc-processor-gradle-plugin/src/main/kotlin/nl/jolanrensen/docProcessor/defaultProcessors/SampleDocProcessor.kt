@@ -113,7 +113,7 @@ class SampleDocProcessor : TagDocProcessor() {
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>
     ): String = processContent(
-        tagWithContent = tagWithContent,
+        tagWithContent = tagWithContent.removePrefix("{").removeSuffix("}"),
         line = docContent,
         documentable = documentable,
         allDocumentables = allDocumentables,
@@ -132,7 +132,7 @@ class SampleDocProcessor : TagDocProcessor() {
         // including any new lines below. We will only replace the first line and skip the rest.
         if (i == 0) {
             processContent(
-                tagWithContent = tagWithContent,
+                tagWithContent = tagWithContent.trimStart(),
                 line = line,
                 documentable = documentable,
                 allDocumentables = allDocumentables,

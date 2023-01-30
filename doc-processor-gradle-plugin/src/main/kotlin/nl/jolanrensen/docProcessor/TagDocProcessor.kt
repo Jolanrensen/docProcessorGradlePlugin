@@ -44,11 +44,35 @@ abstract class TagDocProcessor : DocProcessor {
      * @throws [IllegalStateException] On proces limit reached
      */
     @Throws(IllegalStateException::class)
-    open fun onProcesLimitReached(
+    open fun onProcesError(
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>,
     ): Nothing = error("Process limit reached")
 
+    /**
+     * Check recursion limit to break the while loop.
+     * By default, this will call [onProcesError] when `![anyModifications]` and throw an [IllegalStateException].
+     *
+     * @param i The current iteration.
+     * @param anyModifications `true` if any modifications were made, `false` otherwise.
+     * @param parameters The [ProcessDocsAction.Parameters] used to process the docs.
+     * @param filteredDocumentables Filtered documentables by [filterDocumentables], which, by default, filters the
+     * documentables to have a supported tag in them. The [DocumentableWithSource]s in this map are the same objects as in [allDocumentables], just a subset.
+     * @param allDocumentables All documentables in the source set.
+     * @return `true` if recursion limit is reached, `false` otherwise.
+     */
+    open fun shouldContinue(
+        i: Int,
+        anyModifications: Boolean,
+        parameters: ProcessDocsAction.Parameters,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>,
+    ): Boolean {
+        if ((i > 0 && !anyModifications) || i >= parameters.processLimit)
+            onProcesError(filteredDocumentables, allDocumentables)
+
+        return filteredDocumentables.any { it.value.any { it.hasASupportedTag } }
+    }
 
     /**
      * Process a tag with content ([tagWithContent]) into whatever you like.
@@ -99,7 +123,6 @@ abstract class TagDocProcessor : DocProcessor {
         allDocumentables: Map<String, List<DocumentableWithSource>>,
     ): String
 
-
     /**
      * This is the main function that will be called by the [DocProcessor].
      * It will process all documentables found in the source set and replace all
@@ -124,67 +147,27 @@ abstract class TagDocProcessor : DocProcessor {
         // Main recursion loop that will continue until all supported tags are replaced
         // or the process limit is reached.
         var i = 0
-        while (filteredDocumentables.any { it.value.any { it.hasASupportedTag } }) {
-
-            if (i++ > parameters.processLimit)
-                onProcesLimitReached(filteredDocumentables, allDocumentables)
-
+        while (true) {
             val filteredDocumentablesWithTag = filteredDocumentables
                 .filter { it.value.any { it.hasASupportedTag } }
+
+            var anyModifications = false
             for ((path, documentables) in filteredDocumentablesWithTag) {
                 for (documentable in documentables) {
                     if (!documentable.hasASupportedTag) continue
 
                     val docContent = documentable.docContent
-
-                    // Process the inner tags first
-                    val processedInnerTagsDoc = docContent
-                        .splitDocContentOnInnerTags()
-                        .joinToString("") { split ->
-                            val shouldProcess =
-                                split.startsWith("{@") &&
-                                        split.getTagNameOrNull()
-                                            ?.let(::tagIsSupported) == true
-
-                            if (shouldProcess) {
-                                processInnerTagWithContent(
-                                    tagWithContent = split,
-                                    path = path,
-                                    documentable = documentable,
-                                    docContent = docContent,
-                                    filteredDocumentables = filteredDocumentables,
-                                    allDocumentables = allDocumentables,
-                                )
-                            } else {
-                                split
-                            }
-                        }
-
-                    // Then process the normal tags
-                    val processedDoc = processedInnerTagsDoc
-                        .splitDocContent()
-                        .joinToString("\n") { split ->
-                            val shouldProcess =
-                                split.trimStart().startsWith("@") &&
-                                        split.getTagNameOrNull()
-                                            ?.let(::tagIsSupported) == true
-
-                            if (shouldProcess) {
-                                processTagWithContent(
-                                    tagWithContent = split,
-                                    path = path,
-                                    documentable = documentable,
-                                    docContent = docContent,
-                                    filteredDocumentables = filteredDocumentables,
-                                    allDocumentables = allDocumentables,
-                                )
-                            } else {
-                                split
-                            }
-                        }
+                    val processedDoc = processTagsInContent(
+                        docContent = docContent,
+                        path = path,
+                        documentable = documentable,
+                        filteredDocumentables = filteredDocumentables,
+                        allDocumentables = allDocumentables,
+                    )
 
                     val wasModified = docContent != processedDoc
                     if (wasModified) {
+                        anyModifications = true
                         val tags = processedDoc.findTagsInDocContent().toSet()
 
                         documentable.apply {
@@ -195,8 +178,72 @@ abstract class TagDocProcessor : DocProcessor {
                     }
                 }
             }
+
+            val shouldContinue = shouldContinue(
+                i = i++,
+                anyModifications = anyModifications,
+                parameters = parameters,
+                filteredDocumentables = filteredDocumentables,
+                allDocumentables = allDocumentables,
+            )
+            if (!shouldContinue) break
         }
 
         return allDocumentables
+    }
+
+    fun processTagsInContent(
+        docContent: DocContent,
+        path: String,
+        documentable: MutableDocumentableWithSource,
+        filteredDocumentables: Map<String, List<MutableDocumentableWithSource>>,
+        allDocumentables: Map<String, List<MutableDocumentableWithSource>>
+    ): DocContent {
+        // Process the inner tags first
+        val processedInnerTagsDoc = docContent
+            .splitDocContentOnInnerTags()
+            .joinToString("") { split ->
+                val shouldProcess =
+                    split.startsWith("{@") &&
+                            split.getTagNameOrNull()
+                                ?.let(::tagIsSupported) == true
+
+                if (shouldProcess) {
+                    processInnerTagWithContent(
+                        tagWithContent = split,
+                        path = path,
+                        documentable = documentable,
+                        docContent = docContent,
+                        filteredDocumentables = filteredDocumentables,
+                        allDocumentables = allDocumentables,
+                    )
+                } else {
+                    split
+                }
+            }
+
+        // Then process the normal tags
+        val processedDoc = processedInnerTagsDoc
+            .splitDocContent()
+            .joinToString("\n") { split ->
+                val shouldProcess =
+                    split.trimStart().startsWith("@") &&
+                            split.getTagNameOrNull()
+                                ?.let(::tagIsSupported) == true
+
+                if (shouldProcess) {
+                    processTagWithContent(
+                        tagWithContent = split,
+                        path = path,
+                        documentable = documentable,
+                        docContent = docContent,
+                        filteredDocumentables = filteredDocumentables,
+                        allDocumentables = allDocumentables,
+                    )
+                } else {
+                    split
+                }
+            }
+        return processedDoc
     }
 }

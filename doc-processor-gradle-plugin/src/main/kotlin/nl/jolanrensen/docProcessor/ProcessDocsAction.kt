@@ -68,6 +68,7 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
         // Run all processors
         val modifiedDocumentables =
             processors.fold(sourceDocs) { acc, processor ->
+                println("Running processor: ${processor::class.qualifiedName}")
                 processor.process(parameters, acc)
             }
 

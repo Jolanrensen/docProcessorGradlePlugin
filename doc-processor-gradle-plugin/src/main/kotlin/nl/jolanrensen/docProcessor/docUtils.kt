@@ -1,9 +1,14 @@
 package nl.jolanrensen.docProcessor
 
 /**
+ * Just the contents of the comment, without the `*`-stuff.
+ */
+typealias DocContent = String
+
+/**
  * Returns the actual content of the KDoc/Javadoc comment
  */
-fun String.getDocContent() = this
+fun String.getDocContent(): DocContent = this
     .split('\n')
     .joinToString("\n") {
         it
@@ -21,7 +26,7 @@ fun String.getDocContent() = this
 /**
  * Turns multi-line String into valid KDoc/Javadoc.
  */
-fun String.toDoc(indent: Int = 0) =
+fun DocContent.toDoc(indent: Int = 0): String =
     this
         .split('\n')
         .toMutableList()
@@ -49,7 +54,7 @@ fun String.toDoc(indent: Int = 0) =
  * Get @tag target name.
  * For instance, changes `@include [Foo]` to `Foo`
  */
-fun String.getTagTarget(tag: String): String =
+fun DocContent.getTagTarget(tag: String): String =
     also { require("@$tag" in this) { "Could not find @$tag in $this" } }
         .replace("\n", "")
         .trim()
@@ -85,7 +90,7 @@ fun String.getTagTarget(tag: String): String =
  * Get file target.
  * For instance, changes `@file (./something.md)` to `./something.md`
  */
-fun String.getFileTarget(tag: String): String =
+fun DocContent.getFileTarget(tag: String): String =
     also { require("@$tag" in this) }
         .replace("\n", "")
         .trim()
@@ -109,7 +114,7 @@ fun String.getFileTarget(tag: String): String =
  * `{@someTag someContent}`
  * and will return "someTag" in these cases.
  */
-fun String.getTagNameOrNull(): String? =
+fun DocContent.getTagNameOrNull(): String? =
     takeIf { it.trimStart().startsWith('@') || it.startsWith("{@") }
         ?.trimStart()
         ?.removePrefix("{")
@@ -162,7 +167,7 @@ fun String.expandPath(currentFullPath: String): String {
  * Splitting takes `{}`, `[]`, `()`, and triple backticks into account.
  * Can be joint with '\n' to get the original content.
  */
-fun String.splitDocContent(): List<String> = buildList {
+fun DocContent.splitDocContent(): List<DocContent> = buildList {
     val docContent = this@splitDocContent.split('\n')
 
     var currentBlock = ""
@@ -207,9 +212,9 @@ fun String.splitDocContent(): List<String> = buildList {
  * For instance, it splits `Hi there {@tag some {@test}}` into `["Hi there ", "{@tag some {@test}}"]`
  * Tags inside single and triple backticks are ignored.
  * You can get the name with [String.getTagNameOrNull].
- * Can be joint with '' to get the original content.
+ * Can be joint with "" to get the original content.
  */
-fun String.splitDocContentOnInnerTags(): List<String> = buildList {
+fun DocContent.splitDocContentOnInnerTags(): List<DocContent> = buildList {
     val docContent = this@splitDocContentOnInnerTags
 
     var currentBlock = ""
@@ -234,13 +239,14 @@ fun String.splitDocContentOnInnerTags(): List<String> = buildList {
                 }
             }
 
-            '`' -> {
-                if ("``" in blocksIndicators)
-                    blocksIndicators -= "``"
-                else
-                    blocksIndicators += "``"
-                currentBlock += char
-            }
+// TODO figure out what to do with this
+//            '`' -> {
+//                if ("``" in blocksIndicators)
+//                    blocksIndicators -= "``"
+//                else
+//                    blocksIndicators += "``"
+//                currentBlock += char
+//            }
 
             else -> currentBlock += char
         }
@@ -248,18 +254,44 @@ fun String.splitDocContentOnInnerTags(): List<String> = buildList {
     add(currentBlock)
 }
 
-fun String.findInnerTagsInDocContent(): List<String> =
+fun DocContent.findInnerTagsInDocContent(): List<String> =
     splitDocContentOnInnerTags()
         .filter { it.startsWith("{@") }
         .mapNotNull { it.getTagNameOrNull() }
 
-fun String.findNormalTagsInDocContent(): List<String> =
+fun DocContent.findNormalTagsInDocContent(): List<String> =
     splitDocContent()
         .filter { it.trimStart().startsWith("@") }
         .mapNotNull { it.getTagNameOrNull() }
 
-fun String.findTagsInDocContent(): List<String> =
+fun DocContent.findTagsInDocContent(): List<String> =
     findInnerTagsInDocContent() + findNormalTagsInDocContent()
+
+
+fun DocContent.replaceInnerTagNameInDocContent(oldName: String, newName: String): DocContent =
+    splitDocContentOnInnerTags()
+        .joinToString("") {
+            if (it.startsWith("{@$oldName")) {
+                it.replaceFirst(oldName, newName)
+            } else {
+                it
+            }
+        }
+
+fun DocContent.replaceNormalTagNameInDocContent(oldName: String, newName: String): DocContent =
+    splitDocContent()
+        .joinToString("\n") {
+            if (it.trimStart().startsWith("@$oldName")) {
+                it.replaceFirst(oldName, newName)
+            } else {
+                it
+            }
+        }
+
+fun DocContent.replaceTagNameInDocContent(oldName: String, newName: String): DocContent =
+    replaceInnerTagNameInDocContent(oldName, newName)
+        .replaceNormalTagNameInDocContent(oldName, newName)
+
 
 /**
  * Is able to find an entire JavaDoc/KDoc comment including the starting indent.

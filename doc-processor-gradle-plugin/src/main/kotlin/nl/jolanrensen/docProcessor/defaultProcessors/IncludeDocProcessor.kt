@@ -1,10 +1,12 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.getDocContent
 import nl.jolanrensen.docProcessor.getTagTarget
 import nl.jolanrensen.docProcessor.isLinkableElement
+import nl.jolanrensen.docProcessor.replaceTagNameInDocContent
 import nl.jolanrensen.docProcessor.toDoc
 
 /**
@@ -20,15 +22,48 @@ const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  * ```kotlin
  * /**
  *  * @include [SomeClass]
- *  * Hi
+ *  * Hi!
  *  */
  * ```
  * would turn into
  * ```kotlin
  * /**
  *  * This is the docs of SomeClass
- *  * Hi
+ *  * @see [SomeOtherClass][com.example.somePackage.SomeOtherClass]
+ *  * Hi!
  *  */
+ * ```
+ * [links] that are present in included docs are recognized and replaced by their
+ * fully qualified names, so that they still work in the docs.
+ *
+ * If you need to substitute something in the included docs, you can use [INCLUDE_ARG_DOC_PROCESSOR] in addition to this.
+ * For example:
+ *
+ * File A:
+ * ```kotlin
+ * /** NOTE: The {@includeArg operation} operation is part of the public API. */
+ *  internal interface ApiNote
+ * ```
+ *
+ * File B:
+ *```kotlin
+ * /**
+ *  * Some docs
+ *  * @include [ApiNote]
+ *  * @arg operation update
+ *  */
+ * fun update() {}
+ * ```
+ *
+ * File B after processing:
+ * ```kotlin
+ * /**
+ *  * Some docs
+ *  * NOTE: The update operation is part of the public API.
+ *  */
+ * fun update() {}
+ * ```
+ *
  */
 class IncludeDocProcessor : TagDocProcessor() {
 
@@ -41,6 +76,7 @@ class IncludeDocProcessor : TagDocProcessor() {
     private val singleLinkRegex = Regex("""([^]]\[)([^\[\]]*)(]$|][^\[])""")
 
     private val javaLinkRegex = Regex("""\{@link.*}""")
+
 
     override fun tagIsSupported(tag: String): Boolean = tag == this.tag
 
@@ -55,7 +91,7 @@ class IncludeDocProcessor : TagDocProcessor() {
     /**
      * Provides a helpful message when a circular reference is detected.
      */
-    override fun onProcesLimitReached(
+    override fun onProcesError(
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>
     ): Nothing {
@@ -104,18 +140,28 @@ class IncludeDocProcessor : TagDocProcessor() {
             documentables = filteredDocumentables,
         ) { it != documentable }
 
-        queried ?: error(
-            "IncludeDocProcessor ERROR: Include not found: \"$includePath\". Called from \"$path\". Attempted queries: [\n${
-                documentable.getAllFullPathsFromHereForTargetPath(includePath)
-                    .joinToString("\n")
-            }]"
-        )
+        if (queried == null) {
+            val queriedNoFilter = documentable.queryDocumentables(
+                query = includePath,
+                documentables = filteredDocumentables,
+            )
+            val attemptedQueries = documentable.getAllFullPathsFromHereForTargetPath(includePath)
+                .joinToString("\n")
 
-        val content = queried.docContent.trimEnd()
+            error(
+                if (queriedNoFilter == documentable) {
+                    "IncludeDocProcessor ERROR: Self-reference detected. Called from \"$path\"."
+                } else {
+                    "IncludeDocProcessor ERROR: Include not found: \"$includePath\". Called from \"$path\". Attempted queries: [\n$attemptedQueries]"
+                }
+            )
+        }
+
+        var content: DocContent = queried.docContent.trimEnd()
 
         // if the content contains links to other elements, we need to expand the path
         // providing the original name or alias as new alias.
-        val processedContent = if (documentable.isKotlin) {
+        content = if (documentable.isKotlin) {
             content.replace(aliasedLinkRegex) { // replace all [Aliased][ReferenceLinks] with [Aliased][ExpandedPath]
                 it.groupValues.let {
                     buildString {
@@ -158,7 +204,7 @@ class IncludeDocProcessor : TagDocProcessor() {
         }
 
         // replace the include statement with the kdoc of the queried node (if found)
-        return processedContent
+        return content
     }
 
     override fun processInnerTagWithContent(
