@@ -3,6 +3,7 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.ProcessDocsAction
 import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.findTagNamesInDocContent
 
 /**
  * @see IncludeArgDocProcessor
@@ -43,6 +44,9 @@ const val INCLUDE_ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProces
  *  */
  * fun update() {}
  * ```
+ *
+ * NOTE: If there are multiple `@arg` tags with the same name, the last one processed will be used.
+ * The order is: Inline tags: depth-first, left-to-right. Block tags: top-to-bottom.
  */
 class IncludeArgDocProcessor : TagDocProcessor() {
 
@@ -132,28 +136,41 @@ class IncludeArgDocProcessor : TagDocProcessor() {
             .removeSuffix("}")
 
         val isArgDeclaration = trimmedTagWithContent.startsWith("@$declareArgumentTag")
+        val argTagsStillPresent = docContent.findTagNamesInDocContent().contains(declareArgumentTag)
 
-        if (isArgDeclaration) {
-            val argDeclaration = trimmedTagWithContent
-                .removePrefix("@$declareArgumentTag")
-                .trimStart()
-            val name = argDeclaration.takeWhile { !it.isWhitespace() }
-            val value = argDeclaration.removePrefix(name).trimStart()
+        return when {
+            isArgDeclaration -> {
+                val argDeclaration = trimmedTagWithContent
+                    .removePrefix("@$declareArgumentTag")
+                    .trimStart()
+                val name = argDeclaration.takeWhile { !it.isWhitespace() }
+                val value = argDeclaration.removePrefix(name).trimStart()
 
-            argMap.getOrPut(documentable) { mutableMapOf() }[name] = value
-            argsNotFound.getOrPut(documentable) { mutableSetOf() } -= name
-            return ""
-        } else {
-            val argTarget = trimmedTagWithContent
-                .removePrefix("@$useArgumentTag")
-                .trim()
-
-            val arg = argMap[documentable]?.get(argTarget)
-            if (arg == null) {
-                argsNotFound.getOrPut(documentable) { mutableSetOf() } += argTarget
+                argMap.getOrPut(documentable) { mutableMapOf() }[name] = value
+                argsNotFound.getOrPut(documentable) { mutableSetOf() } -= name
+                ""
             }
 
-            return arg ?: tagWithContent
+            argTagsStillPresent -> {
+                // skip @includeArg tags if there are still @args present
+                tagWithContent
+            }
+
+            else -> {
+                // skip @includeArg tags if there are still @args present
+
+
+                val argTarget = trimmedTagWithContent
+                    .removePrefix("@$useArgumentTag")
+                    .trim()
+
+                val arg = argMap[documentable]?.get(argTarget)
+                if (arg == null) {
+                    argsNotFound.getOrPut(documentable) { mutableSetOf() } += argTarget
+                }
+
+                arg ?: tagWithContent
+            }
         }
     }
 }

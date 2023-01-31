@@ -1,7 +1,5 @@
 package nl.jolanrensen.docProcessor
 
-import kotlin.jvm.Throws
-
 abstract class TagDocProcessor : DocProcessor {
 
     /** The tags to be replaced, like "sample" */
@@ -221,7 +219,7 @@ abstract class TagDocProcessor : DocProcessor {
                         tagWithContent = tagContent,
                         path = path,
                         documentable = documentable,
-                        docContent = docContent,
+                        docContent = text,
                         filteredDocumentables = filteredDocumentables,
                         allDocumentables = allDocumentables,
                     )
@@ -246,28 +244,6 @@ abstract class TagDocProcessor : DocProcessor {
 
             return@run text
         }
-
-//            docContent
-//            .splitDocContentOnInnerTags()
-//            .joinToString("") { split ->
-//                val shouldProcess =
-//                    split.startsWith("{@") &&
-//                            split.getTagNameOrNull()
-//                                ?.let(::tagIsSupported) == true
-//
-//                if (shouldProcess) {
-//                    processInnerTagWithContent(
-//                        tagWithContent = split,
-//                        path = path,
-//                        documentable = documentable,
-//                        docContent = docContent,
-//                        filteredDocumentables = filteredDocumentables,
-//                        allDocumentables = allDocumentables,
-//                    )
-//                } else {
-//                    split
-//                }
-//            }
 
         // Then process the normal tags
         val processedDoc: DocContent = processedInnerTagsDoc

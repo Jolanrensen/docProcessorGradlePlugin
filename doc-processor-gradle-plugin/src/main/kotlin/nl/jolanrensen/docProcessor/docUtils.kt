@@ -1,5 +1,7 @@
 package nl.jolanrensen.docProcessor
 
+import java.util.Comparator
+
 /**
  * Just the contents of the comment, without the `*`-stuff.
  */
@@ -207,77 +209,37 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> = buildList {
     add(currentBlock)
 }
 
-/**
- * Split doc content in parts being either an inner tag or not.
- * For instance, it splits `Hi there {@tag some {@test}}` into `["Hi there ", "{@tag some {@test}}"]`
- * You can get the name with [String.getTagNameOrNull].
- * Can be joint with "" to get the original content.
- */
-//fun DocContent.splitDocContentOnInnerTags(): List<DocContent> = buildList {
-//    val docContent = this@splitDocContentOnInnerTags
-//
-//    var currentBlock = ""
-//    val blocksIndicators = mutableListOf<String>()
-//    for (char in docContent) {
-//        when (char) {
-//            '{' -> {
-//                if (blocksIndicators.isEmpty()) {
-//                    add(currentBlock)
-//                    currentBlock = ""
-//                }
-//                currentBlock += char
-//                blocksIndicators += "{}"
-//            }
-//
-//            '}' -> {
-//                currentBlock += char
-//                blocksIndicators -= "{}"
-//                if (blocksIndicators.isEmpty()) {
-//                    add(currentBlock)
-//                    currentBlock = ""
-//                }
-//            }
-//
-//// TODO figure out what to do with this
-////            '`' -> {
-////                if ("``" in blocksIndicators)
-////                    blocksIndicators -= "``"
-////                else
-////                    blocksIndicators += "``"
-////                currentBlock += char
-////            }
-//
-//            else -> currentBlock += char
-//        }
-//    }
-//    add(currentBlock)
-//}
-
-/** Finds any inline tags, preferring the innermost one. */
-private fun DocContent.findInlineTagOrNull(): IntRange? {
+/** Finds any inline tag with its depth, preferring the innermost one.*/
+private fun DocContent.findInlineTagRangeWithDepthOrNull(): Pair<IntRange, Int>? {
+    var depth = 0
     var start: Int? = null
     for ((i, char) in this.withIndex()) {
         if (char == '{' && this.getOrNull(i + 1) == '@') {
             start = i
+            depth++
         } else if (char == '}') {
             if (start != null) {
-                return start..i
+                return Pair(start..i, depth)
             }
         }
     }
     return null
 }
 
-/** Finds all inline tag names, including nested ones, together with their respective range in the doc. */
+/**
+ * Finds all inline tag names, including nested ones,
+ * together with their respective range in the doc.
+ * The list is sorted by depth, with the deepest tags first and then by order of appearance.
+ */
 fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, IntRange>> {
     var text = this
 
-    return buildList {
-        while (text.findInlineTagOrNull() != null) {
-            val range = text.findInlineTagOrNull()!!
+    return buildMap<Int, MutableList<Pair<String, IntRange>>> {
+        while (text.findInlineTagRangeWithDepthOrNull() != null) {
+            val (range, depth) = text.findInlineTagRangeWithDepthOrNull()!!
             val comment = text.substring(range)
             comment.getTagNameOrNull()?.let { tagName ->
-                add(tagName to range)
+                getOrPut(depth) { mutableListOf() } += Pair(tagName, range)
             }
 
             text = text.replaceRange(
@@ -287,7 +249,8 @@ fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, Int
                     .replace('}', '>'),
             )
         }
-    }
+    }.toSortedMap(Comparator.reverseOrder())
+        .flatMap { it.value }
 }
 
 /** Finds all inline tag names, including nested ones. */
