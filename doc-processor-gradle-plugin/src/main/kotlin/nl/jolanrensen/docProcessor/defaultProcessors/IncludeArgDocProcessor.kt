@@ -4,12 +4,45 @@ import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.ProcessDocsAction
 import nl.jolanrensen.docProcessor.TagDocProcessor
 
+/**
+ * @see IncludeArgDocProcessor
+ */
 const val INCLUDE_ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.IncludeArgDocProcessor"
 
 /**
- * Include arg doc processor.
+ * Adds two tags to your arsenal:
+ * - `@arg argument content` to declare an argument with content that can be used in the same doc.
+ * - `@includeArg argument` to include an argument from the same doc.
  *
- * TODO
+ * This can be useful to repeat the same content in multiple places in the same doc, but
+ * more importantly, it can be used in conjunction with [IncludeDocProcessor].
+ *
+ * For example:
+ *
+ * File A:
+ * ```kotlin
+ * /** NOTE: The {@includeArg operation} operation is part of the public API. */
+ *  internal interface ApiNote
+ * ```
+ *
+ * File B:
+ *```kotlin
+ * /**
+ *  * Some docs
+ *  * @include [ApiNote]
+ *  * @arg operation update
+ *  */
+ * fun update() {}
+ * ```
+ *
+ * File B after processing:
+ * ```kotlin
+ * /**
+ *  * Some docs
+ *  * NOTE: The update operation is part of the public API.
+ *  */
+ * fun update() {}
+ * ```
  */
 class IncludeArgDocProcessor : TagDocProcessor() {
 
@@ -54,6 +87,45 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>
     ): String {
+        // split up the content for @includeArg but not for @arg
+        val isIncludeArg = tagWithContent.trimStart().startsWith("@$useArgumentTag")
+        return if (isIncludeArg) {
+            tagWithContent.split('\n').mapIndexed { i: Int, line: String ->
+                // tagWithContent is the content after the @includeArg tag
+                // including any new lines below. We will only replace the first line and skip the rest.
+                if (i == 0) {
+                    processInnerTagWithContent(
+                        tagWithContent = line,
+                        path = path,
+                        documentable = documentable,
+                        docContent = docContent,
+                        filteredDocumentables = filteredDocumentables,
+                        allDocumentables = allDocumentables,
+                    )
+                } else {
+                    line
+                }
+            }.joinToString("\n")
+        } else {
+            processInnerTagWithContent(
+                tagWithContent = tagWithContent,
+                path = path,
+                documentable = documentable,
+                docContent = docContent,
+                filteredDocumentables = filteredDocumentables,
+                allDocumentables = allDocumentables,
+            )
+        }
+    }
+
+    override fun processInnerTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>
+    ): String {
         val trimmedTagWithContent = tagWithContent
             .trimStart()
             .removePrefix("{")
@@ -84,20 +156,4 @@ class IncludeArgDocProcessor : TagDocProcessor() {
             return arg ?: tagWithContent
         }
     }
-
-    override fun processInnerTagWithContent(
-        tagWithContent: String,
-        path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
-    ): String = processTagWithContent(
-        tagWithContent = tagWithContent,
-        path = path,
-        documentable = documentable,
-        docContent = docContent,
-        filteredDocumentables = filteredDocumentables,
-        allDocumentables = allDocumentables,
-    )
 }

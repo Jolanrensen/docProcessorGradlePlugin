@@ -35,10 +35,10 @@ class KdocIncludePluginFunctionalTest {
         
         val processKdocIncludeMain by creatingProcessDocTask(sources = kotlinMainSources) {
             debug = true
-            processors += COMMENT_DOC_PROCESSOR
             processors += INCLUDE_DOC_PROCESSOR
             processors += INCLUDE_FILE_DOC_PROCESSOR
             processors += INCLUDE_ARG_DOC_PROCESSOR
+            processors += COMMENT_DOC_PROCESSOR
             processors += SAMPLE_DOC_PROCESSOR
 //            processors += TODO_DOC_PROCESSOR
         }
@@ -59,6 +59,8 @@ class KdocIncludePluginFunctionalTest {
          * @see [Hi][TestB]
          * @see [TestA]
          * @see [TestB]
+         * @comment the arg below can be used to supply the argument after an inline @include tag.
+         * @arg test 
          */
 
         private interface TestA
@@ -68,9 +70,8 @@ class KdocIncludePluginFunctionalTest {
         
         /**
          * Hello World 2!
-         * @include [TestA]
-         * blah blah 
-         * @arg test "Test" 
+         * {@include [TestA]} "Test"
+         * @comment 
          */
         @AnnotationTest(a = 24)
         private interface Test

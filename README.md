@@ -11,9 +11,10 @@ Note: `{@inline tags}` work in KDoc comments too!
 
 Examples include: 
  - `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor) (`INCLUDE_DOC_PROCESSOR`)
- - `@sample` / `@sampleNoComments` tag to include code samples into your KDoc / JavaDoc (`SAMPLE_DOC_PROCESSOR`)
+ - `@sample` / `@sampleNoComments` tags to include code samples into your KDoc / JavaDoc (`SAMPLE_DOC_PROCESSOR`)
  - `@includeFile` tag to include file content into your KDoc / JavaDoc (`INCLUDE_FILE_DOC_PROCESSOR`)
  - `@comment` tag to comment out parts of your modified KDoc / JavaDoc (`COMMENT_DOC_PROCESSOR`)
+ - `@arg` / `@includeArg` tags to define and include arguments within your KDoc / JavaDoc. Powerful in combination with `@include` (`INCLUDE_ARG_DOC_PROCESSOR`)
  - A processor that removes all KDoc / JavaDoc comments (`NO_DOC_PROCESSOR`)
  - A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment (`TODO_DOC_PROCESSOR`)
  - A processor that makes all KDoc / JavaDoc comments uppercase (try and make this for fun!)
@@ -97,12 +98,17 @@ val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
     // Optional. The target folder of the processed files. By default ${project.buildDir}/docProcessor/${taskName}.
     target = File(..)
     
-    // Optional. If you want to see more logging. By default false.
+    // Optional. If you want to see more logging. By default, false.
     debug = true
     
     // The processors you want to use in this task.
+    // The recommended order of default processors is as follows:
     processors = listOf(
         INCLUDE_DOC_PROCESSOR, // The @include processor
+        INCLUDE_FILE_DOC_PROCESSOR, // The @includeFile processor
+        INCLUDE_ARG_DOC_PROCESSOR, // The @arg and @includeArg processor
+        COMMENT_DOC_PROCESSOR, // The @comment processor
+        SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
         "com.example.plugin.ExampleDocProcessor", // A custom processor, see below
     )
 
@@ -160,35 +166,38 @@ Visibility modifiers are ignored for now. Import statements are taken into accou
 JavaDoc is also supported. Add the `"java"` extension to `fileExtensions` in the plugin setup to use it.
 You can even cross include between Java and Kotlin but no conversion whatsoever will be done at the moment.
 
-For example:
+Example in conjunction with the `@arg` / `@includeArg` processor:
 ```kotlin
 package com.example.plugin
 
 /**
  * Hello World!
  * 
- * This is a large example of how the plugin will work
+ * This is a large example of how the plugin will work from {@includeArg source}
  * 
  * @param name The name of the person to greet
  * @see [com.example.plugin.KdocIncludePlugin]
+ * @arg source Test1
  */
 private interface Test1
 
 /**
  * Hello World 2!
  * @include [Test1]
+ * @arg source Test2
  */
 @AnnotationTest(a = 24)
 private interface Test2
 
 /** 
  * Some extra text
- * @include [Test2] */
+ * @include [Test2]
+ * @arg source someFun */
 fun someFun() {
     println("Hello World!")
 }
 
-/** @include [com.example.plugin.Test2] */
+/** {@include [com.example.plugin.Test2]}{@arg source someMoreFun} */
 fun someMoreFun() {
     println("Hello World!")
 }
@@ -200,7 +209,7 @@ package com.example.plugin
 /**
  * Hello World!
  * 
- * This is a large example of how the plugin will work
+ * This is a large example of how the plugin will work from Test1
  * 
  * @param name The name of the person to greet
  * @see [com.example.plugin.KdocIncludePlugin]
@@ -212,7 +221,7 @@ private interface Test1
  * 
  * Hello World!
  * 
- * This is a large example of how the plugin will work
+ * This is a large example of how the plugin will work from Test2
  * 
  * @param name The name of the person to greet
  * @see [com.example.plugin.KdocIncludePlugin]
@@ -227,7 +236,7 @@ private interface Test2
  * 
  * Hello World!
  * 
- * This is a large example of how the plugin will work
+ * This is a large example of how the plugin will work from someFun
  * 
  * @param name The name of the person to greet
  * @see [com.example.plugin.KdocIncludePlugin] 
@@ -241,7 +250,7 @@ fun someFun() {
  * 
  * Hello World!
  * 
- * This is a large example of how the plugin will work
+ * This is a large example of how the plugin will work from someMoreFun
  * 
  * @param name The name of the person to greet
  * @see [com.example.plugin.KdocIncludePlugin] 
@@ -250,6 +259,43 @@ fun someMoreFun() {
     println("Hello World!")
 }
 ```
+
+## Technicalities
+
+KDocs and JavaDocs are structured in a tree-like structure and are thus also parsed and processed like that.
+For example, the following KDoc:
+```kotlin
+/** 
+ * Some extra text
+ * @include [Test2]
+ * Hi there!
+ * @arg source someFun
+ * Some more text. 
+ */
+```
+will be parsed as follows:
+```
+["
+Some extra text",
+"@include [Test2]
+Hi there!",
+"@arg source someFun
+Some more text.
+"
+]
+```
+
+This is also how tag processors receive their data. Note that any newlines after the `@tag`
+are also included as part of the tag data. Tag processors can then decide what to do with this extra data.
+However, `@include`, `@includeArg`, `@sample`, and `@includeFile` all have systems in place that
+will keep the content on the lines below the tag in place. Take this into account when writing your own processors.
+
+To avoid any confusion, it's usually easier to stick to `{@inline tags}` as then it's clear which part of the doc
+belongs to the tag and what does not. Inline tags are processed before block tags.
+
+Take extra care when using tags that can introduce new tags, such as `@include`, as this will cause the structure
+of the doc to change mid-processing. Very powerful, but also potentially dangerous.
+If something weird happens, try to disable some processors to understand what's happening.
 
 ## How it works
 
@@ -280,36 +326,39 @@ class ExampleDocProcessor : TagDocProcessor() {
 
     /** How `{@inner tags}` are processed. */
     override fun processInnerTagWithContent(
-        tagWithContent: String,
+        tagWithContent: String, // always from `{@` to `}`.
         path: String,
         documentable: DocumentableWithSource,
         docContent: String,
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>,
-    ): String = processContent(tagWithContent)
+    ): String = processContent(
+        tagWithContent
+            .removePrefix("{")
+            .removeSuffix("}")
+    )
 
-    /** How @normal tags are processed. */
+    /** How `  @normal tags` are processed. */
     override fun processTagWithContent(
-        tagWithContent: String,
+        tagWithContent: String, // from `  @` (with preceding whitespace) to the next `  @` or the end of the doc.
         path: String,
         documentable: DocumentableWithSource,
         docContent: String,
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>,
-    ): String = processContent(tagWithContent)
+    ): String = processContent(
+        tagWithContent.trimStart()
+    )
 
     // We can use the same function for both processInnerTagWithContent and processTagWithContent
     private fun processContent(tagWithContent: String): String {
         // We can get the content after the @example tag.
         val contentWithoutTag = tagWithContent
-            .removePrefix("{") // for if it's an inner tag
-            .removeSuffix("}")
             .removePrefix("@example")
             .removeSurrounding("\n")
             .trim()
 
         // While we can play with the other arguments, let's just return some simple modified content
-
         return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
     }
 }
