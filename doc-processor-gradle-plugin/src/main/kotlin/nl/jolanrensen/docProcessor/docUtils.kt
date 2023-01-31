@@ -167,8 +167,8 @@ fun String.expandPath(currentFullPath: String): String {
  * Splitting takes `{}`, `[]`, `()`, and triple backticks into account.
  * Can be joint with '\n' to get the original content.
  */
-fun DocContent.splitDocContent(): List<DocContent> = buildList {
-    val docContent = this@splitDocContent.split('\n')
+fun DocContent.splitDocContentPerBlock(): List<DocContent> = buildList {
+    val docContent = this@splitDocContentPerBlock.split('\n')
 
     var currentBlock = ""
     val blocksIndicators = mutableListOf<String>()
@@ -210,87 +210,97 @@ fun DocContent.splitDocContent(): List<DocContent> = buildList {
 /**
  * Split doc content in parts being either an inner tag or not.
  * For instance, it splits `Hi there {@tag some {@test}}` into `["Hi there ", "{@tag some {@test}}"]`
- * Tags inside single and triple backticks are ignored.
  * You can get the name with [String.getTagNameOrNull].
  * Can be joint with "" to get the original content.
  */
-fun DocContent.splitDocContentOnInnerTags(): List<DocContent> = buildList {
-    val docContent = this@splitDocContentOnInnerTags
-
-    var currentBlock = ""
-    val blocksIndicators = mutableListOf<String>()
-    for (char in docContent) {
-        when (char) {
-            '{' -> {
-                if (blocksIndicators.isEmpty()) {
-                    add(currentBlock)
-                    currentBlock = ""
-                }
-                currentBlock += char
-                blocksIndicators += "{}"
-            }
-
-            '}' -> {
-                currentBlock += char
-                blocksIndicators -= "{}"
-                if (blocksIndicators.isEmpty()) {
-                    add(currentBlock)
-                    currentBlock = ""
-                }
-            }
-
-// TODO figure out what to do with this
-//            '`' -> {
-//                if ("``" in blocksIndicators)
-//                    blocksIndicators -= "``"
-//                else
-//                    blocksIndicators += "``"
+//fun DocContent.splitDocContentOnInnerTags(): List<DocContent> = buildList {
+//    val docContent = this@splitDocContentOnInnerTags
+//
+//    var currentBlock = ""
+//    val blocksIndicators = mutableListOf<String>()
+//    for (char in docContent) {
+//        when (char) {
+//            '{' -> {
+//                if (blocksIndicators.isEmpty()) {
+//                    add(currentBlock)
+//                    currentBlock = ""
+//                }
 //                currentBlock += char
+//                blocksIndicators += "{}"
 //            }
+//
+//            '}' -> {
+//                currentBlock += char
+//                blocksIndicators -= "{}"
+//                if (blocksIndicators.isEmpty()) {
+//                    add(currentBlock)
+//                    currentBlock = ""
+//                }
+//            }
+//
+//// TODO figure out what to do with this
+////            '`' -> {
+////                if ("``" in blocksIndicators)
+////                    blocksIndicators -= "``"
+////                else
+////                    blocksIndicators += "``"
+////                currentBlock += char
+////            }
+//
+//            else -> currentBlock += char
+//        }
+//    }
+//    add(currentBlock)
+//}
 
-            else -> currentBlock += char
+/** Finds any inline tags, preferring the innermost one. */
+private fun DocContent.findInlineTagOrNull(): IntRange? {
+    var start: Int? = null
+    for ((i, char) in this.withIndex()) {
+        if (char == '{' && this.getOrNull(i + 1) == '@') {
+            start = i
+        } else if (char == '}') {
+            if (start != null) {
+                return start..i
+            }
         }
     }
-    add(currentBlock)
+    return null
 }
 
-fun DocContent.findInnerTagsInDocContent(): List<String> =
-    splitDocContentOnInnerTags()
-        .filter { it.startsWith("{@") }
-        .mapNotNull { it.getTagNameOrNull() }
+/** Finds all inline tag names, including nested ones, together with their respective range in the doc. */
+fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, IntRange>> {
+    var text = this
 
-fun DocContent.findNormalTagsInDocContent(): List<String> =
-    splitDocContent()
+    return buildList {
+        while (text.findInlineTagOrNull() != null) {
+            val range = text.findInlineTagOrNull()!!
+            val comment = text.substring(range)
+            comment.getTagNameOrNull()?.let { tagName ->
+                add(tagName to range)
+            }
+
+            text = text.replaceRange(
+                range = range,
+                replacement = comment
+                    .replace('{', '<')
+                    .replace('}', '>'),
+            )
+        }
+    }
+}
+
+/** Finds all inline tag names, including nested ones. */
+fun DocContent.findInlineTagNamesInDocContent(): List<String> =
+    findInlineTagNamesInDocContentWithRanges().map { it.first }
+
+fun DocContent.findBlockTagNamesInDocContent(): List<String> =
+    splitDocContentPerBlock()
         .filter { it.trimStart().startsWith("@") }
         .mapNotNull { it.getTagNameOrNull() }
 
-fun DocContent.findTagsInDocContent(): List<String> =
-    findInnerTagsInDocContent() + findNormalTagsInDocContent()
-
-
-fun DocContent.replaceInnerTagNameInDocContent(oldName: String, newName: String): DocContent =
-    splitDocContentOnInnerTags()
-        .joinToString("") {
-            if (it.startsWith("{@$oldName")) {
-                it.replaceFirst(oldName, newName)
-            } else {
-                it
-            }
-        }
-
-fun DocContent.replaceNormalTagNameInDocContent(oldName: String, newName: String): DocContent =
-    splitDocContent()
-        .joinToString("\n") {
-            if (it.trimStart().startsWith("@$oldName")) {
-                it.replaceFirst(oldName, newName)
-            } else {
-                it
-            }
-        }
-
-fun DocContent.replaceTagNameInDocContent(oldName: String, newName: String): DocContent =
-    replaceInnerTagNameInDocContent(oldName, newName)
-        .replaceNormalTagNameInDocContent(oldName, newName)
+fun DocContent.findTagNamesInDocContent(): List<String> =
+    findInlineTagNamesInDocContent() + findBlockTagNamesInDocContent()
 
 
 /**

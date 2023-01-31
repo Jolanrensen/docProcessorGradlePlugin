@@ -163,12 +163,13 @@ abstract class TagDocProcessor : DocProcessor {
                         documentable = documentable,
                         filteredDocumentables = filteredDocumentables,
                         allDocumentables = allDocumentables,
+                        parameters = parameters,
                     )
 
                     val wasModified = docContent != processedDoc
                     if (wasModified) {
                         anyModifications = true
-                        val tags = processedDoc.findTagsInDocContent().toSet()
+                        val tags = processedDoc.findTagNamesInDocContent().toSet()
 
                         documentable.apply {
                             this.docContent = processedDoc
@@ -197,34 +198,80 @@ abstract class TagDocProcessor : DocProcessor {
         path: String,
         documentable: MutableDocumentableWithSource,
         filteredDocumentables: Map<String, List<MutableDocumentableWithSource>>,
-        allDocumentables: Map<String, List<MutableDocumentableWithSource>>
+        allDocumentables: Map<String, List<MutableDocumentableWithSource>>,
+        parameters: ProcessDocsAction.Parameters,
     ): DocContent {
         // Process the inner tags first
-        val processedInnerTagsDoc = docContent
-            .splitDocContentOnInnerTags()
-            .joinToString("") { split ->
-                val shouldProcess =
-                    split.startsWith("{@") &&
-                            split.getTagNameOrNull()
-                                ?.let(::tagIsSupported) == true
+        val processedInnerTagsDoc: DocContent = run {
+            var text = docContent
 
-                if (shouldProcess) {
-                    processInnerTagWithContent(
-                        tagWithContent = split,
+            var i = 0
+            while (true) {
+                val inlineTagNames = text
+                    .findInlineTagNamesInDocContentWithRanges()
+                    .filter { (tagName, _) -> tagIsSupported(tagName) }
+
+                if (inlineTagNames.isEmpty()) break
+
+                var wasModified = false
+                for ((_, range) in inlineTagNames) {
+                    val tagContent = text.substring(range)
+
+                    val newTagContent = processInnerTagWithContent(
+                        tagWithContent = tagContent,
                         path = path,
                         documentable = documentable,
                         docContent = docContent,
                         filteredDocumentables = filteredDocumentables,
                         allDocumentables = allDocumentables,
                     )
-                } else {
-                    split
+                    text = text.replaceRange(range, newTagContent)
+
+                    wasModified = tagContent != newTagContent
+
+                    // Restart the loop since ranges might have changed,
+                    // continue if there were no modifications
+                    if (wasModified) break
                 }
+
+                val shouldContinue = shouldContinue(
+                    i = i++,
+                    anyModifications = wasModified,
+                    parameters = parameters,
+                    filteredDocumentables = filteredDocumentables,
+                    allDocumentables = allDocumentables,
+                )
+                if (!shouldContinue) break
             }
 
+            return@run text
+        }
+
+//            docContent
+//            .splitDocContentOnInnerTags()
+//            .joinToString("") { split ->
+//                val shouldProcess =
+//                    split.startsWith("{@") &&
+//                            split.getTagNameOrNull()
+//                                ?.let(::tagIsSupported) == true
+//
+//                if (shouldProcess) {
+//                    processInnerTagWithContent(
+//                        tagWithContent = split,
+//                        path = path,
+//                        documentable = documentable,
+//                        docContent = docContent,
+//                        filteredDocumentables = filteredDocumentables,
+//                        allDocumentables = allDocumentables,
+//                    )
+//                } else {
+//                    split
+//                }
+//            }
+
         // Then process the normal tags
-        val processedDoc = processedInnerTagsDoc
-            .splitDocContent()
+        val processedDoc: DocContent = processedInnerTagsDoc
+            .splitDocContentPerBlock()
             .joinToString("\n") { split ->
                 val shouldProcess =
                     split.trimStart().startsWith("@") &&

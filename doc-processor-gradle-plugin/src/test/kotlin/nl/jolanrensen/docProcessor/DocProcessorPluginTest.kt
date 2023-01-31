@@ -19,7 +19,7 @@ class DocProcessorPluginTest {
      * Other test {@c TestA
      * blabla {@d TestA }
      * }
-     * Other test `{@d TestA}`
+     * Other test `{@h TestA}`
      * ```kotlin
      * @e TestB
      * {@f TestC }
@@ -33,7 +33,7 @@ class DocProcessorPluginTest {
            |Other test {@c TestA
            |blabla {@d TestA }
            |}
-           |Other test `{@d TestA}`
+           |Other test `{@h TestA}`
            |```kotlin
            |@e TestB
            |{@f TestC }
@@ -50,7 +50,7 @@ class DocProcessorPluginTest {
                |Other test {@c TestA
                |blabla {@d TestA }
                |}
-               |Other test `{@d TestA}`
+               |Other test `{@h TestA}`
                |```kotlin
                |@e TestB
                |{@f TestC }
@@ -59,33 +59,17 @@ class DocProcessorPluginTest {
             """|@g Test""",
         ).map { it.trimMargin() }
 
-        difficultKdoc.splitDocContent() shouldBe expected
-        difficultKdoc.splitDocContent().joinToString("\n") shouldBe difficultKdoc
+        difficultKdoc.splitDocContentPerBlock() shouldBe expected
+        difficultKdoc.splitDocContentPerBlock().joinToString("\n") shouldBe difficultKdoc
     }
 
     @Test
-    fun `Test split doc content on inner tags()`() {
-        val expected = listOf(
-            """|blablah
-               |  @a a
-               |Some extra text. @b nothing, this is skipped
-               |Other test """,
+    fun `Test find inline tags in Doc Content()`() {
+        val expected = setOf(
+            "c", "d", "h", "f"
+        )
 
-            """|{@c TestA
-               |blabla {@d TestA }
-               |}""", // not gonna split inner inner tags
-
-            """|
-               |Other test `{@d TestA}`
-               |```kotlin
-               |@e TestB
-               |{@f TestC }
-               |```
-               |@g Test"""
-        ).map { it.trimMargin() }
-
-        difficultKdoc.splitDocContentOnInnerTags() shouldBe expected
-        difficultKdoc.splitDocContentOnInnerTags().joinToString("") shouldBe difficultKdoc
+        difficultKdoc.findInlineTagNamesInDocContent().toSet() shouldBe expected
     }
 
     @Test

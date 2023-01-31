@@ -6,7 +6,6 @@ import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.getDocContent
 import nl.jolanrensen.docProcessor.getTagTarget
 import nl.jolanrensen.docProcessor.isLinkableElement
-import nl.jolanrensen.docProcessor.replaceTagNameInDocContent
 import nl.jolanrensen.docProcessor.toDoc
 
 /**

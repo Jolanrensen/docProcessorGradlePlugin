@@ -81,7 +81,7 @@ class KdocIncludePluginFunctionalTest {
          * Other test {@include [TestA]} 
          * 
          * @include [Test]
-         * @arg test "someFun" */
+         * {@arg test "someFun" with {@include [TestB]}} */
         fun someFun(a: Int) {
             println("Hello World!")
         }

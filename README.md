@@ -7,7 +7,7 @@ These preprocessors can be used to add custom tags to your KDoc / JavaDoc commen
 This is not a Dokka plugin, meaning you can actually get a `sources.jar` file with the modified comments instead of just
 having the comments modified in a `javadoc.jar` or a Dokka HTML website.
 
-Note: `{@inline tags}` work in KDoc comments too!
+Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}` work too from inside to outside.
 
 Examples include: 
  - `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor) (`INCLUDE_DOC_PROCESSOR`)
@@ -281,8 +281,7 @@ Some extra text",
 Hi there!",
 "@arg source someFun
 Some more text.
-"
-]
+"]
 ```
 
 This is also how tag processors receive their data. Note that any newlines after the `@tag`

@@ -107,7 +107,7 @@ open class DocumentableWithSource internal constructor(
 
             val docContent = docTextRange?.substring(fileText)?.getDocContent()
 
-            val tags = docContent?.findTagsInDocContent() ?: emptyList()
+            val tags = docContent?.findTagNamesInDocContent() ?: emptyList()
             val isModified = false
 
             return DocumentableWithSource(
