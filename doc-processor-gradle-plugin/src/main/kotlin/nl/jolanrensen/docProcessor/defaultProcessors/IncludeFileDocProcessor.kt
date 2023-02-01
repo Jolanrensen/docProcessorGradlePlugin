@@ -59,7 +59,10 @@ class IncludeFileDocProcessor : TagDocProcessor() {
                 .replace("*/", "&#42;&#47;")
         } else {
             content
-        } + " " + extraContent
+        }.let {
+            if (extraContent.isNotBlank()) "$it $extraContent"
+            else it
+        }
     }
 
     override fun processInnerTagWithContent(

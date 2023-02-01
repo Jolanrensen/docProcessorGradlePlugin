@@ -70,7 +70,7 @@ class IncludeDocProcessor : TagDocProcessor() {
     private val tag = "include"
 
     // Regex to match [Aliased][ReferenceLinks].
-    private val aliasedLinkRegex = Regex("""(\[[^\[]*]\[)([^\[]*)(])""")
+    private val aliasedLinkRegex = Regex("""(\[[^\[\]]*]\[)([^\[\]]*)(])""")
 
     // Regex to match [ReferenceLinks].
     private val singleLinkRegex = Regex("""([^]]\[)([^\[\]]*)(]$|][^\[])""")
@@ -150,7 +150,11 @@ class IncludeDocProcessor : TagDocProcessor() {
         }
 
         var content: DocContent = queried.docContent
-            .removeSurrounding("\n") + " $extraContent"
+            .removeSurrounding("\n")
+
+        if (extraContent.isNotEmpty()) {
+            content = "$content $extraContent"
+        }
 
         // if the content contains links to other elements, we need to expand the path
         // providing the original name or alias as new alias.

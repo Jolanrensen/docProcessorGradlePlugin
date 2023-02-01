@@ -99,7 +99,8 @@ class SampleDocProcessor : TagDocProcessor() {
                     appendLine("```")
                 }
 
-                append(" $extraContent")
+                if (extraContent.isNotEmpty())
+                    append(" $extraContent")
             }
         } ?: error(
             "SampleDocProcessor ERROR: Sample not found: $samplePath. Called from $path. Attempted queries: [\n${

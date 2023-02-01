@@ -184,7 +184,8 @@ class IncludeArgDocProcessor : TagDocProcessor() {
 
                     tagWithContent
                 } else {
-                    "$content $extraContent"
+                    if (extraContent.isEmpty()) content
+                    else "$content $extraContent"
                 }
             }
         }
