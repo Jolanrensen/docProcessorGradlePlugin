@@ -18,11 +18,7 @@ class ExampleDocProcessor : TagDocProcessor() {
         docContent: String,
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>,
-    ): String = processContent(
-        tagWithContent
-            .removePrefix("{")
-            .removeSuffix("}")
-    )
+    ): String = processContent(tagWithContent)
 
     /** How `  @normal tags` are processed. */
     override fun processTagWithContent(
@@ -32,9 +28,7 @@ class ExampleDocProcessor : TagDocProcessor() {
         docContent: String,
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>,
-    ): String = processContent(
-        tagWithContent.trimStart()
-    )
+    ): String = processContent(tagWithContent)
 
     // We can use the same function for both processInnerTagWithContent and processTagWithContent
     private fun processContent(tagWithContent: String): String {

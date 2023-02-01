@@ -275,20 +275,24 @@ For example, the following KDoc:
 ```kotlin
 /** 
  * Some extra text
- * @include [Test2]
+ * @a [Test2]
  * Hi there!
- * @arg source someFun
- * Some more text. 
+ * @b source someFun
+ * Some more text. (
+ * @c [Test1] {
+ * )
  */
 ```
 will be parsed as follows:
 ```
 ["
 Some extra text",
-"@include [Test2]
+"@a [Test2]
 Hi there!",
-"@arg source someFun
-Some more text.
+"@b source someFun
+Some more text. (
+@c [Test1] {
+)
 "]
 ```
 
@@ -328,46 +332,40 @@ package com.example.plugin
 
 class ExampleDocProcessor : TagDocProcessor() {
 
-    /** We'll intercept @example tags. */
-    override fun tagIsSupported(tag: String): Boolean =
-        tag == "example"
+   /** We'll intercept @example tags. */
+   override fun tagIsSupported(tag: String): Boolean =
+      tag == "example"
 
-    /** How `{@inner tags}` are processed. */
-    override fun processInnerTagWithContent(
-        tagWithContent: String, // always from `{@` to `}`.
-        path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
-    ): String = processContent(
-        tagWithContent
-            .removePrefix("{")
-            .removeSuffix("}")
-    )
+   /** How `{@inner tags}` are processed. */
+   override fun processInnerTagWithContent(
+      tagWithContent: String,
+      path: String,
+      documentable: DocumentableWithSource,
+      docContent: String,
+      filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+      allDocumentables: Map<String, List<DocumentableWithSource>>,
+   ): String = processContent(tagWithContent)
 
-    /** How `  @normal tags` are processed. */
-    override fun processTagWithContent(
-        tagWithContent: String, // from `  @` (with preceding whitespace) to the next `  @` or the end of the doc.
-        path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
-    ): String = processContent(
-        tagWithContent.trimStart()
-    )
+   /** How `  @normal tags` are processed. */
+   override fun processTagWithContent(
+      tagWithContent: String,
+      path: String,
+      documentable: DocumentableWithSource,
+      docContent: String,
+      filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+      allDocumentables: Map<String, List<DocumentableWithSource>>,
+   ): String = processContent(tagWithContent)
 
-    // We can use the same function for both processInnerTagWithContent and processTagWithContent
-    private fun processContent(tagWithContent: String): String {
-       // We can get the content after the @example tag.
-       val contentWithoutTag = tagWithContent
-          .getTagArguments(tag = "example", numberOfArguments = 1)
-          .single()
+   // We can use the same function for both processInnerTagWithContent and processTagWithContent
+   private fun processContent(tagWithContent: String): String {
+      // We can get the content after the @example tag.
+      val contentWithoutTag = tagWithContent
+         .getTagArguments(tag = "example", numberOfArguments = 1)
+         .single()
 
-       // While we can play with the other arguments, let's just return some simple modified content
-       return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
-    }
+      // While we can play with the other arguments, let's just return some simple modified content
+      return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
+   }
 }
 ```
 
