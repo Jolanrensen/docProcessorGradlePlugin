@@ -53,60 +53,108 @@ fun DocContent.toDoc(indent: Int = 0): String =
         }
 
 /**
- * Get @tag target name.
- * For instance, changes `@include [Foo]` to `Foo`
+ * Can retrieve the arguments of an inline- or block-tag.
+ * Arguments are split by spaces, unless they are in a block of "{}", "[]", "()", "<>", "`", """, or "'".
  */
-fun DocContent.getTagTarget(tag: String): String =
-    also { require("@$tag" in this) { "Could not find @$tag in $this" } }
-        .replace("\n", "")
-        .trim()
-        .removePrefix("{") // for inner tags
-        .removeSuffix("}")
+fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
+    require("@$tag" in this) { "Could not find @$tag in $this" }
+    require(numberOfArguments > 0) { "numberOfArguments must be greater than 0" }
 
-        .removePrefix("@$tag")
-        .trim()
+    var content = this
+
+    // remove inline tag stuff
+    if (content.startsWith("{") && content.endsWith("}")) {
+        content = content.removePrefix("{").removeSuffix("}")
+    }
+
+    // remove leading spaces
+    content = content.trimStart()
+
+    // remove tag
+    content = content.removePrefix("@$tag").trimStart()
+
+    val arguments = buildList {
+        var currentBlock = ""
+        val blocksIndicators = mutableListOf<String>()
+
+        for (char in content) {
+            when {
+                size >= numberOfArguments - 1 -> Unit
+
+                char.isWhitespace() && blocksIndicators.isEmpty() -> {
+                    if (currentBlock.isNotBlank()) add(currentBlock)
+                    currentBlock = ""
+                }
+
+                char == '{' -> blocksIndicators += "{}"
+                char == '}' -> blocksIndicators.removeAllElementsFromLast("{}")
+
+                char == '[' -> blocksIndicators += "[]"
+                char == ']' -> blocksIndicators.removeAllElementsFromLast("[]")
+
+                char == '(' -> blocksIndicators += "()"
+                char == ')' -> blocksIndicators.removeAllElementsFromLast("()")
+
+                char == '<' -> blocksIndicators += "<>"
+                char == '>' -> blocksIndicators.removeAllElementsFromLast("<>")
+
+                char == '`' -> if (!blocksIndicators.removeAllElementsFromLast("`")) blocksIndicators += "`"
+                char == '"' -> if (!blocksIndicators.removeAllElementsFromLast("\"")) blocksIndicators += "\""
+                char == '\'' -> if (blocksIndicators.removeAllElementsFromLast("'")) blocksIndicators += "'"
+
+                // TODO html tags
+            }
+            if (!(currentBlock.isEmpty() && char.isWhitespace()))
+                currentBlock += char
+        }
+
+        if (currentBlock.endsWith('\n'))
+            currentBlock = currentBlock.dropLast(1)
+
+        add(currentBlock)
+    }
+    return arguments
+}
+
+
+/**
+ * Decodes something like `[Alias][Foo]` to `Foo`
+ * But also `{@link Foo#main(String[])}` to `Foo.main`
+ */
+fun String.decodeCallableTarget(): String =
+    trim()
+
         .removePrefix("[")
-        .removePrefix("[") // twice for scalaDoc
-        .removeSuffix("]")
         .removeSuffix("]")
 
         .let { // for aliased tags like [Foo][Bar]
             if ("][" in it) it.substringAfter("][")
             else it
         }
+        .trim()
 
         .removePrefix("<code>") // for javaDoc
         .removeSuffix("</code>")
+
+        .trim()
 
         // for javaDoc, attempt to be able to read
         // @include {@link Main#main(String[])} as "Main.main"
         .removePrefix("{") // alternatively for javaDoc
         .removeSuffix("}")
+        .removePrefix("@link")
         .trim()
-        .removePrefix("@link ")
         .replace('#', '.')
         .replace(Regex("""\(.*\)"""), "")
         .trim()
 
 /**
- * Get file target.
- * For instance, changes `@file (./something.md)` to `./something.md`
+ * Get @tag target name.
+ * For instance, changes `@include [Foo]` to `Foo`
  */
-fun DocContent.getFileTarget(tag: String): String =
-    also { require("@$tag" in this) }
-        .replace("\n", "")
-        .trim()
-        .removePrefix("{") // for inner tags
-        .removeSuffix("}")
-
-        .removePrefix("@$tag")
-        .trim()
-
-        // TODO figure out how to make file location clickable
-        // TODO both for Java and Kotlin
-        .removePrefix("(")
-        .removeSuffix(")")
-        .trim()
+@Deprecated("", ReplaceWith("getTagArguments(tag, 1).first().decodeCallableTarget()"), DeprecationLevel.ERROR)
+fun DocContent.getTagTarget(tag: String): String =
+    getTagArguments(tag, 1).first().decodeCallableTarget()
 
 /**
  * Get tag name from the start of some content.
@@ -190,20 +238,20 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> = buildList {
         }
         for (char in line) when (char) {
             '{' -> blocksIndicators += "{}"
-            '}' -> blocksIndicators -= "{}"
+            '}' -> blocksIndicators.removeAllElementsFromLast("{}")
 
             '[' -> blocksIndicators += "[]"
-            ']' -> blocksIndicators -= "[]"
+            ']' -> blocksIndicators.removeAllElementsFromLast("[]")
 
             '(' -> blocksIndicators += "()"
-            ')' -> blocksIndicators -= "()"
-        }
-        val numberOfBackTicks = line.count { it == '`' } / 3
-        repeat(numberOfBackTicks) {
-            if ("```" in blocksIndicators)
-                blocksIndicators -= "```"
-            else
-                blocksIndicators += "```"
+            ')' -> blocksIndicators.removeAllElementsFromLast("()")
+
+            '<' -> blocksIndicators += "<>"
+            '>' -> blocksIndicators.removeAllElementsFromLast("<>")
+
+            '`' -> if (!blocksIndicators.removeAllElementsFromLast("`")) blocksIndicators += "`"
+
+            // TODO html tags
         }
     }
     add(currentBlock)
@@ -276,3 +324,18 @@ val docRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
  * Tags can be at the beginning of a line or after a `{`, like in `{@see String}`
  */
 val tagRegex = Regex("""(^|\n|\{) *@[a-zA-Z][a-zA-Z0-9]*""")
+
+
+/**
+ * Finds removes the last occurrence of [element] from the list and, if found, all elements after it.
+ * Returns true if [element] was found and removed, false otherwise.
+ */
+fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {
+    val index = lastIndexOf(element)
+    if (index == -1) return false
+    val indicesToRemove = index..lastIndex
+    for (i in indicesToRemove.reversed()) {
+        removeAt(i)
+    }
+    return true
+}

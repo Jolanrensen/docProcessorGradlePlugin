@@ -3,8 +3,9 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.getDocContent
-import nl.jolanrensen.docProcessor.getTagTarget
+import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.isLinkableElement
 import nl.jolanrensen.docProcessor.toDoc
 
@@ -108,18 +109,6 @@ class IncludeDocProcessor : TagDocProcessor() {
         error("Circular references detected in @include statements:\n$circularRefs")
     }
 
-    private fun DocumentableWithSource.queryDocumentables(
-        query: String,
-        documentables: Map<String, List<DocumentableWithSource>>,
-        filter: (DocumentableWithSource) -> Boolean = { true },
-    ): DocumentableWithSource? {
-        val queries = this.getAllFullPathsFromHereForTargetPath(query)
-
-        return queries.firstNotNullOfOrNull {
-            documentables[it]?.firstOrNull(filter)
-        }
-    }
-
     /**
      * Queries the path targeted by the @include tag and returns the docs of that element to
      * overwrite the @include tag.
@@ -131,7 +120,11 @@ class IncludeDocProcessor : TagDocProcessor() {
         allDocumentables: Map<String, List<DocumentableWithSource>>,
         path: String,
     ): String {
-        val includePath = line.getTagTarget(tag)
+        val includeArguments = line.getTagArguments(tag, 2)
+        val includePath = includeArguments.first().decodeCallableTarget()
+        // for stuff written after the @include tag, save and include it later
+        val extraContent = includeArguments.getOrElse(1) { "" }
+            .trimStart()
 
         // query the filtered documentables for the @include paths
         val queried = documentable.queryDocumentables(
@@ -156,7 +149,8 @@ class IncludeDocProcessor : TagDocProcessor() {
             )
         }
 
-        var content: DocContent = queried.docContent.trimEnd()
+        var content: DocContent = queried.docContent
+            .removeSurrounding("\n") + " $extraContent"
 
         // if the content contains links to other elements, we need to expand the path
         // providing the original name or alias as new alias.

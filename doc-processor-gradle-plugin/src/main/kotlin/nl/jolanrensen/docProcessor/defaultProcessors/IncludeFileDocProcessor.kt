@@ -2,7 +2,7 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.TagDocProcessor
-import nl.jolanrensen.docProcessor.getFileTarget
+import nl.jolanrensen.docProcessor.getTagArguments
 import org.apache.commons.lang.StringEscapeUtils
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
 
@@ -31,7 +31,19 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         documentable: DocumentableWithSource,
         path: String
     ): String {
-        val filePath = line.getFileTarget(tag)
+        val includeFileArguments = line.getTagArguments(tag, 2)
+        val filePath = includeFileArguments.first()
+            .trim()
+
+            // TODO figure out how to make file location clickable
+            // TODO both for Java and Kotlin
+            .removePrefix("(")
+            .removeSuffix(")")
+            .trim()
+
+        // for stuff written after the @includeFile tag, save and include it later
+        val extraContent = includeFileArguments.getOrElse(1) { "" }.trimStart()
+
         val currentDir = documentable.file.parentFile!!
         val targetFile = currentDir.resolve(filePath)
 
@@ -47,7 +59,7 @@ class IncludeFileDocProcessor : TagDocProcessor() {
                 .replace("*/", "&#42;&#47;")
         } else {
             content
-        }
+        } + " " + extraContent
     }
 
     override fun processInnerTagWithContent(

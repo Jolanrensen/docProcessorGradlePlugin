@@ -170,6 +170,18 @@ open class DocumentableWithSource internal constructor(
         return queries
     }
 
+    fun queryDocumentables(
+        query: String,
+        documentables: Map<String, List<DocumentableWithSource>>,
+        filter: (DocumentableWithSource) -> Boolean = { true },
+    ): DocumentableWithSource? {
+        val queries = this.getAllFullPathsFromHereForTargetPath(query)
+
+        return queries.firstNotNullOfOrNull {
+            documentables[it]?.firstOrNull(filter)
+        }
+    }
+
     fun asMutable(): MutableDocumentableWithSource =
         if (this is MutableDocumentableWithSource) this
         else MutableDocumentableWithSource(

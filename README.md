@@ -295,7 +295,8 @@ Some more text.
 This is also how tag processors receive their data. Note that any newlines after the `@tag`
 are also included as part of the tag data. Tag processors can then decide what to do with this extra data.
 However, `@include`, `@includeArg`, `@sample`, and `@includeFile` all have systems in place that
-will keep the content on the lines below the tag in place. Take this into account when writing your own processors.
+will keep the content after the tag and on the lines below the tag in place. 
+Take this into account when writing your own processors.
 
 To avoid any confusion, it's usually easier to stick to `{@inline tags}` as then it's clear which part of the doc
 belongs to the tag and what does not. Inline tags are processed before block tags.
@@ -359,14 +360,13 @@ class ExampleDocProcessor : TagDocProcessor() {
 
     // We can use the same function for both processInnerTagWithContent and processTagWithContent
     private fun processContent(tagWithContent: String): String {
-        // We can get the content after the @example tag.
-        val contentWithoutTag = tagWithContent
-            .removePrefix("@example")
-            .removeSurrounding("\n")
-            .trim()
+       // We can get the content after the @example tag.
+       val contentWithoutTag = tagWithContent
+          .getTagArguments(tag = "example", numberOfArguments = 1)
+          .single()
 
-        // While we can play with the other arguments, let's just return some simple modified content
-        return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
+       // While we can play with the other arguments, let's just return some simple modified content
+       return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
     }
 }
 ```

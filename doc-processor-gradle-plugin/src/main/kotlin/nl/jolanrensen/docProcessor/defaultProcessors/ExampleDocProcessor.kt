@@ -2,6 +2,7 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.getTagArguments
 
 class ExampleDocProcessor : TagDocProcessor() {
 
@@ -39,12 +40,10 @@ class ExampleDocProcessor : TagDocProcessor() {
     private fun processContent(tagWithContent: String): String {
         // We can get the content after the @example tag.
         val contentWithoutTag = tagWithContent
-            .removePrefix("@example")
-            .removeSurrounding("\n")
-            .trim()
+            .getTagArguments(tag = "example", numberOfArguments = 1)
+            .single()
 
         // While we can play with the other arguments, let's just return some simple modified content
-
         return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
     }
 }

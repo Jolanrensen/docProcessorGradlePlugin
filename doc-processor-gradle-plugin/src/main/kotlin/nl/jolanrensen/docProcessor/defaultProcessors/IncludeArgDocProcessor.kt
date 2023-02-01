@@ -3,7 +3,10 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.ProcessDocsAction
 import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.findTagNamesInDocContent
+import nl.jolanrensen.docProcessor.getTagArguments
+import nl.jolanrensen.docProcessor.getTagNameOrNull
 
 /**
  * @see IncludeArgDocProcessor
@@ -47,6 +50,8 @@ const val INCLUDE_ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProces
  *
  * NOTE: If there are multiple `@arg` tags with the same name, the last one processed will be used.
  * The order is: Inline tags: depth-first, left-to-right. Block tags: top-to-bottom.
+ * NOTE: Use `[References]` as keys is you want extra refactoring-safety.
+ * They are queried and saved by their fully qualified name.
  */
 class IncludeArgDocProcessor : TagDocProcessor() {
 
@@ -93,7 +98,8 @@ class IncludeArgDocProcessor : TagDocProcessor() {
     ): String {
         // split up the content for @includeArg but not for @arg
         val isIncludeArg = tagWithContent.trimStart().startsWith("@$useArgumentTag")
-        return if (isIncludeArg) {
+
+        return if (isIncludeArg) { // @includeArg
             tagWithContent.split('\n').mapIndexed { i: Int, line: String ->
                 // tagWithContent is the content after the @includeArg tag
                 // including any new lines below. We will only replace the first line and skip the rest.
@@ -110,7 +116,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                     line
                 }
             }.joinToString("\n")
-        } else {
+        } else { // @arg
             processInnerTagWithContent(
                 tagWithContent = tagWithContent,
                 path = path,
@@ -130,24 +136,26 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>
     ): String {
-        val trimmedTagWithContent = tagWithContent
-            .trimStart()
-            .removePrefix("{")
-            .removeSuffix("}")
+        val tagName = tagWithContent.getTagNameOrNull()
+        val isArgDeclaration = tagName == declareArgumentTag
 
-        val isArgDeclaration = trimmedTagWithContent.startsWith("@$declareArgumentTag")
-        val argTagsStillPresent = docContent.findTagNamesInDocContent().contains(declareArgumentTag)
+        val argTagsStillPresent = declareArgumentTag in docContent.findTagNamesInDocContent()
 
         return when {
-            isArgDeclaration -> {
-                val argDeclaration = trimmedTagWithContent
-                    .removePrefix("@$declareArgumentTag")
-                    .trimStart()
-                val name = argDeclaration.takeWhile { !it.isWhitespace() }
-                val value = argDeclaration.removePrefix(name).trimStart()
+            isArgDeclaration -> { // @arg
+                val argArguments = tagWithContent.getTagArguments(declareArgumentTag, 2)
+                var key = argArguments.first()
 
-                argMap.getOrPut(documentable) { mutableMapOf() }[name] = value
-                argsNotFound.getOrPut(documentable) { mutableSetOf() } -= name
+                if (key.startsWith('[') && key.contains(']')) {
+                    key = buildReferenceKey(key, documentable, allDocumentables)
+                }
+
+                val value = argArguments.getOrElse(1) { "" }
+                    .trimStart()
+                    .removeSuffix("\n")
+
+                argMap.getOrPut(documentable) { mutableMapOf() }[key] = value
+                argsNotFound.getOrPut(documentable) { mutableSetOf() } -= key
                 ""
             }
 
@@ -156,21 +164,46 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 tagWithContent
             }
 
-            else -> {
-                // skip @includeArg tags if there are still @args present
+            else -> { // @includeArg
+                val includeArgArguments = tagWithContent.getTagArguments(useArgumentTag, 2)
 
+                val argIncludeDeclaration = includeArgArguments.first()
 
-                val argTarget = trimmedTagWithContent
-                    .removePrefix("@$useArgumentTag")
-                    .trim()
+                // for stuff written after the @includeArg tag, save and include it later
+                val extraContent = includeArgArguments.getOrElse(1) { "" }
+                    .trimStart()
 
-                val arg = argMap[documentable]?.get(argTarget)
-                if (arg == null) {
-                    argsNotFound.getOrPut(documentable) { mutableSetOf() } += argTarget
+                var key = argIncludeDeclaration
+                if (key.startsWith('[') && key.contains(']')) {
+                    key = buildReferenceKey(key, documentable, allDocumentables)
                 }
 
-                arg ?: tagWithContent
+                val content = argMap[documentable]?.get(key)
+                if (content == null) {
+                    argsNotFound.getOrPut(documentable) { mutableSetOf() } += key
+
+                    tagWithContent
+                } else {
+                    "$content $extraContent"
+                }
             }
         }
+    }
+
+    private fun buildReferenceKey(
+        originalKey: String,
+        documentable: DocumentableWithSource,
+        allDocumentables: Map<String, List<DocumentableWithSource>>
+    ): String {
+        var key = originalKey
+        val reference = key.decodeCallableTarget()
+        val referencedDocumentable = documentable.queryDocumentables(
+            query = reference,
+            documentables = allDocumentables,
+        )
+
+        if (referencedDocumentable != null)
+            key = "[${referencedDocumentable.path}]"
+        return key
     }
 }

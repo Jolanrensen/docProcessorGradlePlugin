@@ -2,13 +2,11 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.docRegex
-import nl.jolanrensen.docProcessor.expandPath
-import nl.jolanrensen.docProcessor.getTagTarget
-import nl.jolanrensen.docProcessor.hasStar
+import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.psi
 import org.apache.commons.lang.StringEscapeUtils
-import org.jetbrains.dokka.analysis.PsiDocumentableSource
 
 /**
  * @see SampleDocProcessor
@@ -51,7 +49,10 @@ class SampleDocProcessor : TagDocProcessor() {
         val noComments = tagWithContent.startsWith("@$sampleNoComments")
 
         // get the full @sample / @sampleNoComments path
-        val samplePath = line.getTagTarget(if (noComments) sampleNoComments else sampleTag)
+        val sampleArguments = line.getTagArguments(if (noComments) sampleNoComments else sampleTag, 2)
+        val samplePath = sampleArguments.first().decodeCallableTarget()
+        // for stuff written after the @sample tag, save and include it later
+        val extraContent = sampleArguments.getOrElse(1) { "" }.trimStart()
 
         val queries = documentable.getAllFullPathsFromHereForTargetPath(samplePath)
 
@@ -97,6 +98,8 @@ class SampleDocProcessor : TagDocProcessor() {
                     appendLine(content)
                     appendLine("```")
                 }
+
+                append(" $extraContent")
             }
         } ?: error(
             "SampleDocProcessor ERROR: Sample not found: $samplePath. Called from $path. Attempted queries: [\n${

@@ -53,14 +53,16 @@ class KdocIncludePluginFunctionalTest {
         /**
          * Hello World!
          * 
-         * This is a large example of how the plugin will work from {@includeArg test}
+         * This is a large example of how the plugin will work from {@includeArg [TestA]}!
          * 
+         * @includeArg [TestA] with extra text
          * @param name The name of the person to greet
          * @see [Hi][TestB]
          * @see [TestA]
          * @see [TestB]
-         * @comment the arg below can be used to supply the argument after an inline @include tag.
-         * @arg test 
+         * {@comment If you provide a default value for an argument, make sure to make it inline, so it can be 
+         * overwritten by other inline tags, since block tags are processed after inline tags and would thus overwrite it.}
+         * {@arg [TestA] <DEFAULT>}
          */
 
         private interface TestA
@@ -70,8 +72,7 @@ class KdocIncludePluginFunctionalTest {
         
         /**
          * Hello World 2!
-         * {@include [TestA]} "Test"
-         * @comment 
+         * @include [TestA] {@arg [Some Alias][com.example.plugin.TestA] Test}
          */
         @AnnotationTest(a = 24)
         private interface Test
@@ -80,8 +81,9 @@ class KdocIncludePluginFunctionalTest {
          * Some extra text @include nothing, this is skipped
          * Other test {@include [TestA]} 
          * 
-         * @include [Test]
-         * {@arg test "someFun" with {@include [TestB]}} */
+         * @include [Test] aaa
+         * @arg [TestA] "someFun" with {@include [TestB]}
+         */
         fun someFun(a: Int) {
             println("Hello World!")
         }
@@ -145,7 +147,7 @@ class KdocIncludePluginFunctionalTest {
                     System.out.println("Hello World!");
                 }
         
-                /** @include <code>com.example.plugin.JavaMain.Main2.TestB</code> */
+                /** @include {@link com.example.plugin.JavaMain.Main2.TestB} */
                 void someFun(String b) {
                     System.out.println("Hello World!");
                 }

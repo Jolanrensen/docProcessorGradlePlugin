@@ -16,7 +16,7 @@ class DocProcessorPluginTest {
      * blablah
      *   @a a
      * Some extra text. @b nothing, this is skipped
-     * Other test {@c TestA
+     * Other test {@c [TestA
      * blabla {@d TestA }
      * }
      * Other test `{@h TestA}`
@@ -30,7 +30,7 @@ class DocProcessorPluginTest {
         """|blablah
            |  @a a
            |Some extra text. @b nothing, this is skipped
-           |Other test {@c TestA
+           |Other test {@c [TestA
            |blabla {@d TestA }
            |}
            |Other test `{@h TestA}`
@@ -47,7 +47,7 @@ class DocProcessorPluginTest {
 
             """|  @a a
                |Some extra text. @b nothing, this is skipped
-               |Other test {@c TestA
+               |Other test {@c [TestA
                |blabla {@d TestA }
                |}
                |Other test `{@h TestA}`
@@ -129,6 +129,35 @@ class DocProcessorPluginTest {
 
         kdoc6.getDocContent().toDoc() shouldBe kdoc6a
     }
+
+
+    @Test
+    fun `Get tag content`() {
+        val tagContent1 = "{@tag simple content with spaces}"
+
+        tagContent1.getTagArguments("tag", 1) shouldBe listOf("simple content with spaces")
+        tagContent1.getTagArguments("tag", 2) shouldBe listOf("simple", "content with spaces")
+        tagContent1.getTagArguments("tag", 3) shouldBe listOf("simple", "content", "with spaces")
+
+        val tagContent2 = "@tag [some (\"more `difficult] (content with) spaces"
+
+        tagContent2.getTagArguments("tag", 1) shouldBe listOf("[some (\"more `difficult] (content with) spaces")
+        tagContent2.getTagArguments("tag", 2) shouldBe listOf("[some (\"more `difficult]", "(content with) spaces")
+        tagContent2.getTagArguments("tag", 3) shouldBe listOf("[some (\"more `difficult]", "(content with)", "spaces")
+
+        val tagContent3 = "@include {@link com.example.plugin.JavaMain.Main2.TestB}"
+
+        tagContent3.getTagArguments("include", 1) shouldBe listOf("{@link com.example.plugin.JavaMain.Main2.TestB}")
+        tagContent3.getTagArguments("include", 1)
+            .first()
+            .decodeCallableTarget() shouldBe "com.example.plugin.JavaMain.Main2.TestB"
+
+        val tagContent4 = "@arg [Something] with a newline at the end\n"
+        tagContent4.getTagArguments("arg", 1) shouldBe listOf("[Something] with a newline at the end")
+        tagContent4.getTagArguments("arg", 2) shouldBe listOf("[Something]", "with a newline at the end")
+
+    }
+
 }
 
 
