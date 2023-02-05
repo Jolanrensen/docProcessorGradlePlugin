@@ -61,7 +61,7 @@ open class DocumentableWithSource internal constructor(
             val file = File(source.path)
 
             if (!file.exists()) {
-                println("Warning: Could not find file for $path")
+                // println("Warning: Could not find file for $path")
                 return null
             }
 
@@ -170,6 +170,10 @@ open class DocumentableWithSource internal constructor(
         return queries
     }
 
+    /**
+     * Queries the [documentables] map for a [DocumentableSource] that exists for
+     * the given [query].
+     */
     fun queryDocumentables(
         query: String,
         documentables: Map<String, List<DocumentableWithSource>>,
@@ -181,6 +185,25 @@ open class DocumentableWithSource internal constructor(
             documentables[it]?.firstOrNull(filter)
         }
     }
+
+    /**
+     * Queries the [documentables] map for a [DocumentableSource]'s [path] that exists for
+     * the given [query]. If there is no [DocumentableSource] for the given [query] but the path
+     * still exists as a key in the [documentables] map, then that path is returned.
+     */
+    fun queryDocumentablesForPath(
+        query: String,
+        documentables: Map<String, List<DocumentableWithSource>>,
+        filter: (DocumentableWithSource) -> Boolean = { true },
+    ): String? {
+        val docPath = queryDocumentables(query, documentables, filter)?.path
+        if (docPath != null) return docPath
+
+        val queries = this.getAllFullPathsFromHereForTargetPath(query)
+
+        return queries.firstOrNull { it in documentables }
+    }
+
 
     fun asMutable(): MutableDocumentableWithSource =
         if (this is MutableDocumentableWithSource) this

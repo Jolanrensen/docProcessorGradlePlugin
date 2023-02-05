@@ -140,11 +140,24 @@ class IncludeDocProcessor : TagDocProcessor() {
             val attemptedQueries = documentable.getAllFullPathsFromHereForTargetPath(includePath)
                 .joinToString("\n")
 
+            val queriedPath = documentable.queryDocumentablesForPath(
+                query = includePath,
+                documentables = allDocumentables,
+            )
+
             error(
-                if (queriedNoFilter == documentable) {
-                    "IncludeDocProcessor ERROR: Self-reference detected. Called from \"$path\"."
-                } else {
-                    "IncludeDocProcessor ERROR: Include not found: \"$includePath\". Called from \"$path\". Attempted queries: [\n$attemptedQueries]"
+                when {
+                    queriedNoFilter == documentable ->
+                        "IncludeDocProcessor ERROR: Self-reference detected. Called from \"$path\"."
+
+                    queriedPath != null ->
+                        "IncludeDocProcessor ERROR: Include path found, but no documentation found for: " +
+                                "\"$includePath\". Including documentation from outside the library or from type-aliases " +
+                                "is currently not supported. Called from \"$path\". Attempted queries: [\n$attemptedQueries]"
+
+                    else ->
+                        "IncludeDocProcessor ERROR: Include not found: \"$includePath\". Called from \"$path\". " +
+                                "Attempted queries: [\n$attemptedQueries]"
                 }
             )
         }
@@ -164,10 +177,10 @@ class IncludeDocProcessor : TagDocProcessor() {
                     buildString {
                         append(it[1])
                         append(
-                            queried.queryDocumentables(
+                            queried.queryDocumentablesForPath(
                                 query = it[2],
                                 documentables = allDocumentables,
-                            )?.path ?: it[2]
+                            ) ?: it[2]
                         )
                         append(it[3])
                     }
@@ -178,10 +191,10 @@ class IncludeDocProcessor : TagDocProcessor() {
                         append(it[0].dropLastWhile { it != ']' })
                         append(it[1].drop(1))
                         append(
-                            queried.queryDocumentables(
+                            queried.queryDocumentablesForPath(
                                 query = it[2],
                                 documentables = allDocumentables,
-                            )?.path ?: it[2]
+                            ) ?: it[2]
                         )
                         append(it[3])
                     }

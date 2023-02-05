@@ -126,22 +126,36 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
         }
 
         // collect the right documentables from the modules (only linkable elements with docs)
+        val pathsWithoutSources = mutableSetOf<String>()
         val documentables = modules.flatMap {
-            it.withDescendants()
-                .filter { /*it.isLinkableElement() && it.hasDocumentation() &&*/ it is WithSources }
-                .mapNotNull {
+            it.withDescendants().let {
+                val (withSources, withoutSources) = it.partition { it is WithSources }
+
+                pathsWithoutSources.addAll(withoutSources.map { it.dri.path })
+
+                withSources.mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
 
-                    // TODO include documentables without docs to make @sample work
                     DocumentableWithSource.createOrNull(
                         documentable = it,
                         source = source,
                         logger = logger,
                     )
                 }
+            }
         }
 
-        return documentables.groupBy { it.path }
+        val documentablesPerPath = documentables
+            .groupBy { it.path }
+            .toMutableMap()
+
+        for (path in pathsWithoutSources) {
+            if (path !in documentablesPerPath) {
+                documentablesPerPath[path] = emptyList()
+            }
+        }
+
+        return documentablesPerPath
     }
 
     private fun getModifiedDocumentablesPerFile(

@@ -19,6 +19,7 @@ import org.jetbrains.dokka.links.DRI
 import org.jetbrains.dokka.model.Callable
 import org.jetbrains.dokka.model.DClasslike
 import org.jetbrains.dokka.model.DParameter
+import org.jetbrains.dokka.model.DTypeAlias
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.model.doc.TagWrapper
@@ -42,7 +43,7 @@ import java.util.*
 
 /**
  * Many of the contents of this file are copied from Dokka's
- * [org.jetbrains.dokka.base.translators.psi.parsers.DocComment]
+ * [DocComment][org.jetbrains.dokka.base.translators.psi.parsers.DocComment]
  * since many of these methods were internal or private.
  * However, there's no other way to access JavaDoc than with [findClosestDocComment].
  * See https://github.com/Kotlin/dokka/blob/master/plugins/base/src/main/kotlin/translators/psi/parsers/PsiCommentsUtils.kt
@@ -54,7 +55,11 @@ import java.util.*
  * @receiver [Documentable]
  * @return true if receiver is linkable element
  */
-fun Documentable.isLinkableElement(): Boolean = this is DClasslike || this is Callable || this is DParameter
+fun Documentable.isLinkableElement(): Boolean =
+    this is DClasslike ||
+            this is Callable ||
+            this is DParameter ||
+            this is DTypeAlias // TODO will not be included in DocumentableWithSources since it has no source
 
 /**
  * Has documentation for any sourceSet
