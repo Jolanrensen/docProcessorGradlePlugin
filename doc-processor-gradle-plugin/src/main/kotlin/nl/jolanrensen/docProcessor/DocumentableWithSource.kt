@@ -165,6 +165,9 @@ open class DocumentableWithSource internal constructor(
                     this += targetPath.replaceFirst(identifier, import.pathStr)
                 }
             }
+
+            // finally add the path itself in case it's a top level/fq path
+            this += targetPath
         }
 
         return queries
