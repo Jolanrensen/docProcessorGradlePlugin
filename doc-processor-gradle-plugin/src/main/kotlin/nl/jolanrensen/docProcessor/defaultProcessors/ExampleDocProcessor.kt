@@ -3,6 +3,7 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 import nl.jolanrensen.docProcessor.DocumentableWithSource
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.getTagArguments
+import nl.jolanrensen.docProcessor.removeEscapeCharacters
 
 class ExampleDocProcessor : TagDocProcessor() {
 
@@ -36,6 +37,7 @@ class ExampleDocProcessor : TagDocProcessor() {
         val contentWithoutTag = tagWithContent
             .getTagArguments(tag = "example", numberOfArguments = 1)
             .single()
+            .removeEscapeCharacters() // remove escape character "\" from the content
 
         // While we can play with the other arguments, let's just return some simple modified content
         return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""

@@ -362,6 +362,7 @@ class ExampleDocProcessor : TagDocProcessor() {
       val contentWithoutTag = tagWithContent
          .getTagArguments(tag = "example", numberOfArguments = 1)
          .single()
+         .removeEscapeCharacters() // remove escape character "\" from the content
 
       // While we can play with the other arguments, let's just return some simple modified content
       return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""

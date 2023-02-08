@@ -22,7 +22,7 @@ fun String.getDocContent(): DocContent = this
                 if (it.startsWith(" ")) it.drop(1)
                 else it
             }
-    }
+    }.trimEnd()
 
 
 /**
@@ -55,6 +55,7 @@ fun DocContent.toDoc(indent: Int = 0): String =
 /**
  * Can retrieve the arguments of an inline- or block-tag.
  * Arguments are split by spaces, unless they are in a block of "{}", "[]", "()", "<>", "`", """, or "'".
+ * Blocks "marks" are ignored if "\" escaped.
  */
 fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
     require("@$tag" in this) { "Could not find @$tag in $this" }
@@ -77,8 +78,13 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
         var currentBlock = ""
         val blocksIndicators = mutableListOf<String>()
 
+        var escapeNext = false
         for (char in content) {
             when {
+                escapeNext -> escapeNext = false
+
+                char == '\\' -> escapeNext = true
+
                 size >= numberOfArguments - 1 -> Unit
 
                 char.isWhitespace() && blocksIndicators.isEmpty() -> {
@@ -116,6 +122,22 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
     return arguments
 }
 
+/**
+ * Removes "\" from the String, but only if it is not escaped.
+ */
+fun String.removeEscapeCharacters(escapeChars: List<Char> = listOf('\\')): String = buildString {
+    var escapeNext = false
+    for (char in this@removeEscapeCharacters) {
+        if (escapeNext) {
+            escapeNext = false
+        } else if (char in escapeChars) {
+            escapeNext = true
+            continue
+        }
+        append(char)
+    }
+}
+
 
 /**
  * Decodes something like `[Alias][Foo]` to `Foo`
@@ -147,14 +169,6 @@ fun String.decodeCallableTarget(): String =
         .replace('#', '.')
         .replace(Regex("""\(.*\)"""), "")
         .trim()
-
-/**
- * Get @tag target name.
- * For instance, changes `@include [Foo]` to `Foo`
- */
-@Deprecated("", ReplaceWith("getTagArguments(tag, 1).first().decodeCallableTarget()"), DeprecationLevel.ERROR)
-fun DocContent.getTagTarget(tag: String): String =
-    getTagArguments(tag, 1).first().decodeCallableTarget()
 
 /**
  * Get tag name from the start of some content.
@@ -215,6 +229,7 @@ fun String.expandPath(currentFullPath: String): String {
  * The tag, if present, can be found with optional leading spaces in the first line of the block.
  * You can get the name with [String.getTagNameOrNull].
  * Splitting takes `{}`, `[]`, `()`, and triple backticks into account.
+ * Block "marks" are ignored if "\" escaped.
  * Can be joint with '\n' to get the original content.
  */
 fun DocContent.splitDocContentPerBlock(): List<DocContent> = buildList {
@@ -236,38 +251,60 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> = buildList {
                 currentBlock += "\n$line"
             }
         }
-        for (char in line) when (char) {
-            '{' -> blocksIndicators += "{}"
-            '}' -> blocksIndicators.removeAllElementsFromLast("{}")
+        var escapeNext = false
+        for (char in line) {
 
-            '[' -> blocksIndicators += "[]"
-            ']' -> blocksIndicators.removeAllElementsFromLast("[]")
+            if (escapeNext) {
+                escapeNext = false
+                continue
+            }
 
-            '(' -> blocksIndicators += "()"
-            ')' -> blocksIndicators.removeAllElementsFromLast("()")
+            when (char) {
+                '\\' -> escapeNext = true
 
-            '<' -> blocksIndicators += "<>"
-            '>' -> blocksIndicators.removeAllElementsFromLast("<>")
+                '{' -> blocksIndicators += "{}"
+                '}' -> blocksIndicators.removeAllElementsFromLast("{}")
 
-            '`' -> if (!blocksIndicators.removeAllElementsFromLast("`")) blocksIndicators += "`"
+                '[' -> blocksIndicators += "[]"
+                ']' -> blocksIndicators.removeAllElementsFromLast("[]")
 
-            // TODO html tags
+                '(' -> blocksIndicators += "()"
+                ')' -> blocksIndicators.removeAllElementsFromLast("()")
+
+                '<' -> blocksIndicators += "<>"
+                '>' -> blocksIndicators.removeAllElementsFromLast("<>")
+
+                '`' -> if (!blocksIndicators.removeAllElementsFromLast("`")) blocksIndicators += "`"
+
+                // TODO html tags
+            }
         }
     }
     add(currentBlock)
 }
 
-/** Finds any inline tag with its depth, preferring the innermost one.*/
+/** Finds any inline tag with its depth, preferring the innermost one.
+ * "{@}" marks are ignored if "\" escaped.
+ */
 private fun DocContent.findInlineTagRangeWithDepthOrNull(): Pair<IntRange, Int>? {
     var depth = 0
     var start: Int? = null
+    var escapeNext = false
     for ((i, char) in this.withIndex()) {
-        if (char == '{' && this.getOrNull(i + 1) == '@') {
-            start = i
-            depth++
-        } else if (char == '}') {
-            if (start != null) {
-                return Pair(start..i, depth)
+        // escape this char
+        when {
+            escapeNext -> escapeNext = false
+
+            char == '\\' -> escapeNext = true
+
+            char == '{' && this.getOrNull(i + 1) == '@' -> {
+                start = i
+                depth++
+            }
+            char == '}' -> {
+                if (start != null) {
+                    return Pair(start..i, depth)
+                }
             }
         }
     }
@@ -278,6 +315,7 @@ private fun DocContent.findInlineTagRangeWithDepthOrNull(): Pair<IntRange, Int>?
  * Finds all inline tag names, including nested ones,
  * together with their respective range in the doc.
  * The list is sorted by depth, with the deepest tags first and then by order of appearance.
+ * "{@}" marks are ignored if "\" escaped.
  */
 fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, IntRange>> {
     var text = this
@@ -301,7 +339,9 @@ fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, Int
         .flatMap { it.value }
 }
 
-/** Finds all inline tag names, including nested ones. */
+/** Finds all inline tag names, including nested ones.
+ * "{@}" marks are ignored if "\" escaped.
+ */
 fun DocContent.findInlineTagNamesInDocContent(): List<String> =
     findInlineTagNamesInDocContentWithRanges().map { it.first }
 
@@ -319,11 +359,11 @@ fun DocContent.findTagNamesInDocContent(): List<String> =
  */
 val docRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
 
-/**
- * Is able to find JavaDoc/KDoc tags without content.
- * Tags can be at the beginning of a line or after a `{`, like in `{@see String}`
- */
-val tagRegex = Regex("""(^|\n|\{) *@[a-zA-Z][a-zA-Z0-9]*""")
+///**
+// * Is able to find JavaDoc/KDoc tags without content.
+// * Tags can be at the beginning of a line or after a `{`, like in `{@see String}`
+// */
+//val tagRegex = Regex("""(^|\n|\{) *@[a-zA-Z][a-zA-Z0-9]*""")
 
 
 /**

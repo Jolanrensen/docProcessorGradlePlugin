@@ -7,6 +7,7 @@ import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.getDocContent
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.isLinkableElement
+import nl.jolanrensen.docProcessor.removeEscapeCharacters
 import nl.jolanrensen.docProcessor.toDoc
 
 /**
@@ -120,7 +121,7 @@ class IncludeDocProcessor : TagDocProcessor() {
         allDocumentables: Map<String, List<DocumentableWithSource>>,
         path: String,
     ): String {
-        val includeArguments = line.getTagArguments(tag, 2)
+        val includeArguments = line.getTagArguments(tag = tag, numberOfArguments = 2)
         val includePath = includeArguments.first().decodeCallableTarget()
         // for stuff written after the @include tag, save and include it later
         val extraContent = includeArguments.getOrElse(1) { "" }
@@ -164,8 +165,9 @@ class IncludeDocProcessor : TagDocProcessor() {
 
         var content: DocContent = queried.docContent
             .removeSurrounding("\n")
+            .removeEscapeCharacters()
 
-        if (extraContent.isNotEmpty()) {
+        if (extraContent.isNotBlank()) {
             content = "$content $extraContent"
         }
 

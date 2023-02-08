@@ -7,6 +7,7 @@ import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.findTagNamesInDocContent
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.getTagNameOrNull
+import nl.jolanrensen.docProcessor.removeEscapeCharacters
 
 /**
  * @see IncludeArgDocProcessor
@@ -88,53 +89,12 @@ class IncludeArgDocProcessor : TagDocProcessor() {
     private val argMap: MutableMap<DocumentableWithSource, MutableMap<String, String>> = mutableMapOf()
 
     private val argsNotFound: MutableMap<DocumentableWithSource, MutableSet<String>> = mutableMapOf()
-    override fun processTagWithContent(
+
+    private fun process(
         tagWithContent: String,
-        path: String,
         documentable: DocumentableWithSource,
         docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
-    ): String {
-        // split up the content for @includeArg but not for @arg
-        val isIncludeArg = tagWithContent.trimStart().startsWith("@$useArgumentTag")
-
-        return if (isIncludeArg) { // @includeArg
-            tagWithContent.split('\n').mapIndexed { i: Int, line: String ->
-                // tagWithContent is the content after the @includeArg tag
-                // including any new lines below. We will only replace the first line and skip the rest.
-                if (i == 0) {
-                    processInnerTagWithContent(
-                        tagWithContent = line,
-                        path = path,
-                        documentable = documentable,
-                        docContent = docContent,
-                        filteredDocumentables = filteredDocumentables,
-                        allDocumentables = allDocumentables,
-                    )
-                } else {
-                    line
-                }
-            }.joinToString("\n")
-        } else { // @arg
-            processInnerTagWithContent(
-                tagWithContent = tagWithContent,
-                path = path,
-                documentable = documentable,
-                docContent = docContent,
-                filteredDocumentables = filteredDocumentables,
-                allDocumentables = allDocumentables,
-            )
-        }
-    }
-
-    override fun processInnerTagWithContent(
-        tagWithContent: String,
-        path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        allDocumentables: Map<String, List<DocumentableWithSource>>,
     ): String {
         val tagName = tagWithContent.getTagNameOrNull()
         val isArgDeclaration = tagName == declareArgumentTag
@@ -143,7 +103,10 @@ class IncludeArgDocProcessor : TagDocProcessor() {
 
         return when {
             isArgDeclaration -> { // @arg
-                val argArguments = tagWithContent.getTagArguments(declareArgumentTag, 2)
+                val argArguments = tagWithContent.getTagArguments(
+                    tag = declareArgumentTag,
+                    numberOfArguments = 2,
+                )
                 var key = argArguments.first()
 
                 if (key.startsWith('[') && key.contains(']')) {
@@ -153,6 +116,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 val value = argArguments.getOrElse(1) { "" }
                     .trimStart()
                     .removeSuffix("\n")
+                    .removeEscapeCharacters()
 
                 argMap.getOrPut(documentable) { mutableMapOf() }[key] = value
                 argsNotFound.getOrPut(documentable) { mutableSetOf() } -= key
@@ -165,7 +129,10 @@ class IncludeArgDocProcessor : TagDocProcessor() {
             }
 
             else -> { // @includeArg
-                val includeArgArguments = tagWithContent.getTagArguments(useArgumentTag, 2)
+                val includeArgArguments = tagWithContent.getTagArguments(
+                    tag = useArgumentTag,
+                    numberOfArguments = 2,
+                )
 
                 val argIncludeDeclaration = includeArgArguments.first()
 
@@ -190,6 +157,56 @@ class IncludeArgDocProcessor : TagDocProcessor() {
             }
         }
     }
+
+    override fun processTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>
+    ): String {
+        // split up the content for @includeArg but not for @arg
+        val isIncludeArg = tagWithContent.trimStart().startsWith("@$useArgumentTag")
+
+        return if (isIncludeArg) { // @includeArg
+            tagWithContent.split('\n').mapIndexed { i: Int, line: String ->
+                // tagWithContent is the content after the @includeArg tag
+                // including any new lines below. We will only replace the first line and skip the rest.
+                if (i == 0) {
+                    process(
+                        tagWithContent = line,
+                        documentable = documentable,
+                        docContent = docContent,
+                        allDocumentables = allDocumentables,
+                    )
+                } else {
+                    line
+                }
+            }.joinToString("\n")
+        } else { // @arg
+            process(
+                tagWithContent = tagWithContent,
+                documentable = documentable,
+                docContent = docContent,
+                allDocumentables = allDocumentables,
+            )
+        }
+    }
+
+    override fun processInnerTagWithContent(
+        tagWithContent: String,
+        path: String,
+        documentable: DocumentableWithSource,
+        docContent: String,
+        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
+        allDocumentables: Map<String, List<DocumentableWithSource>>,
+    ): String = process(
+        tagWithContent = tagWithContent,
+        documentable = documentable,
+        docContent = docContent,
+        allDocumentables = allDocumentables,
+    )
 
     private fun buildReferenceKey(
         originalKey: String,

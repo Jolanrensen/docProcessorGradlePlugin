@@ -29,9 +29,12 @@ class IncludeFileDocProcessor : TagDocProcessor() {
     private fun processContent(
         line: String,
         documentable: DocumentableWithSource,
-        path: String
+        path: String,
     ): String {
-        val includeFileArguments = line.getTagArguments(tag, 2)
+        val includeFileArguments = line.getTagArguments(
+            tag = tag,
+            numberOfArguments = 2,
+        )
         val filePath = includeFileArguments.first()
             .trim()
 
@@ -92,7 +95,7 @@ class IncludeFileDocProcessor : TagDocProcessor() {
                 processContent(
                     line = line,
                     documentable = documentable,
-                    path = path
+                    path = path,
                 )
             } else {
                 line
