@@ -152,7 +152,7 @@ open class DocumentableWithSource internal constructor(
         val queries = buildList {
             // get all possible full @target paths with all possible sub paths
             for (subPath in subPaths) {
-                this += targetPath.expandPath(currentFullPath = subPath)
+                this += "$subPath.$targetPath"
             }
 
             // check imports too

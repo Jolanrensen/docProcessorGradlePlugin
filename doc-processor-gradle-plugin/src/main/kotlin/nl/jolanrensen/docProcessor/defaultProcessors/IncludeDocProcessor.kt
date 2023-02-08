@@ -182,7 +182,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                             queried.queryDocumentablesForPath(
                                 query = it[2],
                                 documentables = allDocumentables,
-                            ) ?: it[2]
+                            ) { it != queried } ?: it[2]
                         )
                         append(it[3])
                     }
@@ -196,7 +196,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                             queried.queryDocumentablesForPath(
                                 query = it[2],
                                 documentables = allDocumentables,
-                            ) ?: it[2]
+                            ) { it != queried } ?: it[2]
                         )
                         append(it[3])
                     }

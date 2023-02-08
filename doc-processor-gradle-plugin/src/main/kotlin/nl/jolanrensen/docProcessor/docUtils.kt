@@ -188,43 +188,6 @@ fun DocContent.getTagNameOrNull(): String? =
 fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) next() else null
 
 /**
- * Expands the receiver String path relative to the current full path.
- * For instance, if the receiver is `plugin.Class.Class2` and the current full path is `com.example.plugin.Class`,
- * the result will be `com.example.plugin.Class.Class2`.
- */
-fun String.expandPath(currentFullPath: String): String {
-    if (isEmpty() && currentFullPath.isEmpty()) return ""
-    if (isEmpty()) return currentFullPath
-    if (currentFullPath.isEmpty()) return this
-
-    val targetPath = split(".")
-    val parentPath = currentFullPath.split(".")
-
-    var result = ""
-    val targetPathIterator = targetPath.iterator()
-    val parentPathIterator = parentPath.iterator()
-
-    var nextTarget: String? = targetPathIterator.nextOrNull()
-    var nextParent: String? = parentPathIterator.nextOrNull()
-
-    while (nextTarget != null || nextParent != null) {
-        if (nextTarget == nextParent) {
-            result += "$nextParent."
-            nextTarget = targetPathIterator.nextOrNull()
-            nextParent = parentPathIterator.nextOrNull()
-        } else if (nextParent != null) {
-            result += "$nextParent."
-            nextParent = parentPathIterator.nextOrNull()
-        } else {
-            result += "$nextTarget."
-            nextTarget = targetPathIterator.nextOrNull()
-        }
-    }
-
-    return result.dropLastWhile { it == '.' }
-}
-
-/**
  * Split doc content in blocks of content and text belonging to tags.
  * The tag, if present, can be found with optional leading spaces in the first line of the block.
  * You can get the name with [String.getTagNameOrNull].
