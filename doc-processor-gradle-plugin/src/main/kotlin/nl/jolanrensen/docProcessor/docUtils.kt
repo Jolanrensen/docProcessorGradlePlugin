@@ -264,6 +264,7 @@ private fun DocContent.findInlineTagRangeWithDepthOrNull(): Pair<IntRange, Int>?
                 start = i
                 depth++
             }
+
             char == '}' -> {
                 if (start != null) {
                     return Pair(start..i, depth)
@@ -341,4 +342,50 @@ fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {
         removeAt(i)
     }
     return true
+}
+
+/**
+ * Replaces multiple ranges with their respective replacements.
+ * The replacements can be of any size.
+ */
+fun String.replaceRanges(rangeToReplacement: Map<IntRange, String>): String {
+    val textRange = this.indices.associateWith { this[it].toString() }.toMutableMap()
+    for ((range, replacement) in rangeToReplacement) {
+        range.forEach(textRange::remove)
+        textRange[range.first] = replacement
+    }
+    return textRange.toSortedMap().values.joinToString("")
+}
+
+/**
+ * Replace all matches of [regex], even if they overlap a part of their match.
+ * Matches are temporarily replaced with [intermediateReplacementChar] (so that we don't get an infinite loop dependent
+ * on the result of [transform]) before being actually replaced with the result of [transform].
+ */
+fun CharSequence.replaceAll(
+    regex: Regex,
+    limit: Int = 10_000,
+    intermediateReplacementChar: Char = ' ', // must not match the regex
+    transform: (MatchResult) -> CharSequence,
+): String {
+    var text = this.toString()
+
+    var i = 0
+    val replacements = mutableMapOf<IntRange, String>()
+    while (regex in text) {
+        text = text.replace(regex) {
+            val range = it.range
+            replacements[range] = transform(it).toString()
+
+            intermediateReplacementChar.toString().repeat(range.count())
+                .also { require(regex !in it) { "intermediateReplacementChar must not match the regex" } }
+        }
+
+        if (i++ > limit) {
+            println("WARNING: replaceWhilePresent limit reached for $regex in $this")
+            break
+        }
+    }
+
+    return text.replaceRanges(replacements)
 }

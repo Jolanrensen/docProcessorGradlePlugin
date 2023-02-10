@@ -107,10 +107,11 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                     tag = declareArgumentTag,
                     numberOfArguments = 2,
                 )
-                var key = argArguments.first()
+                val originalKey = argArguments.first()
+                var keys = listOf(originalKey)
 
-                if (key.startsWith('[') && key.contains(']')) {
-                    key = buildReferenceKey(key, documentable, allDocumentables)
+                if (originalKey.startsWith('[') && originalKey.contains(']')) {
+                    keys = buildReferenceKeys(originalKey, documentable, allDocumentables)
                 }
 
                 val value = argArguments.getOrElse(1) { "" }
@@ -118,8 +119,11 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                     .removeSuffix("\n")
                     .removeEscapeCharacters()
 
-                argMap.getOrPut(documentable) { mutableMapOf() }[key] = value
-                argsNotFound.getOrPut(documentable) { mutableSetOf() } -= key
+                argMap.getOrPut(documentable) { mutableMapOf() }.apply {
+                    for (it in keys) this[it] = value
+                }
+
+                argsNotFound.getOrPut(documentable) { mutableSetOf() } -= keys.toSet()
                 ""
             }
 
@@ -140,14 +144,17 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 val extraContent = includeArgArguments.getOrElse(1) { "" }
                     .trimStart()
 
-                var key = argIncludeDeclaration
-                if (key.startsWith('[') && key.contains(']')) {
-                    key = buildReferenceKey(key, documentable, allDocumentables)
+                val originalKey = argIncludeDeclaration
+                var keys = listOf(originalKey)
+                if (originalKey.startsWith('[') && originalKey.contains(']')) {
+                    keys = buildReferenceKeys(originalKey, documentable, allDocumentables)
                 }
 
-                val content = argMap[documentable]?.get(key)
+                val content = keys.firstNotNullOfOrNull { key ->
+                    argMap[documentable]?.get(key)
+                }
                 if (content == null) {
-                    argsNotFound.getOrPut(documentable) { mutableSetOf() } += key
+                    argsNotFound.getOrPut(documentable) { mutableSetOf() } += keys
 
                     tagWithContent
                 } else {
@@ -208,20 +215,24 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         allDocumentables = allDocumentables,
     )
 
-    private fun buildReferenceKey(
+    private fun buildReferenceKeys(
         originalKey: String,
         documentable: DocumentableWithSource,
         allDocumentables: Map<String, List<DocumentableWithSource>>
-    ): String {
-        var key = originalKey
-        val reference = key.decodeCallableTarget()
+    ): List<String> {
+        var keys = listOf(originalKey)
+        val reference = originalKey.decodeCallableTarget()
         val referencedDocumentable = documentable.queryDocumentables(
             query = reference,
             documentables = allDocumentables,
         )
 
         if (referencedDocumentable != null)
-            key = "[${referencedDocumentable.path}]"
-        return key
+            keys = listOfNotNull(
+                referencedDocumentable.path,
+                referencedDocumentable.extensionPath,
+            ).map { "[$it]" }
+
+        return keys
     }
 }

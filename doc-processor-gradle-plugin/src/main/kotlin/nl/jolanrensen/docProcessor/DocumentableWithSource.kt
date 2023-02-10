@@ -6,6 +6,7 @@ import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.ImportPath
 import java.io.File
@@ -19,6 +20,8 @@ import java.io.File
  *
  * @property docComment The doc comment found from [documentable] with [findClosestDocComment]
  * @property path The path of the [documentable].
+ * @property extensionPath If the documentable is an extension function/property:
+ * The path of the "receiver.(name of the[documentable])".
  * @property file The file of the [documentable]'s [source].
  * @property fileText The text of the [documentable]'s [file].
  * @property docTextRange The text range of the [file] where the original comment can be found.
@@ -36,6 +39,7 @@ open class DocumentableWithSource internal constructor(
 
     val docComment: DocComment?,
     val path: String,
+    val extensionPath: String?,
     val file: File,
     val fileText: String,
     val docTextRange: TextRange?,
@@ -58,6 +62,7 @@ open class DocumentableWithSource internal constructor(
             )
 
             val path = documentable.dri.path
+            val extensionPath = documentable.dri.extensionPath
             val file = File(source.path)
 
             if (!file.exists()) {
@@ -77,14 +82,14 @@ open class DocumentableWithSource internal constructor(
                 require(startComment != -1) {
                     """
                     |Could not find start of comment.
-                    |Path: $path
+                    |Paths: ${listOfNotNull(path, extensionPath)}
                     |Comment Content: "${docComment.documentString}"
                     |Query: "$query"""".trimMargin()
                 }
                 require(endComment != -1) {
                     """
                     |Could not find end of comment.
-                    |Path: $path
+                    |Paths: ${listOfNotNull(path, extensionPath)}
                     |Comment Content: "${docComment.documentString}"
                     |Query: "$query"""".trimMargin()
                 }
@@ -116,6 +121,7 @@ open class DocumentableWithSource internal constructor(
                 logger = logger,
                 docComment = docComment,
                 path = path,
+                extensionPath = extensionPath,
                 file = file,
                 fileText = fileText,
                 docTextRange = docTextRange,
@@ -156,7 +162,8 @@ open class DocumentableWithSource internal constructor(
             }
 
             // check imports too
-            for (import in getImports()) {
+            val imports = getImports() + ImportPath(FqName("kotlin"), true)
+            for (import in imports) {
                 val identifier = import.importedName?.identifier
 
                 if (import.hasStar) {
@@ -190,7 +197,7 @@ open class DocumentableWithSource internal constructor(
     }
 
     /**
-     * Queries the [documentables] map for a [DocumentableSource]'s [path] that exists for
+     * Queries the [documentables] map for a [DocumentableSource]'s [path] or [extensionPath] that exists for
      * the given [query]. If there is no [DocumentableSource] for the given [query] but the path
      * still exists as a key in the [documentables] map, then that path is returned.
      */
@@ -199,7 +206,12 @@ open class DocumentableWithSource internal constructor(
         documentables: Map<String, List<DocumentableWithSource>>,
         filter: (DocumentableWithSource) -> Boolean = { true },
     ): String? {
-        val docPath = queryDocumentables(query, documentables, filter)?.path
+        val docPath = queryDocumentables(query, documentables, filter)?.let {
+            // take either the normal path to the doc or the extension path depending on which one causes the
+            // least collisions
+            listOfNotNull(it.path, it.extensionPath)
+                .minByOrNull { documentables[it]?.size ?: 0 }
+        }
         if (docPath != null) return docPath
 
         val queries = this.getAllFullPathsFromHereForTargetPath(query)
@@ -216,6 +228,7 @@ open class DocumentableWithSource internal constructor(
             logger = logger,
             docComment = docComment,
             path = path,
+            extensionPath = extensionPath,
             file = file,
             fileText = fileText,
             docTextRange = docTextRange,
@@ -236,6 +249,7 @@ open class DocumentableWithSource internal constructor(
             logger = logger,
             docComment = docComment,
             path = path,
+            extensionPath = extensionPath,
             file = file,
             fileText = fileText,
             docTextRange = docTextRange,
@@ -253,6 +267,7 @@ open class MutableDocumentableWithSource internal constructor(
 
     docComment: DocComment?,
     path: String,
+    extensionPath: String?,
     file: File,
     fileText: String,
     docTextRange: TextRange?,
@@ -267,6 +282,7 @@ open class MutableDocumentableWithSource internal constructor(
     logger = logger,
     docComment = docComment,
     path = path,
+    extensionPath = extensionPath,
     file = file,
     fileText = fileText,
     docTextRange = docTextRange,

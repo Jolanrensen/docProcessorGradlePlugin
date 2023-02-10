@@ -8,6 +8,7 @@ import nl.jolanrensen.docProcessor.getDocContent
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.isLinkableElement
 import nl.jolanrensen.docProcessor.removeEscapeCharacters
+import nl.jolanrensen.docProcessor.replaceAll
 import nl.jolanrensen.docProcessor.toDoc
 
 /**
@@ -174,7 +175,7 @@ class IncludeDocProcessor : TagDocProcessor() {
         // if the content contains links to other elements, we need to expand the path
         // providing the original name or alias as new alias.
         content = if (documentable.isKotlin) {
-            content.replace(aliasedLinkRegex) { // replace all [Aliased][ReferenceLinks] with [Aliased][ExpandedPath]
+            content.replaceAll(aliasedLinkRegex) { // replace all [Aliased][ReferenceLinks] with [Aliased][ExpandedPath]
                 it.groupValues.let {
                     buildString {
                         append(it[1])
@@ -187,7 +188,9 @@ class IncludeDocProcessor : TagDocProcessor() {
                         append(it[3])
                     }
                 }
-            }.replace(singleLinkRegex) { // replace all [ReferenceLinks] with [ReferenceLinks][ExpandedPath]
+            }.replaceAll(singleLinkRegex) { // replace all [ReferenceLinks] with [ReferenceLinks][ExpandedPath]
+                // TODO NOTE: This puts an extra space between `[two] [separate references]`
+
                 it.groupValues.let {
                     buildString {
                         append(it[0].dropLastWhile { it != ']' })

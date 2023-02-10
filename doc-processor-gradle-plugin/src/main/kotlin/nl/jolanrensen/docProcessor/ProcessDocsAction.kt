@@ -131,7 +131,8 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
             it.withDescendants().let {
                 val (withSources, withoutSources) = it.partition { it is WithSources }
 
-                pathsWithoutSources.addAll(withoutSources.map { it.dri.path })
+                pathsWithoutSources += withoutSources.map { it.dri.path }
+                pathsWithoutSources += withoutSources.mapNotNull { it.dri.extensionPath }
 
                 withSources.mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
@@ -145,8 +146,15 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
             }
         }
 
-        val documentablesPerPath = documentables
-            .groupBy { it.path }
+        val documentablesPerPath: MutableMap<String, List<DocumentableWithSource>> = documentables
+            .flatMap { doc ->
+                buildList {
+                    this += doc.path to doc
+                    doc.extensionPath?.let { this += it to doc }
+                }
+            }
+            .groupBy { it.first }
+            .mapValues { it.value.map { it.second } }
             .toMutableMap()
 
         for (path in pathsWithoutSources) {
@@ -210,19 +218,22 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
                         range to newKdoc
                     }.toMap()
 
-                val fileRange = content.indices.associateWith { content[it].toString() }.toMutableMap()
-                for ((range, kdoc) in modificationsByRange) {
-                    range.forEach { fileRange.remove(it) }
-                    fileRange[range.first] = kdoc
+//                val fileRange = content.indices.associateWith { content[it].toString() }.toMutableMap()
+//                for ((range, kdoc) in modificationsByRange) {
+//                    range.forEach { fileRange.remove(it) }
+//                    fileRange[range.first] = kdoc
+//
+//                    // TODO attempt to fix newline after newly placed kdoc?
+////                    if (fileRange[range.first + 1] != "\n") {
+////                        val indent = kdoc.takeWhile { it == ' ' }
+////                        fileRange[range.first] += "\n$indent"
+////                    }
+//                }
+//
+//                val processedContent = fileRange.toSortedMap().values.joinToString("")
 
-                    // TODO attempt to fix newline after newly placed kdoc?
-//                    if (fileRange[range.first + 1] != "\n") {
-//                        val indent = kdoc.takeWhile { it == ' ' }
-//                        fileRange[range.first] += "\n$indent"
-//                    }
-                }
+                val processedContent = content.replaceRanges(modificationsByRange)
 
-                val processedContent = fileRange.toSortedMap().values.joinToString("")
                 targetFile.writeText(processedContent)
             }
         }

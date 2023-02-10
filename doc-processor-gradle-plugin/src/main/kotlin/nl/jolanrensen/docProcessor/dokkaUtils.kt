@@ -16,6 +16,10 @@ import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.analysis.from
 import org.jetbrains.dokka.links.DRI
+import org.jetbrains.dokka.links.JavaClassReference
+import org.jetbrains.dokka.links.Nullable
+import org.jetbrains.dokka.links.TypeConstructor
+import org.jetbrains.dokka.links.TypeReference
 import org.jetbrains.dokka.model.Callable
 import org.jetbrains.dokka.model.DClasslike
 import org.jetbrains.dokka.model.DParameter
@@ -335,12 +339,38 @@ fun PsiElement.referenceElementOrSelf(): PsiElement? =
 fun PsiElement.resolveToGetDri(): PsiElement? =
     reference?.resolve()
 
+/**
+ * Gets the fully qualified path of a linkable target.
+ * If it's an extension function/property, the receiver is ignored.
+ */
 val DRI.path: String
-    get() = (
-            packageName?.split('.').orEmpty() +
-                    classNames?.split('.').orEmpty() +
-                    listOfNotNull(callable?.name)
-            ).joinToString(".")
+    get() = listOf(
+        packageName?.split('.').orEmpty(),
+        classNames?.split('.').orEmpty(),
+        listOfNotNull(callable?.name),
+    ).flatten().joinToString(".")
+
+/**
+ * Gets the fully qualified path of a linkable target that is an extension
+ * function/property from the perspective of the receiver. So
+ * `com.something.Receiver.extension`
+ */
+val DRI.extensionPath: String?
+    get() = callable?.receiver?.let { receiver ->
+        listOf(
+            receiver.path.split('.'),
+            listOf(callable!!.name),
+        ).flatten().joinToString(".")
+    }
+
+val TypeReference.path: String
+    get() = when (this) {
+        is TypeConstructor -> fullyQualifiedName
+        is JavaClassReference -> name
+        is Nullable -> wrapped.path
+        else -> toString()
+    }
+
 
 val ImportPath.hasStar: Boolean
     get() = isAllUnder

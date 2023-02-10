@@ -71,7 +71,7 @@ class KdocIncludePluginFunctionalTest {
         private interface TestB
         
         /**
-         * Hello World 2!
+         * Hello World 2! [someFun] [String.someFun]
          * @include [TestA] {@arg [Some Alias][com.example.plugin.TestA] Test}
          */
         @AnnotationTest(a = 24)
@@ -84,18 +84,20 @@ class KdocIncludePluginFunctionalTest {
          * @include [Test] aaa
          * @arg [TestA] "someFun" with {@include [TestB]}
          */
-        fun someFun(a: Int) {
+        fun <T> List<T?>.someFunn(a: Int) {
             println("Hello World!")
         }
 
         /** @include [com.example.plugin.TestB] */
-        fun someFun(b: String) {
+        fun String.someFun(b: String) {
             println("Hello World!")
         }
 
         /**
          * Some constant
-         * @sample [someFun]
+         * {@includeArg [kotlin.String.someFun]} 
+         * {@arg [com.example.plugin.someFun] test} 
+         * @sample [kotlin.String.someFun]
          */
         const val someLanguages = "Kotlin"
 
