@@ -40,13 +40,12 @@ class SampleDocProcessor : TagDocProcessor() {
     private val sampleEndRegex = Regex(" *// *SampleEnd *\n")
 
     private fun processContent(
-        tagWithContent: String,
         line: String,
         documentable: DocumentableWithSource,
         allDocumentables: Map<String, List<DocumentableWithSource>>,
         path: String
     ): String {
-        val noComments = tagWithContent.startsWith("@$sampleNoComments")
+        val noComments = line.startsWith("@$sampleNoComments")
 
         // get the full @sample / @sampleNoComments path
         val sampleArguments = line.getTagArguments(if (noComments) sampleNoComments else sampleTag, 2)
@@ -78,7 +77,7 @@ class SampleDocProcessor : TagDocProcessor() {
             val content = if (hasSampleComments) {
                 val start = sampleStartRegex.find(queriedSource)!!.range.last + 1
                 val end = sampleEndRegex.find(queriedSource)!!.range.first - 1
-                queriedSource.substring(start, end)
+                queriedSource.substring(start, end).trimIndent()
             } else {
                 queriedSource
             }
@@ -117,8 +116,7 @@ class SampleDocProcessor : TagDocProcessor() {
         filteredDocumentables: Map<String, List<DocumentableWithSource>>,
         allDocumentables: Map<String, List<DocumentableWithSource>>
     ): String = processContent(
-        tagWithContent = tagWithContent.removePrefix("{").removeSuffix("}"),
-        line = docContent,
+        line = tagWithContent.removePrefix("{").removeSuffix("}"),
         documentable = documentable,
         allDocumentables = allDocumentables,
         path = path,
@@ -136,8 +134,7 @@ class SampleDocProcessor : TagDocProcessor() {
         // including any new lines below. We will only replace the first line and skip the rest.
         if (i == 0) {
             processContent(
-                tagWithContent = tagWithContent.trimStart(),
-                line = line,
+                line = tagWithContent.trimStart(),
                 documentable = documentable,
                 allDocumentables = allDocumentables,
                 path = path,

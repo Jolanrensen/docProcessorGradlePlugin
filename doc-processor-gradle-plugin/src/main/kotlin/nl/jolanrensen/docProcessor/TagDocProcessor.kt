@@ -214,6 +214,10 @@ abstract class TagDocProcessor : DocProcessor {
                 var wasModified = false
                 for ((_, range) in inlineTagNames) {
                     val tagContent = text.substring(range)
+                        .trim()
+                        .removePrefix("\n")
+                        .removeSuffix("\n")
+                        .trim()
 
                     val newTagContent = processInnerTagWithContent(
                         tagWithContent = tagContent,
