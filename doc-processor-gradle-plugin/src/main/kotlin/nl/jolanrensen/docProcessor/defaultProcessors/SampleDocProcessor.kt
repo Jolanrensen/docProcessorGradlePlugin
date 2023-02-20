@@ -98,7 +98,7 @@ class SampleDocProcessor : TagDocProcessor() {
                     appendLine("```")
                 }
 
-                if (extraContent.isNotEmpty())
+                if (extraContent.isNotBlank())
                     append(" $extraContent")
             }
         } ?: error(
