@@ -175,6 +175,15 @@ class IncludeDocProcessor : TagDocProcessor() {
         // if the content contains links to other elements, we need to expand the path
         // providing the original name or alias as new alias.
         content = if (documentable.isKotlin) {
+
+            // ensure that the given path points to the same element in the destination place and
+            // that it's queryable
+            fun pathIsValid(path: String, it: DocumentableWithSource): Boolean =
+                documentable.queryDocumentables(
+                    query = path,
+                    documentables = allDocumentables,
+                ) == it
+
             content.replaceAll(aliasedLinkRegex) { // replace all [Aliased][ReferenceLinks] with [Aliased][ExpandedPath]
                 it.groupValues.let {
                     buildString {
@@ -183,7 +192,8 @@ class IncludeDocProcessor : TagDocProcessor() {
                             queried.queryDocumentablesForPath(
                                 query = it[2],
                                 documentables = allDocumentables,
-                            ) { it != queried } ?: it[2]
+                                pathIsValid = ::pathIsValid,
+                            ) ?: it[2]
                         )
                         append(it[3])
                     }
@@ -199,7 +209,8 @@ class IncludeDocProcessor : TagDocProcessor() {
                             queried.queryDocumentablesForPath(
                                 query = it[2],
                                 documentables = allDocumentables,
-                            ) { it != queried } ?: it[2]
+                                pathIsValid = ::pathIsValid,
+                            ) ?: it[2]
                         )
                         append(it[3])
                     }

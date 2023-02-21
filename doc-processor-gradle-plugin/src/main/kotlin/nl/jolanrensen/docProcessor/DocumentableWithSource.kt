@@ -204,17 +204,20 @@ open class DocumentableWithSource internal constructor(
     fun queryDocumentablesForPath(
         query: String,
         documentables: Map<String, List<DocumentableWithSource>>,
+        pathIsValid: (String, DocumentableWithSource) -> Boolean = { _, _ -> true },
         filter: (DocumentableWithSource) -> Boolean = { true },
     ): String? {
         val docPath = queryDocumentables(query, documentables, filter)?.let {
-            // take either the normal path to the doc or the extension path depending on which one causes the
-            // least collisions
+            // take either the normal path to the doc or the extension path depending on which is valid and
+            // causes the smallest number of collisions
             listOfNotNull(it.path, it.extensionPath)
+                .filter { path -> pathIsValid(path, it) }
                 .minByOrNull { documentables[it]?.size ?: 0 }
         }
         if (docPath != null) return docPath
 
-        val queries = this.getAllFullPathsFromHereForTargetPath(query)
+        // if there is no doc for the query, then we just return the first matching path
+        val queries = getAllFullPathsFromHereForTargetPath(query)
 
         return queries.firstOrNull { it in documentables }
     }
