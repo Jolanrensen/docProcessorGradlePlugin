@@ -134,7 +134,7 @@ class SampleDocProcessor : TagDocProcessor() {
         // including any new lines below. We will only replace the first line and skip the rest.
         if (i == 0) {
             processContent(
-                line = tagWithContent.trimStart(),
+                line = line.trimStart(),
                 documentable = documentable,
                 allDocumentables = allDocumentables,
                 path = path,

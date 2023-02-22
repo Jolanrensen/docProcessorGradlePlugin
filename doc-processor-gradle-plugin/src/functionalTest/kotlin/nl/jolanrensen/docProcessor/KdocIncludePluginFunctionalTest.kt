@@ -112,6 +112,36 @@ class KdocIncludePluginFunctionalTest {
         const val someOtherLanguages = "Kotlin"
     """.trimIndent()
 
+    @Language("kotlin")
+    private val secondKotlinFile = """
+        /**
+         * @include [someFun2]
+         */
+        fun someSample() {
+            println("Hello World!")
+        }
+
+        /**
+         * Hello
+         */
+        fun someFun2() {
+            println("Hello World!")
+        }
+
+        /**
+         * First sample:
+         * @sample [someSample]
+         *
+         * Second sample: nothing
+         *
+         * Final sample:
+         * @sample someFun2
+         */
+        fun someFun() {
+        
+        }
+    """.trimIndent()
+
     @Language("java")
     private val javaFile = """
         package com.example.plugin;
@@ -184,6 +214,9 @@ class KdocIncludePluginFunctionalTest {
 
         File(projectDir, "src/main/kotlin/com/example/plugin/KotlinMain.kt")
             .writeString(kotlinFile)
+
+        File(projectDir, "src/main/kotlin/SecondKotlinMain.kt")
+            .writeString(secondKotlinFile)
 
         File(projectDir, "src/main/java/com/example/plugin/JavaMain.java")
             .writeString(javaFile)
