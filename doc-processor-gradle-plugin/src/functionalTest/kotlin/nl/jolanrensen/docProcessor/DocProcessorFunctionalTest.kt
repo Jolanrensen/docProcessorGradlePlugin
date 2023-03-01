@@ -2,7 +2,6 @@
 
 package nl.jolanrensen.docProcessor
 
-import io.kotest.matchers.shouldBe
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.intellij.lang.annotations.Language
@@ -91,15 +90,25 @@ abstract class DocProcessorFunctionalTest(name: String) {
         }
     }
 
-    fun testContentSingleFile(
+    class AdditionalFile(
+        val relativePath: String = "src/main/kotlin/com/example/plugin/Test.kt",
+        val content: String,
+    )
+
+    fun processContent(
         content: String,
-        expectedOutput: String,
-        javaOrKotlin: JavaOrKotlin = JavaOrKotlin.KOTLIN,
         packageName: String,
         fileName: String = "Test",
+        javaOrKotlin: JavaOrKotlin = JavaOrKotlin.KOTLIN,
         processors: List<String>,
-    ) {
+        additionalFiles: List<AdditionalFile> = emptyList(),
+    ): String {
         initializeProjectFiles(processors)
+
+        for (additionalFile in additionalFiles) {
+            File(projectDir, additionalFile.relativePath)
+                .writeString(additionalFile.content)
+        }
 
         val relativePath = buildString {
             append("src/main/")
@@ -123,9 +132,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
 
         runBuild()
 
-        val result = File(File(outputDir, relativePath), fileNameWithExtension).readText()
-
-        result shouldBe expectedOutput
+        return File(File(outputDir, relativePath), fileNameWithExtension).readText()
     }
 
     @Throws(IOException::class)

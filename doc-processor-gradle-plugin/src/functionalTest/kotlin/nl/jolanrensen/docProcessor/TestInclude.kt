@@ -3,6 +3,7 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.assertions.throwables.shouldThrowAny
+import io.kotest.matchers.shouldBe
 import org.intellij.lang.annotations.Language
 import org.junit.Test
 
@@ -11,7 +12,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     private val processors = listOf("INCLUDE_DOC_PROCESSOR")
 
     @Test
-    fun `Test include with and without package`() {
+    fun `Test include with and without package kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -46,12 +47,60 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             """.trimIndent()
 
 
-        testContentSingleFile(
+        processContent(
             content = content,
-            expectedOutput = expectedOutput,
-            processors = processors,
             packageName = "com.example.plugin",
-        )
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test include with and without package java`() {
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /**
+                 * Hello World!
+                 */
+                public void helloWorld() {}
+
+                /**
+                 * @include {@link Test#helloWorld}
+                 * @include {@link com.example.plugin.Test#helloWorld}  
+                 */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        @Language("java")
+        val expectedOutput = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /**
+                 * Hello World!
+                 */
+                public void helloWorld() {}
+            
+                /**
+                 * Hello World!
+                 * 
+                 * Hello World!
+                 */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            javaOrKotlin = JavaOrKotlin.JAVA,
+        ) shouldBe expectedOutput
     }
 
     @Test
@@ -80,16 +129,15 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             fun helloWorld2() {}
             """.trimIndent()
 
-        testContentSingleFile(
+        processContent(
             content = content,
-            expectedOutput = expectedOutput,
-            processors = processors,
             packageName = "",
-        )
+            processors = processors,
+        ) shouldBe expectedOutput
     }
 
     @Test
-    fun `Test transitive include`() {
+    fun `Test transitive include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -119,16 +167,59 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             """.trimIndent()
 
 
-        testContentSingleFile(
+        processContent(
             content = content,
-            expectedOutput = expectedOutput,
-            processors = processors,
             packageName = "com.example.plugin",
-        )
+            processors = processors,
+        ) shouldBe expectedOutput
     }
 
     @Test
-    fun `Test inline include`() {
+    fun `Test transitive include java`() {
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /** Hello World! */
+                public void helloWorld() {}
+            
+                /** @include {@link Test#helloWorld} */
+                public void helloWorld2() {}
+            
+                /** @include {@link Test#helloWorld2} */
+                public void helloWorld3() {}
+            }
+            """.trimIndent()
+
+        @Language("java")
+        val expectedOutput = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /** Hello World! */
+                public void helloWorld() {}
+            
+                /** Hello World! */
+                public void helloWorld2() {}
+            
+                /** Hello World! */
+                public void helloWorld3() {}
+            }
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            javaOrKotlin = JavaOrKotlin.JAVA,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test inline include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -152,16 +243,53 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             """.trimIndent()
 
 
-        testContentSingleFile(
+        processContent(
             content = content,
-            expectedOutput = expectedOutput,
-            processors = processors,
             packageName = "com.example.plugin",
-        )
+            processors = processors,
+        ) shouldBe expectedOutput
     }
 
     @Test
-    fun `Test function overload include`() {
+    fun `Test inline include java`() {
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /** Hello World! */
+                public void helloWorld() {}
+            
+                /** @include {@link Test#helloWorld} {@include {@link Test#helloWorld}} */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        @Language("java")
+        val expectedOutput = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /** Hello World! */
+                public void helloWorld() {}
+            
+                /** Hello World! Hello World! */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            javaOrKotlin = JavaOrKotlin.JAVA,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test function overload include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -196,16 +324,64 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             """.trimIndent()
 
 
-        testContentSingleFile(
+        processContent(
             content = content,
-            expectedOutput = expectedOutput,
-            processors = processors,
             packageName = "com.example.plugin",
-        )
+            processors = processors,
+        ) shouldBe expectedOutput
     }
 
     @Test
-    fun `Test self reference include`() {
+    fun `Test function overload include java`() {
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /**
+                 * Hello World!
+                 */
+                public void helloWorld() {}
+            
+                /**
+                 * @include {@link Test#helloWorld}
+                 * @include {@link com.example.plugin.Test#helloWorld}  
+                 */
+                public void helloWorld(int a) {}
+            }
+            """.trimIndent()
+
+        @Language("java")
+        val expectedOutput = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /**
+                 * Hello World!
+                 */
+                public void helloWorld() {}
+            
+                /**
+                 * Hello World!
+                 * 
+                 * Hello World!
+                 */
+                public void helloWorld(int a) {}
+            }
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            javaOrKotlin = JavaOrKotlin.JAVA,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test self reference include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -217,17 +393,41 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             """.trimIndent()
 
         shouldThrowAny {
-            testContentSingleFile(
+            processContent(
                 content = content,
-                expectedOutput = "",
-                processors = processors,
                 packageName = "com.example.plugin",
+                processors = processors,
             )
         }
     }
 
     @Test
-    fun `Test unavailable reference include`() {
+    fun `Test self reference include java`() {
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /**
+                 * @include {@link Test#helloWorld}
+                 */
+                public void helloWorld(int a) {}
+            }
+            """.trimIndent()
+
+        shouldThrowAny {
+            processContent(
+                content = content,
+                packageName = "com.example.plugin",
+                processors = processors,
+                javaOrKotlin = JavaOrKotlin.JAVA,
+            )
+        }
+    }
+
+    @Test
+    fun `Test unavailable reference include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -239,12 +439,222 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             """.trimIndent()
 
         shouldThrowAny {
-            testContentSingleFile(
+            processContent(
                 content = content,
-                expectedOutput = "",
-                processors = processors,
                 packageName = "com.example.plugin",
+                processors = processors,
             )
         }
+    }
+
+    @Test
+    fun `Test unavailable reference include java`() {
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /**
+                 * @include {@link Test#nothing}
+                 */
+                public void helloWorld(int a) {}
+            }
+            """.trimIndent()
+
+        shouldThrowAny {
+            processContent(
+                content = content,
+                packageName = "com.example.plugin",
+                processors = processors,
+                javaOrKotlin = JavaOrKotlin.JAVA,
+            )
+        }
+    }
+
+    @Test
+    fun `Test multiple files kotlin`() {
+        @Language("kt")
+        val otherFile = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /** @include [helloWorld] */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /** Hello World! */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            additionalFiles = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/Test2.kt",
+                    content = otherFile,
+                )
+            ),
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test multiple files java`() {
+        @Language("java")
+        val otherFile = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /**
+                 * Hello World!
+                 */
+                public void helloWorld() {}
+            }
+            """.trimIndent()
+
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            public class Test2 {
+            
+                /** @include {@link Test#helloWorld} */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        @Language("java")
+        val expectedOutput = """
+            package com.example.plugin;
+            
+            public class Test2 {
+            
+                /** Hello World! */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            fileName = "Test2",
+            packageName = "com.example.plugin",
+            additionalFiles = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/java/com/example/plugin/Test.java",
+                    content = otherFile,
+                )
+            ),
+            processors = processors,
+            javaOrKotlin = JavaOrKotlin.JAVA,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test multiple files kotlin to java`() {
+        @Language("kt")
+        val otherFile = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            public class Test2 {
+            
+                /** @include {@link TestKt#helloWorld} */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        @Language("java")
+        val expectedOutput = """
+            package com.example.plugin;
+            
+            public class Test2 {
+            
+                /** Hello World! */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            fileName = "Test2",
+            packageName = "com.example.plugin",
+            additionalFiles = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/Test.kt",
+                    content = otherFile,
+                )
+            ),
+            processors = processors,
+            javaOrKotlin = JavaOrKotlin.JAVA,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test multiple files java to kotlin`() {
+        @Language("java")
+        val otherFile = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /**
+                 * Hello World!
+                 */
+                public void helloWorld() {}
+            }
+            """.trimIndent()
+
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /** @include [Test.helloWorld] */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /** Hello World! */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            additionalFiles = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/java/com/example/plugin/Test.java",
+                    content = otherFile,
+                )
+            ),
+            processors = processors,
+        ) shouldBe expectedOutput
     }
 }

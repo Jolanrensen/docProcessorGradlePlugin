@@ -150,7 +150,10 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
             .flatMap { doc ->
                 buildList {
                     this += doc.path to doc
-                    doc.extensionPath?.let { this += it to doc }
+
+                    doc.extensionPath?.let {
+                        this += it to doc
+                    }
                 }
             }
             .groupBy { it.first }
@@ -217,20 +220,6 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
 
                         range to newKdoc
                     }.toMap()
-
-//                val fileRange = content.indices.associateWith { content[it].toString() }.toMutableMap()
-//                for ((range, kdoc) in modificationsByRange) {
-//                    range.forEach { fileRange.remove(it) }
-//                    fileRange[range.first] = kdoc
-//
-//                    // TODO attempt to fix newline after newly placed kdoc?
-////                    if (fileRange[range.first + 1] != "\n") {
-////                        val indent = kdoc.takeWhile { it == ' ' }
-////                        fileRange[range.first] += "\n$indent"
-////                    }
-//                }
-//
-//                val processedContent = fileRange.toSortedMap().values.joinToString("")
 
                 val processedContent = content.replaceRanges(modificationsByRange)
 

@@ -189,7 +189,16 @@ open class DocumentableWithSource internal constructor(
         documentables: Map<String, List<DocumentableWithSource>>,
         filter: (DocumentableWithSource) -> Boolean = { true },
     ): DocumentableWithSource? {
-        val queries = this.getAllFullPathsFromHereForTargetPath(query)
+        val queries = getAllFullPathsFromHereForTargetPath(query).toMutableList()
+
+        if (isJava) { // support KotlinFileKt.Notation from java
+            val splitQuery = query.split(".")
+            if (splitQuery.firstOrNull()?.endsWith("Kt") == true) {
+                queries += getAllFullPathsFromHereForTargetPath(
+                    splitQuery.drop(1).joinToString(".")
+                )
+            }
+        }
 
         return queries.firstNotNullOfOrNull {
             documentables[it]?.firstOrNull(filter)
