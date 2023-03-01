@@ -8,6 +8,7 @@ import java.io.File
 import java.io.FileWriter
 import java.io.IOException
 
+@Deprecated("")
 class KdocIncludePluginFunctionalTest {
 
     @Language("kts")
