@@ -4,7 +4,7 @@ import io.kotest.matchers.shouldBe
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.Test
 
-class DocProcessorPluginTest {
+class DocProcessorGradlePluginTest {
     @Test
     fun pluginRegistersATask() {
         // Create a test project and apply the plugin

@@ -1,7 +1,7 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocProcessor
-import nl.jolanrensen.docProcessor.DocumentableWithSource
+import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.ProcessDocsAction
 
 
@@ -14,11 +14,11 @@ const val NO_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.NoDo
 /**
  * A doc processor that simply removes all docs from the sources.
  */
-class NoDocProcessor : DocProcessor {
+class NoDocProcessor : DocProcessor() {
     override fun process(
         parameters: ProcessDocsAction.Parameters,
-        documentablesByPath: Map<String, List<DocumentableWithSource>>,
-    ): Map<String, List<DocumentableWithSource>> =
+        documentablesByPath: Map<String, List<DocumentableWrapper>>,
+    ): Map<String, List<DocumentableWrapper>> =
         documentablesByPath
             .mapValues { (_, documentables) ->
             documentables.map {

@@ -1,6 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import nl.jolanrensen.docProcessor.DocumentableWithSource
+import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.ProcessDocsAction
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
@@ -66,8 +66,8 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         i: Int,
         anyModifications: Boolean,
         parameters: ProcessDocsAction.Parameters,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): Boolean {
         if (i >= parameters.processLimit)
             onProcesError(filteredDocumentables, allDocumentables)
@@ -86,20 +86,19 @@ class IncludeArgDocProcessor : TagDocProcessor() {
     }
 
     // @arg map for path -> arg name -> value
-    private val argMap: MutableMap<DocumentableWithSource, MutableMap<String, String>> = mutableMapOf()
+    private val argMap: MutableMap<DocumentableWrapper, MutableMap<String, String>> = mutableMapOf()
 
-    private val argsNotFound: MutableMap<DocumentableWithSource, MutableSet<String>> = mutableMapOf()
+    private val argsNotFound: MutableMap<DocumentableWrapper, MutableSet<String>> = mutableMapOf()
 
     private fun process(
         tagWithContent: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
+        documentable: DocumentableWrapper,
+        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String {
         val tagName = tagWithContent.getTagNameOrNull()
         val isArgDeclaration = tagName == declareArgumentTag
 
-        val argTagsStillPresent = declareArgumentTag in docContent.findTagNamesInDocContent()
+        val argTagsStillPresent = declareArgumentTag in documentable.docContent.findTagNamesInDocContent()
 
         return when {
             isArgDeclaration -> { // @arg
@@ -165,13 +164,12 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         }
     }
 
-    override fun processTagWithContent(
+    override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String {
         // split up the content for @includeArg but not for @arg
         val isIncludeArg = tagWithContent.trimStart().startsWith("@$useArgumentTag")
@@ -184,7 +182,6 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                     process(
                         tagWithContent = line,
                         documentable = documentable,
-                        docContent = docContent,
                         allDocumentables = allDocumentables,
                     )
                 } else {
@@ -195,30 +192,27 @@ class IncludeArgDocProcessor : TagDocProcessor() {
             process(
                 tagWithContent = tagWithContent,
                 documentable = documentable,
-                docContent = docContent,
                 allDocumentables = allDocumentables,
             )
         }
     }
 
-    override fun processInnerTagWithContent(
+    override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = process(
         tagWithContent = tagWithContent,
         documentable = documentable,
-        docContent = docContent,
         allDocumentables = allDocumentables,
     )
 
     private fun buildReferenceKeys(
         originalKey: String,
-        documentable: DocumentableWithSource,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        documentable: DocumentableWrapper,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): List<String> {
         var keys = listOf(originalKey)
         val reference = originalKey.decodeCallableTarget()

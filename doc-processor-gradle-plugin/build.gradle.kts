@@ -60,14 +60,14 @@ gradlePlugin {
         id = "nl.jolanrensen.docProcessor"
         displayName = "KDoc/Javadoc processor Gradle Plugin"
         description = "KDoc/Javadoc processor Gradle Plugin"
-        implementationClass = "nl.jolanrensen.docProcessor.DocProcessorPlugin"
+        implementationClass = "nl.jolanrensen.docProcessor.gradle.DocProcessorPlugin"
     }
 
     val docProcessorJitpack by plugins.creating {
         id = "com.github.jolanrensen.docProcessorGradlePlugin"
         displayName = "KDoc/Javadoc processor Gradle Plugin"
         description = "KDoc/Javadoc processor Gradle Plugin"
-        implementationClass = "nl.jolanrensen.docProcessor.DocProcessorPlugin"
+        implementationClass = "nl.jolanrensen.docProcessor.gradle.DocProcessorPlugin"
     }
 }
 

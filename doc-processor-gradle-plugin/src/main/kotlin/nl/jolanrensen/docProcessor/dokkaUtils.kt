@@ -65,26 +65,6 @@ fun Documentable.isLinkableElement(): Boolean =
             this is DParameter ||
             this is DTypeAlias // TODO will not be included in DocumentableWithSources since it has no source
 
-/**
- * Has documentation for any sourceSet
- *
- * @receiver [Documentable]
- * @return true if receiver has documentation for any sourceSet
- */
-fun Documentable.hasDocumentation(): Boolean = allDocumentation().isNotEmpty()
-
-/**
- * Has documentation for given [sourceSet]
- *
- * @receiver [Documentable]
- * @return true if receiver has documentation for any sourceSet
- */
-fun Documentable.hasDocumentation(sourceSet: DokkaConfiguration.DokkaSourceSet): Boolean =
-    documentation[sourceSet]?.children?.isNotEmpty() ?: false
-
-fun Documentable.allDocumentation(): List<TagWrapper> = documentation.flatMap { it.value.children }
-
-
 sealed interface DocComment {
     fun hasTag(tag: JavadocTag): Boolean
     fun hasTagWithExceptionOfType(tag: JavadocTag, exceptionFqName: String): Boolean
@@ -132,21 +112,6 @@ val DocumentableSource.psi: PsiNamedElement?
  */
 val DocumentableSource.textRange: TextRange?
     get() = psi?.textRange
-
-val DocumentableSource.sourceWithoutDocs: List<PsiElement>
-    get() = when (this) {
-        is PsiDocumentableSource -> psi.children.toList().let {
-            if (it.first() is PsiDocComment) it.drop(1)
-            else it
-        }
-
-        is DescriptorDocumentableSource -> psi?.children?.toList()?.let {
-            if (it.first() is KDoc) it.drop(1)
-            else it
-        } ?: emptyList()
-
-        else -> emptyList()
-    }
 
 data class JavaDocComment(val comment: PsiDocComment) : DocComment {
     override fun hasTag(tag: JavadocTag): Boolean = comment.hasTag(tag)
@@ -370,7 +335,6 @@ val TypeReference.path: String
         is Nullable -> wrapped.path
         else -> toString()
     }
-
 
 val ImportPath.hasStar: Boolean
     get() = isAllUnder

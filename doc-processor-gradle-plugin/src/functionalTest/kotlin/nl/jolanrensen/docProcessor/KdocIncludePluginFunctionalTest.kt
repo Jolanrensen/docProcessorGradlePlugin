@@ -24,7 +24,7 @@ class KdocIncludePluginFunctionalTest {
 
     @Language("kts")
     private val buildFile = """
-        import nl.jolanrensen.docProcessor.*
+        import nl.jolanrensen.docProcessor.gradle.*
         import nl.jolanrensen.docProcessor.defaultProcessors.*
 
         plugins {  

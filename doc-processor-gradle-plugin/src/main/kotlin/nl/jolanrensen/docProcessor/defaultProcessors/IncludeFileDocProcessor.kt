@@ -1,6 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import nl.jolanrensen.docProcessor.DocumentableWithSource
+import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.getTagArguments
 import org.apache.commons.lang.StringEscapeUtils
@@ -28,7 +28,7 @@ class IncludeFileDocProcessor : TagDocProcessor() {
 
     private fun processContent(
         line: String,
-        documentable: DocumentableWithSource,
+        documentable: DocumentableWrapper,
         path: String,
     ): String {
         val includeFileArguments = line.getTagArguments(
@@ -68,26 +68,24 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         }
     }
 
-    override fun processInnerTagWithContent(
+    override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = processContent(
         line = tagWithContent,
         documentable = documentable,
         path = path,
     )
 
-    override fun processTagWithContent(
+    override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = tagWithContent
         .split('\n')
         .mapIndexed { i, line ->

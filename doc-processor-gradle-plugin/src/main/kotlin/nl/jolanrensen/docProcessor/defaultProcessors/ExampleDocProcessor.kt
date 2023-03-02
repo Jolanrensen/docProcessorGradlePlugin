@@ -1,6 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import nl.jolanrensen.docProcessor.DocumentableWithSource
+import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.removeEscapeCharacters
@@ -12,23 +12,21 @@ class ExampleDocProcessor : TagDocProcessor() {
         tag == "example"
 
     /** How `{@inner tags}` are processed. */
-    override fun processInnerTagWithContent(
+    override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = processContent(tagWithContent)
 
     /** How `  @normal tags` are processed. */
-    override fun processTagWithContent(
+    override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = processContent(tagWithContent)
 
     // We can use the same function for both processInnerTagWithContent and processTagWithContent

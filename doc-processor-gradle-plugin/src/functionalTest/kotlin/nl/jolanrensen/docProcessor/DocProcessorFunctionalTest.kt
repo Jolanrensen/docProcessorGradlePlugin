@@ -28,7 +28,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
 
     @Language("kts")
     private fun getBuildFileContent(processors: List<String>): String = """
-        import nl.jolanrensen.docProcessor.*
+        import nl.jolanrensen.docProcessor.gradle.*
         import nl.jolanrensen.docProcessor.defaultProcessors.*
 
         plugins {  

@@ -1,7 +1,7 @@
 package nl.jolanrensen.docProcessor
 
-import org.gradle.workers.WorkAction
-import org.gradle.workers.WorkParameters
+import nl.jolanrensen.docProcessor.ProcessDocsAction.Parameters
+import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
 import org.jetbrains.dokka.CoreExtensions
 import org.jetbrains.dokka.DokkaConfigurationImpl
 import org.jetbrains.dokka.DokkaGenerator
@@ -15,10 +15,22 @@ import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import java.io.File
 import java.util.*
 
+/**
+ * Process docs action.
+ *
+ * When [process] is executed, it will:
+ *  - analyse the sources with dokka to get the documentables ([analyseSourcesWithDokka])
+ *  - Use a [ServiceLoader] to get all available [DocProcessors][DocProcessor] ([findProcessors])
+ *  - Filter found [DocProcessors][DocProcessor] by [Parameters.processors] ([findProcessors])
+ *  - Run filtered [DocProcessors][DocProcessor] on the documentables in order of [Parameters.processors] ([process])
+ *  - Collect all modified documentables per file ([getModifiedDocumentablesPerFile])
+ *  - Write files to the [Parameters.target] directory containing modified text ([copyAndModifySources])
+ *
+ * @see [ProcessDocsGradleAction] for a Gradle specific implementation.
+ */
+abstract class ProcessDocsAction : SimpleLogger {
 
-abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameters> {
-
-    interface Parameters : WorkParameters {
+    interface Parameters {
         val baseDir: File
         val sources: DokkaSourceSetImpl
         val sourceRoots: List<File>
@@ -26,32 +38,56 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
         val debug: Boolean
         val processors: List<String>
         val processLimit: Int
-    }
 
-    interface MutableParameters : Parameters {
-        override var baseDir: File
-        override var sources: DokkaSourceSetImpl
-        override var sourceRoots: List<File>
-        override var target: File?
-        override var debug: Boolean
-        override var processors: List<String>
-        override var processLimit: Int
-    }
-
-    private fun println(message: String) {
-        if (parameters.debug) kotlin.io.println(message)
-    }
-
-    override fun execute() {
-        try {
-            process()
-        } catch (e: Throwable) {
-            if (parameters.debug) e.printStackTrace()
-            throw e
+        companion object {
+            operator fun invoke(
+                baseDir: File,
+                sources: DokkaSourceSetImpl,
+                sourceRoots: List<File>,
+                target: File?,
+                debug: Boolean,
+                processors: List<String>,
+                processLimit: Int,
+            ): Parameters = object : Parameters {
+                override val baseDir: File = baseDir
+                override val sources: DokkaSourceSetImpl = sources
+                override val sourceRoots: List<File> = sourceRoots
+                override val target: File? = target
+                override val debug: Boolean = debug
+                override val processors: List<String> = processors
+                override val processLimit: Int = processLimit
+            }
         }
     }
 
-    private fun process() {
+    companion object {
+        operator fun invoke(
+            baseDir: File,
+            sources: DokkaSourceSetImpl,
+            sourceRoots: List<File>,
+            target: File?,
+            debug: Boolean,
+            processors: List<String>,
+            processLimit: Int,
+        ): ProcessDocsAction = object : ProcessDocsAction() {
+            override val parameters = Parameters(
+                baseDir = baseDir,
+                sources = sources,
+                sourceRoots = sourceRoots,
+                target = target,
+                debug = debug,
+                processors = processors,
+                processLimit = processLimit,
+            )
+        }
+    }
+
+    abstract val parameters: Parameters
+
+    override val logEnabled: Boolean
+        get() = parameters.debug
+
+    protected fun process() {
         // analyse the sources with dokka to get the documentables
         val sourceDocs = analyseSourcesWithDokka()
 
@@ -81,24 +117,12 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
         copyAndModifySources(modifiedDocumentablesPerFile)
     }
 
-    private fun findProcessors(): List<DocProcessor> {
-        val availableProcessors: Set<DocProcessor> =
-            ServiceLoader.load(DocProcessor::class.java).toSet()
-
-        val filteredProcessors = parameters.processors
-            .mapNotNull { name ->
-                availableProcessors.find { it::class.qualifiedName == name }
-            }
-        return filteredProcessors
-    }
-
-    private fun analyseSourcesWithDokka(): Map<String, List<DocumentableWithSource>> {
+    private fun analyseSourcesWithDokka(): Map<String, List<DocumentableWrapper>> {
         // initialize dokka with the sources
         val configuration = DokkaConfigurationImpl(
             sourceSets = listOf(parameters.sources),
         )
         val logger = DokkaConsoleLogger()
-
         val dokkaGenerator = DokkaGenerator(configuration, logger)
 
         // get the sourceToDocumentableTranslators from DokkaBase, both for java and kotlin files
@@ -131,13 +155,14 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
             it.withDescendants().let {
                 val (withSources, withoutSources) = it.partition { it is WithSources }
 
+                // paths without sources are likely generated files or external sources, such as dependencies
                 pathsWithoutSources += withoutSources.map { it.dri.path }
                 pathsWithoutSources += withoutSources.mapNotNull { it.dri.extensionPath }
 
                 withSources.mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
 
-                    DocumentableWithSource.createOrNull(
+                    DocumentableWrapper.createOrNull(
                         documentable = it,
                         source = source,
                         logger = logger,
@@ -146,20 +171,16 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
             }
         }
 
-        val documentablesPerPath: MutableMap<String, List<DocumentableWithSource>> = documentables
+        // collect the documentables with sources per path
+        val documentablesPerPath: MutableMap<String, List<DocumentableWrapper>> = documentables
             .flatMap { doc ->
-                buildList {
-                    this += doc.path to doc
-
-                    doc.extensionPath?.let {
-                        this += it to doc
-                    }
-                }
+                listOfNotNull(doc.path, doc.extensionPath).map { it to doc }
             }
             .groupBy { it.first }
             .mapValues { it.value.map { it.second } }
             .toMutableMap()
 
+        // add the paths for documentables without sources to the map
         for (path in pathsWithoutSources) {
             if (path !in documentablesPerPath) {
                 documentablesPerPath[path] = emptyList()
@@ -169,9 +190,24 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
         return documentablesPerPath
     }
 
+    private fun findProcessors(): List<DocProcessor> {
+        val availableProcessors: Set<DocProcessor> =
+            ServiceLoader.load(DocProcessor::class.java).toSet()
+
+        val filteredProcessors = parameters.processors
+            .mapNotNull { name ->
+                availableProcessors.find { it::class.qualifiedName == name }
+            }
+
+        // set loggers enabled
+        filteredProcessors.forEach { it.logEnabled = parameters.debug }
+
+        return filteredProcessors
+    }
+
     private fun getModifiedDocumentablesPerFile(
-        modifiedSourceDocs: Map<String, List<DocumentableWithSource>>,
-    ): Map<File, List<DocumentableWithSource>> =
+        modifiedSourceDocs: Map<String, List<DocumentableWrapper>>,
+    ): Map<File, List<DocumentableWrapper>> =
         modifiedSourceDocs
             .entries
             .flatMap {
@@ -183,8 +219,7 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
             }
             .groupBy { it.file }
 
-
-    private fun copyAndModifySources(modifiedDocumentablesPerFile: Map<File, List<DocumentableWithSource>>) {
+    private fun copyAndModifySources(modifiedDocumentablesPerFile: Map<File, List<DocumentableWrapper>>) {
         for (source in parameters.sourceRoots) {
             for (file in source.walkTopDown()) {
                 if (!file.isFile) continue
@@ -217,7 +252,6 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
 
                         val newKdoc = fixedKdoc.toDoc(indent!!).trimStart()
 
-
                         range to newKdoc
                     }.toMap()
 
@@ -227,10 +261,4 @@ abstract class ProcessDocsAction : WorkAction<ProcessDocsAction.MutableParameter
             }
         }
     }
-
-
 }
-
-
-
-

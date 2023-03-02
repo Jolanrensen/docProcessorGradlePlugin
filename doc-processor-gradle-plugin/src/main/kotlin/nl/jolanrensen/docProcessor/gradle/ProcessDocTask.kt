@@ -1,6 +1,8 @@
-package nl.jolanrensen.docProcessor
+package nl.jolanrensen.docProcessor.gradle
 
+import nl.jolanrensen.docProcessor.SimpleLogger
 import org.gradle.api.DefaultTask
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
@@ -9,7 +11,6 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
@@ -21,12 +22,13 @@ import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
 import java.io.File
 import javax.inject.Inject
 
+/**
+ * Process doc task you can instantiate in your build.gradle(.kts) file.
+ * For example using [Project.creatingProcessDocTask].
+ */
+abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : DefaultTask(), SimpleLogger {
 
-abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : DefaultTask() {
-
-    /**
-     * Source root folders for preprocessing
-     */
+    /** Source root folders for preprocessing. This needs to be set! */
     @get:InputFiles
     val sources: ListProperty<File> = factory
         .listProperty(File::class.java)
@@ -40,12 +42,8 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         .property(File::class.java)
         .convention(project.projectDir)
 
-    @get:Inject
-    abstract val workerExecutor: WorkerExecutor
-
     /**
-     * Target folder to place preprocessing result in regular source processing
-     * phase.
+     * Target folder to place the preprocessing results in.
      */
     @get:Input
     val target: Property<File> = factory
@@ -66,18 +64,30 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         .property(Boolean::class.java)
         .convention(false)
 
+    /**
+     * The limit for while-true loops in processors. This is to prevent infinite loops.
+     */
     @get:Input
     val processLimit: Property<Int> = factory
         .property(Int::class.java)
         .convention(10_000)
 
+    /**
+     * The processors to use. These must be fully qualified names, such as:
+     * `"com.example.plugin.MyProcessor"`
+     */
     @get:Input
     val processors: ListProperty<String> = factory
         .listProperty(String::class.java)
         .convention(emptyList())
 
+    /** The classpath of this task. */
     @Classpath
     val classpath: Configuration = project.maybeCreateRuntimeConfiguration()
+
+    /** Used by the task to execute [ProcessDocsGradleAction]. */
+    @get:Inject
+    abstract val workerExecutor: WorkerExecutor
 
     private fun Project.maybeCreateRuntimeConfiguration(): Configuration =
         project.configurations.maybeCreate("kotlinKdocIncludePluginRuntime") {
@@ -87,6 +97,9 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:1.7.20"))
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:1.7.20"))
         }
+
+    private fun <T : Any> NamedDomainObjectContainer<T>.maybeCreate(name: String, configuration: T.() -> Unit): T =
+        findByName(name) ?: create(name, configuration)
 
     /**
      * Adds dependency to plugin.
@@ -112,9 +125,8 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         classpath.dependencies.addAll(dependency)
     }
 
-    private fun println(message: String) {
-        if (debug.get()) kotlin.io.println(message)
-    }
+    override val logEnabled: Boolean
+        get() = debug.get()
 
     init {
         outputs.upToDateWhen { false }
@@ -159,7 +171,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
             it.classpath.setFrom(runtime)
         }
 
-        workQueue.submit(ProcessDocsAction::class.java) {
+        workQueue.submit(ProcessDocsGradleAction::class.java) {
             it.baseDir = baseDir.get()
             it.sources = sources
             it.sourceRoots = sourceRoots

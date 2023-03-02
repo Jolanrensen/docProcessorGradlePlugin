@@ -9,7 +9,9 @@ import org.junit.Test
 
 class TestInclude : DocProcessorFunctionalTest(name = "include") {
 
-    private val processors = listOf("INCLUDE_DOC_PROCESSOR")
+    private val processors = listOf(
+        "INCLUDE_DOC_PROCESSOR",
+    )
 
     @Test
     fun `Test include with and without package kotlin`() {

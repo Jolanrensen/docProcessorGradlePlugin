@@ -74,7 +74,7 @@ In `build.gradle.kts` add `id("com.github.jolanrensen.docProcessorGradlePlugin")
 Say you want to create a task that will run when you're making a sources Jar such that the modified files appear in the Jar:
 
 ```kts
-import nl.jolanrensen.docProcessor.*
+import nl.jolanrensen.docProcessor.gradle.*
 import nl.jolanrensen.docProcessor.defaultProcessors.*
 import org.gradle.jvm.tasks.Jar
 
@@ -336,27 +336,25 @@ class ExampleDocProcessor : TagDocProcessor() {
    override fun tagIsSupported(tag: String): Boolean =
       tag == "example"
 
-   /** How `{@inner tags}` are processed. */
-   override fun processInnerTagWithContent(
+   /** How `{@inline tags}` are processed. */
+   override fun processInlineTagWithContent(
       tagWithContent: String,
       path: String,
-      documentable: DocumentableWithSource,
-      docContent: String,
-      filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-      allDocumentables: Map<String, List<DocumentableWithSource>>,
+      documentable: DocumentableWrapper,
+      filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+      allDocumentables: Map<String, List<DocumentableWrapper>>,
    ): String = processContent(tagWithContent)
 
-   /** How `  @normal tags` are processed. */
-   override fun processTagWithContent(
+   /** How `  @block tags` are processed. */
+   override fun processBlockTagWithContent(
       tagWithContent: String,
       path: String,
-      documentable: DocumentableWithSource,
-      docContent: String,
-      filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-      allDocumentables: Map<String, List<DocumentableWithSource>>,
+      documentable: DocumentableWrapper,
+      filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+      allDocumentables: Map<String, List<DocumentableWrapper>>,
    ): String = processContent(tagWithContent)
 
-   // We can use the same function for both processInnerTagWithContent and processTagWithContent
+   // We can use the same function for both processInlineTagWithContent and processTagWithContent
    private fun processContent(tagWithContent: String): String {
       // We can get the content after the @example tag.
       val contentWithoutTag = tagWithContent

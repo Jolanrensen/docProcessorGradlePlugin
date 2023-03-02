@@ -1,6 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import nl.jolanrensen.docProcessor.DocumentableWithSource
+import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.TagDocProcessor
 
 /**
@@ -40,21 +40,19 @@ class CommentDocProcessor : TagDocProcessor() {
     override fun tagIsSupported(tag: String): Boolean =
         tag == this.tag
 
-    override fun processTagWithContent(
+    override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = ""
 
-    override fun processInnerTagWithContent(
+    override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = ""
 }

@@ -1,6 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import nl.jolanrensen.docProcessor.DocumentableWithSource
+import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.docRegex
@@ -41,8 +41,8 @@ class SampleDocProcessor : TagDocProcessor() {
 
     private fun processContent(
         line: String,
-        documentable: DocumentableWithSource,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
+        documentable: DocumentableWrapper,
+        allDocumentables: Map<String, List<DocumentableWrapper>>,
         path: String
     ): String {
         val noComments = line.startsWith("@$sampleNoComments")
@@ -108,13 +108,12 @@ class SampleDocProcessor : TagDocProcessor() {
         )
     }
 
-    override fun processInnerTagWithContent(
+    override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = processContent(
         line = tagWithContent.removePrefix("{").removeSuffix("}"),
         documentable = documentable,
@@ -122,13 +121,12 @@ class SampleDocProcessor : TagDocProcessor() {
         path = path,
     )
 
-    override fun processTagWithContent(
+    override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = tagWithContent.split('\n').mapIndexed { i, line ->
         // tagWithContent is the content after the @sample tag, e.g. "[SomeClass]"
         // including any new lines below. We will only replace the first line and skip the rest.

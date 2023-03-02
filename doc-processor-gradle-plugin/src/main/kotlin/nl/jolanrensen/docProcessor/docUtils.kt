@@ -303,32 +303,26 @@ fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, Int
         .flatMap { it.value }
 }
 
-/** Finds all inline tag names, including nested ones.
+/**
+ * Finds all inline tag names, including nested ones.
  * "{@}" marks are ignored if "\" escaped.
  */
 fun DocContent.findInlineTagNamesInDocContent(): List<String> =
     findInlineTagNamesInDocContentWithRanges().map { it.first }
 
+/** Finds all block tag names. */
 fun DocContent.findBlockTagNamesInDocContent(): List<String> =
     splitDocContentPerBlock()
         .filter { it.trimStart().startsWith("@") }
         .mapNotNull { it.getTagNameOrNull() }
 
+/** Finds all tag names, including inline and block tags. */
 fun DocContent.findTagNamesInDocContent(): List<String> =
     findInlineTagNamesInDocContent() + findBlockTagNamesInDocContent()
 
 
-/**
- * Is able to find an entire JavaDoc/KDoc comment including the starting indent.
- */
+/** Is able to find an entire JavaDoc/KDoc comment including the starting indent. */
 val docRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
-
-///**
-// * Is able to find JavaDoc/KDoc tags without content.
-// * Tags can be at the beginning of a line or after a `{`, like in `{@see String}`
-// */
-//val tagRegex = Regex("""(^|\n|\{) *@[a-zA-Z][a-zA-Z0-9]*""")
-
 
 /**
  * Finds removes the last occurrence of [element] from the list and, if found, all elements after it.

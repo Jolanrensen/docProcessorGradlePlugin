@@ -1,7 +1,7 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocContent
-import nl.jolanrensen.docProcessor.DocumentableWithSource
+import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.getDocContent
@@ -88,7 +88,7 @@ class IncludeDocProcessor : TagDocProcessor() {
      * Filter documentables to only include linkable elements (classes, functions, properties, etc) and
      * have any documentation. This will save performance when looking up the target of the @include tag.
      */
-    override fun <T : DocumentableWithSource> filterDocumentables(documentable: T): Boolean =
+    override fun <T : DocumentableWrapper> filterDocumentables(documentable: T): Boolean =
         documentable.documentable.isLinkableElement() &&
                 documentable.docComment != null
 
@@ -96,8 +96,8 @@ class IncludeDocProcessor : TagDocProcessor() {
      * Provides a helpful message when a circular reference is detected.
      */
     override fun onProcesError(
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): Nothing {
         val circularRefs = filteredDocumentables
             .filter { it.value.any { it.hasASupportedTag } }
@@ -106,7 +106,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                 buildString {
                     appendLine("$path:")
                     appendLine(documentables.joinToString("\n\n") {
-                        it.queryFile()?.getDocContent()?.toDoc(4) ?: ""
+                        it.queryFileForDocTextRange()?.getDocContent()?.toDoc(4) ?: ""
                     })
                 }
             }
@@ -119,9 +119,9 @@ class IncludeDocProcessor : TagDocProcessor() {
      */
     private fun processContent(
         line: String,
-        documentable: DocumentableWithSource,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>,
         path: String,
     ): String {
         val includeArguments = line.getTagArguments(tag = tag, numberOfArguments = 2)
@@ -180,7 +180,7 @@ class IncludeDocProcessor : TagDocProcessor() {
 
             // ensure that the given path points to the same element in the destination place and
             // that it's queryable
-            fun pathIsValid(path: String, it: DocumentableWithSource): Boolean =
+            fun pathIsValid(path: String, it: DocumentableWrapper): Boolean =
                 documentable.queryDocumentables(
                     query = path,
                     documentables = allDocumentables,
@@ -235,13 +235,12 @@ class IncludeDocProcessor : TagDocProcessor() {
         return content.removeEscapeCharacters()
     }
 
-    override fun processInnerTagWithContent(
+    override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = processContent(
         // processContent can handle inner tags perfectly fine
         line = tagWithContent,
@@ -251,13 +250,12 @@ class IncludeDocProcessor : TagDocProcessor() {
         path = path,
     )
 
-    override fun processTagWithContent(
+    override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,
-        documentable: DocumentableWithSource,
-        docContent: String,
-        filteredDocumentables: Map<String, List<DocumentableWithSource>>,
-        allDocumentables: Map<String, List<DocumentableWithSource>>,
+        documentable: DocumentableWrapper,
+        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
+        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = tagWithContent.split('\n').mapIndexed { i: Int, line: String ->
         // tagWithContent is the content after the @include tag, e.g. "[SomeClass]"
         // including any new lines below. We will only replace the first line and skip the rest.
