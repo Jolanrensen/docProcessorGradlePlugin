@@ -233,24 +233,26 @@ abstract class ProcessDocsAction : SimpleLogger {
 
                 val modificationsByRange = modifications
                     .groupBy { it.docTextRange!! }
-                    .mapValues { it.value.first().let { Pair(it.docContent, it.docIndent) } }
+                    .mapValues { it.value.first() }
                     .toSortedMap(compareBy { it.startOffset })
-                    .map { (textRange, kdocAndIndent) ->
+                    .map { (textRange, documentable) ->
                         val range = textRange!!.startOffset until textRange.endOffset
-                        val (kdoc, indent) = kdocAndIndent
 
-                        if (kdoc.isBlank())
+                        val docContent = documentable.docContent
+                        val indent = documentable.docIndent
+
+                        if (docContent.isBlank())
                             return@map range to "" // don't create empty kdoc, just remove it altogether
 
-                        var fixedKdoc = kdoc.trim()
+                        var fixedDoc = docContent.trim()
 
                         // fix start and end newlines of kdoc
-                        if (fixedKdoc.split('\n').size > 1) {
-                            if (fixedKdoc.first() != '\n') fixedKdoc = "\n$fixedKdoc"
-                            if (fixedKdoc.last() != '\n') fixedKdoc = "$fixedKdoc\n"
+                        if (fixedDoc.split('\n').size > 1) {
+                            if (fixedDoc.first() != '\n') fixedDoc = "\n$fixedDoc"
+                            if (fixedDoc.last() != '\n') fixedDoc = "$fixedDoc\n"
                         }
 
-                        val newKdoc = fixedKdoc.toDoc(indent!!).trimStart()
+                        val newKdoc = fixedDoc.toDoc(indent!!).trimStart()
 
                         range to newKdoc
                     }.toMap()

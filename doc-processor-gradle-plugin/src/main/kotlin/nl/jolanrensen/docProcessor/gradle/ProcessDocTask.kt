@@ -1,6 +1,5 @@
 package nl.jolanrensen.docProcessor.gradle
 
-import nl.jolanrensen.docProcessor.SimpleLogger
 import org.gradle.api.DefaultTask
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
@@ -26,7 +25,7 @@ import javax.inject.Inject
  * Process doc task you can instantiate in your build.gradle(.kts) file.
  * For example using [Project.creatingProcessDocTask].
  */
-abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : DefaultTask(), SimpleLogger {
+abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : DefaultTask() {
 
     /** Source root folders for preprocessing. This needs to be set! */
     @get:InputFiles
@@ -125,8 +124,11 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         classpath.dependencies.addAll(dependency)
     }
 
-    override val logEnabled: Boolean
-        get() = debug.get()
+    private fun println(message: Any?) {
+        if (debug.get()) {
+            kotlin.io.println(message)
+        }
+    }
 
     init {
         outputs.upToDateWhen { false }

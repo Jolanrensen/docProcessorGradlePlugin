@@ -4,9 +4,7 @@ package nl.jolanrensen.docProcessor.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.tasks.TaskContainer
-import org.gradle.kotlin.dsl.PolymorphicDomainObjectContainerCreatingDelegateProvider
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.creating
 import java.io.File
@@ -46,10 +44,9 @@ class DocProcessorPlugin : Plugin<Project> {
 public fun TaskContainer.creatingProcessDocTask(
     sources: Iterable<File>,
     block: ProcessDocTaskDsl.() -> Unit,
-): PolymorphicDomainObjectContainerCreatingDelegateProvider<Task, ProcessDocTask> =
-    creating(ProcessDocTask::class) {
-        ProcessDocTaskDsl(this, sources).block()
-    }
+) = creating(ProcessDocTask::class) {
+    ProcessDocTaskDsl(this, sources).block()
+}
 
 /**
  * Create a new [ProcessDocTask].
@@ -74,7 +71,7 @@ public fun TaskContainer.createProcessDocTask(
     name: String,
     sources: Iterable<File>,
     block: ProcessDocTaskDsl.() -> Unit,
-): ProcessDocTask = create<ProcessDocTask>(name) {
+) = create<ProcessDocTask>(name) {
     ProcessDocTaskDsl(this, sources).block()
 }
 
@@ -101,7 +98,7 @@ public fun TaskContainer.maybeCreateProcessDocTask(
     name: String,
     sources: Iterable<File>,
     block: ProcessDocTaskDsl.() -> Unit,
-): ProcessDocTask = maybeCreate(name, ProcessDocTask::class.java).apply {
+) = maybeCreate(name, ProcessDocTask::class.java).apply {
     ProcessDocTaskDsl(this, sources).block()
 }
 
@@ -128,7 +125,7 @@ public fun Project.maybeCreateProcessDocTask(
     name: String,
     sources: Iterable<File>,
     block: ProcessDocTaskDsl.() -> Unit,
-): ProcessDocTask = tasks.maybeCreateProcessDocTask(name, sources, block)
+) = tasks.maybeCreateProcessDocTask(name, sources, block)
 
 /**
  * Create a new [ProcessDocTask].
@@ -153,7 +150,7 @@ public fun Project.createProcessDocTask(
     name: String,
     sources: Iterable<File>,
     block: ProcessDocTaskDsl.() -> Unit,
-): ProcessDocTask = tasks.createProcessDocTask(name, sources, block)
+) = tasks.createProcessDocTask(name, sources, block)
 
 /**
  * Create a new [ProcessDocTask] using by-delegate.
@@ -177,5 +174,4 @@ public fun Project.createProcessDocTask(
 public fun Project.creatingProcessDocTask(
     sources: Iterable<File>,
     block: ProcessDocTaskDsl.() -> Unit,
-): PolymorphicDomainObjectContainerCreatingDelegateProvider<Task, ProcessDocTask> =
-    tasks.creatingProcessDocTask(sources, block)
+) = tasks.creatingProcessDocTask(sources, block)

@@ -10,6 +10,7 @@ import nl.jolanrensen.docProcessor.isLinkableElement
 import nl.jolanrensen.docProcessor.removeEscapeCharacters
 import nl.jolanrensen.docProcessor.replaceAll
 import nl.jolanrensen.docProcessor.toDoc
+import org.apache.commons.lang.StringEscapeUtils
 
 /**
  * @see IncludeDocProcessor
@@ -228,7 +229,9 @@ class IncludeDocProcessor : TagDocProcessor() {
                             "@including docs with {@link statements}."
                 )
             }
-            content
+            StringEscapeUtils.escapeHtml(content)
+                .replace("@", "&#64;")
+                .replace("*/", "&#42;&#47;")
         }
 
         // replace the include statement with the kdoc of the queried node (if found)
