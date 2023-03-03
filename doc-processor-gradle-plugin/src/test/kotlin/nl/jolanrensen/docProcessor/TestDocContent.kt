@@ -18,9 +18,9 @@ class TestDocContent {
 
         val expected = "\n      Hello World!\n\n@see [com.example.plugin.KdocIncludePlugin]\n"
 
-        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContentOrNull() shouldBe expected
 
-        kdoc.getDocContent().toDoc() shouldBe kdoc
+        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
     }
 
     @Test
@@ -33,9 +33,9 @@ class TestDocContent {
 
         val expected = "Hello World!\n\n@see [com.example.plugin.KdocIncludePlugin]"
 
-        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContentOrNull() shouldBe expected
 
-        kdoc.getDocContent().toDoc() shouldBe kdoc
+        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
     }
 
     @Test
@@ -47,9 +47,9 @@ class TestDocContent {
 
         val expected = "Hello World!\n@see [com.example.plugin.KdocIncludePlugin]"
 
-        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContentOrNull() shouldBe expected
 
-        kdoc.getDocContent().toDoc() shouldBe kdoc
+        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
     }
 
     @Test
@@ -60,9 +60,9 @@ class TestDocContent {
 
         val expected = "Hello World!"
 
-        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContentOrNull() shouldBe expected
 
-        kdoc.getDocContent().toDoc() shouldBe kdoc
+        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
     }
 
     @Test
@@ -75,9 +75,9 @@ class TestDocContent {
 
         val expected = "\nHello World!\n"
 
-        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContentOrNull() shouldBe expected
 
-        kdoc.getDocContent().toDoc() shouldBe kdoc
+        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
     }
 
     @Test
@@ -90,7 +90,7 @@ class TestDocContent {
 
         val expected = "\nHello World!\n"
 
-        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContentOrNull() shouldBe expected
 
         val kdoca = """
             /**
@@ -98,7 +98,7 @@ class TestDocContent {
              */
         """.trimIndent()
 
-        kdoc.getDocContent().toDoc() shouldBe kdoca
+        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoca
     }
 
     @Test
@@ -111,9 +111,9 @@ class TestDocContent {
 
         val expected = "\nHello World! /** Some doc inside the doc */\n"
 
-        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContentOrNull() shouldBe expected
 
-        kdoc.getDocContent().toDoc() shouldBe kdoc
+        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
     }
 
     @Test
@@ -127,7 +127,7 @@ class TestDocContent {
         """.trimIndent()
 
         shouldThrow<IllegalArgumentException> {
-            kdoc.getDocContent()
+            kdoc.getDocContentOrNull()
         }
     }
 
@@ -139,8 +139,8 @@ class TestDocContent {
 
         val expected = ""
 
-        kdoc.getDocContent() shouldBe expected
-        kdoc.getDocContent().toDoc() shouldBe kdoc
+        kdoc.getDocContentOrNull() shouldBe expected
+        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
     }
 
     @Test
@@ -153,7 +153,7 @@ class TestDocContent {
 
         val expected = "\n\n"
 
-        kdoc.getDocContent() shouldBe expected
-        kdoc.getDocContent().toDoc() shouldBe kdoc
+        kdoc.getDocContentOrNull() shouldBe expected
+        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
     }
 }

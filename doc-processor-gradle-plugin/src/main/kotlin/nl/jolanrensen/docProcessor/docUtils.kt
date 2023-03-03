@@ -10,12 +10,8 @@ typealias DocContent = String
 /**
  * Returns the actual content of the KDoc/Javadoc comment
  */
-fun String.getDocContent(): DocContent {
-    if (isBlank()) return ""
-
-    require(startsWith("/**") && endsWith("*/")) {
-        "`$this` doesn't match expected doc structure."
-    }
+fun String.getDocContentOrNull(): DocContent? {
+    if (isBlank() || !startsWith("/**") || !endsWith("*/")) return null
 
     val lines = split('\n').withIndex()
 
@@ -148,23 +144,6 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
 }
 
 /**
- * Removes "\" from the String, but only if it is not escaped.
- */
-fun String.removeEscapeCharacters(escapeChars: List<Char> = listOf('\\')): String = buildString {
-    var escapeNext = false
-    for (char in this@removeEscapeCharacters) {
-        if (escapeNext) {
-            escapeNext = false
-        } else if (char in escapeChars) {
-            escapeNext = true
-            continue
-        }
-        append(char)
-    }
-}
-
-
-/**
  * Decodes something like `[Alias][Foo]` to `Foo`
  * But also `{@link Foo#main(String[])}` to `Foo.main`
  */
@@ -209,8 +188,6 @@ fun DocContent.getTagNameOrNull(): String? =
         ?.removePrefix("{")
         ?.removePrefix("@")
         ?.takeWhile { !it.isWhitespace() }
-
-fun <T> Iterator<T>.nextOrNull(): T? = if (hasNext()) next() else null
 
 /**
  * Split doc content in blocks of content and text belonging to tags.
@@ -349,6 +326,68 @@ fun DocContent.findTagNamesInDocContent(): List<String> =
 /** Is able to find an entire JavaDoc/KDoc comment including the starting indent. */
 val docRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
 
+// Regex to match [Aliased][ReferenceLinks].
+val aliasedLinkRegex = Regex("""(\[[^\[\]]*]\[)([^\[\]]*)(])""")
+
+// Regex to match [ReferenceLinks].
+val singleLinkRegex = Regex("""((^|[^]])\[)([^\[\]]*)(]$|][^\[])""")
+
+// Regex to match [ReferenceLinks] [with space] since this breaks singleLinkRegex.
+val doubleSingleLinkRegex = Regex("""((^|[^]])\[)([^\[\]]*)(][^\[]\[)([^\[\]]*)(]$|][^\[])""")
+
+val javaLinkRegex = Regex("""\{@link.*}""")
+
+/**
+ * Replace KDoc links in doc content with the result of [process].
+ *
+ * Replaces all `[Aliased][ReferenceLinks]` with `[Aliased][ProcessedPath]`
+ * and all `[ReferenceLinks]` with `[ReferenceLinks][ProcessedPath]`.
+ */
+fun DocContent.replaceKdocLinks(process: (String) -> String): DocContent = this
+    .replace(aliasedLinkRegex) { // replace all [Aliased][ReferenceLinks] with [Aliased][ProcessedPath]
+        it.groupValues.let {
+            buildString {
+                append(it[1])
+                append(
+                    process(it[2])
+                )
+                append(it[3])
+            }
+        }
+    }
+    .replace(doubleSingleLinkRegex) { // replace all [ReferenceLinks] [with space] with [ReferenceLinks][ProcessedPath] [with space][ProcessedPath]
+        it.groupValues.let {
+            buildString {
+                append(it[1])
+                append(it[3])
+                append("][")
+                append(
+                    process(it[3])
+                )
+                append(it[4])
+                append(it[5])
+                append("][")
+                append(
+                    process(it[5])
+                )
+                append(it[6])
+            }
+        }
+    }
+    .replace(singleLinkRegex) { // replace all [ReferenceLinks] with [ReferenceLinks][ProcessedPath]
+        it.groupValues.let {
+            buildString {
+                append(it[0].dropLastWhile { it != ']' })
+                append("[")
+                append(
+                    process(it[3])
+                )
+                append(it[4])
+            }
+        }
+    }
+
+
 /**
  * Finds removes the last occurrence of [element] from the list and, if found, all elements after it.
  * Returns true if [element] was found and removed, false otherwise.
@@ -361,50 +400,4 @@ fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {
         removeAt(i)
     }
     return true
-}
-
-/**
- * Replaces multiple ranges with their respective replacements.
- * The replacements can be of any size.
- */
-fun String.replaceRanges(rangeToReplacement: Map<IntRange, String>): String {
-    val textRange = this.indices.associateWith { this[it].toString() }.toMutableMap()
-    for ((range, replacement) in rangeToReplacement) {
-        range.forEach(textRange::remove)
-        textRange[range.first] = replacement
-    }
-    return textRange.toSortedMap().values.joinToString("")
-}
-
-/**
- * Replace all matches of [regex], even if they overlap a part of their match.
- * Matches are temporarily replaced with [intermediateReplacementChar] (so that we don't get an infinite loop dependent
- * on the result of [transform]) before being actually replaced with the result of [transform].
- */
-fun CharSequence.replaceAll(
-    regex: Regex,
-    limit: Int = 10_000,
-    intermediateReplacementChar: Char = ' ', // must not match the regex
-    transform: (MatchResult) -> CharSequence,
-): String {
-    var text = this.toString()
-
-    var i = 0
-    val replacements = mutableMapOf<IntRange, String>()
-    while (regex in text) {
-        text = text.replace(regex) {
-            val range = it.range
-            replacements[range] = transform(it).toString()
-
-            intermediateReplacementChar.toString().repeat(range.count())
-                .also { require(regex !in it) { "intermediateReplacementChar must not match the regex" } }
-        }
-
-        if (i++ > limit) {
-            println("WARNING: replaceWhilePresent limit reached for $regex in $this")
-            break
-        }
-    }
-
-    return text.replaceRanges(replacements)
 }

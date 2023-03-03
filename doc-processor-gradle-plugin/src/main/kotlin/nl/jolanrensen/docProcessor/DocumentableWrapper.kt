@@ -123,7 +123,7 @@ open class DocumentableWrapper internal constructor(
             }?.coerceAtLeast(0)
 
             // grab just the contents of the doc without the *-stuff
-            val docContent = docTextRange?.substring(fileText)?.getDocContent()
+            val docContent = docTextRange?.substring(fileText)?.getDocContentOrNull()
 
             val tags = docContent?.findTagNamesInDocContent() ?: emptyList()
             val isModified = false

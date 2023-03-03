@@ -11,7 +11,6 @@ import com.intellij.psi.impl.source.tree.JavaDocElementType
 import com.intellij.psi.javadoc.PsiDocComment
 import com.intellij.psi.javadoc.PsiDocTag
 import com.intellij.psi.util.PsiTreeUtil
-import org.jetbrains.dokka.DokkaConfiguration
 import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.analysis.from
@@ -26,7 +25,6 @@ import org.jetbrains.dokka.model.DParameter
 import org.jetbrains.dokka.model.DTypeAlias
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
-import org.jetbrains.dokka.model.doc.TagWrapper
 import org.jetbrains.dokka.utilities.DokkaLogger
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
@@ -34,7 +32,6 @@ import org.jetbrains.kotlin.idea.kdoc.findKDoc
 import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
 import org.jetbrains.kotlin.idea.util.hasComments
 import org.jetbrains.kotlin.js.resolve.diagnostics.findPsi
-import org.jetbrains.kotlin.kdoc.psi.api.KDoc
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocTag
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtDeclaration
@@ -79,11 +76,11 @@ sealed interface DocComment {
  * @receiver [DocComment]
  * @return
  */
-val DocComment.documentString: String
+val DocComment.documentString: String?
     get() = when (this) {
         is JavaDocComment -> comment.text
         is KotlinDocComment -> comment.text
-    }.getDocContent()
+    }.getDocContentOrNull()
 
 /**
  * Get text range of Kdoc/JavaDoc comment from /** to */

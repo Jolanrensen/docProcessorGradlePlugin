@@ -4,11 +4,12 @@ import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
-import nl.jolanrensen.docProcessor.getDocContent
+import nl.jolanrensen.docProcessor.getDocContentOrNull
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.isLinkableElement
+import nl.jolanrensen.docProcessor.javaLinkRegex
 import nl.jolanrensen.docProcessor.removeEscapeCharacters
-import nl.jolanrensen.docProcessor.replaceAll
+import nl.jolanrensen.docProcessor.replaceKdocLinks
 import nl.jolanrensen.docProcessor.toDoc
 import org.apache.commons.lang.StringEscapeUtils
 
@@ -85,15 +86,6 @@ class IncludeDocProcessor : TagDocProcessor() {
 
     private val tag = "include"
 
-    // Regex to match [Aliased][ReferenceLinks].
-    private val aliasedLinkRegex = Regex("""(\[[^\[\]]*]\[)([^\[\]]*)(])""")
-
-    // Regex to match [ReferenceLinks].
-    private val singleLinkRegex = Regex("""([^]]\[)([^\[\]]*)(]$|][^\[])""")
-
-    private val javaLinkRegex = Regex("""\{@link.*}""")
-
-
     override fun tagIsSupported(tag: String): Boolean = tag == this.tag
 
     /**
@@ -118,7 +110,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                 buildString {
                     appendLine("$path:")
                     appendLine(documentables.joinToString("\n\n") {
-                        it.queryFileForDocTextRange()?.getDocContent()?.toDoc(4) ?: ""
+                        it.queryFileForDocTextRange()?.getDocContentOrNull()?.toDoc(4) ?: ""
                     })
                 }
             }
@@ -164,16 +156,21 @@ class IncludeDocProcessor : TagDocProcessor() {
             error(
                 when {
                     queriedNoFilter == documentable ->
-                        "IncludeDocProcessor ERROR: Self-reference detected. Called from \"$path\"."
+                        "IncludeDocProcessor ERROR: Self-reference detected. Called from \"$path\" in \"${documentable.file.absolutePath}\"."
 
                     queriedPath != null ->
                         "IncludeDocProcessor ERROR: Include path found, but no documentation found for: " +
                                 "\"$includePath\". Including documentation from outside the library or from type-aliases " +
-                                "is currently not supported. Called from \"$path\". Attempted queries: [\n$attemptedQueries]"
+                                "is currently not supported.\nCalled from \"$path\" in \"${documentable.file.absolutePath}\".\n" +
+                                "Attempted queries: [\n$attemptedQueries]\n" +
+                                "Include line: \"$line\"\n" +
+                                "Full doc: \"${documentable.docContent}\""
 
                     else ->
-                        "IncludeDocProcessor ERROR: Include not found: \"$includePath\". Called from \"$path\". " +
-                                "Attempted queries: [\n$attemptedQueries]"
+                        "IncludeDocProcessor ERROR: Include not found: \"$includePath\".\nCalled from \"$path\" in \"${documentable.file.absolutePath}\".\n" +
+                                "Attempted queries: [\n$attemptedQueries]\n"+
+                                "Include line: \"$line\"\n" +
+                                "Full doc: \"${documentable.docContent}\""
                 }
             )
         }
@@ -187,63 +184,41 @@ class IncludeDocProcessor : TagDocProcessor() {
             content = "$content $extraContent"
         }
 
-        // if the content contains links to other elements, we need to expand the path
-        // providing the original name or alias as new alias.
-        content = if (documentable.isKotlin) {
+        content = when {
 
-            // ensure that the given path points to the same element in the destination place and
-            // that it's queryable
-            fun pathIsValid(path: String, it: DocumentableWrapper): Boolean =
-                documentable.queryDocumentables(
-                    query = path,
+            // if the content contains links to other elements, we need to expand the path
+            // providing the original name or alias as new alias.
+            documentable.isKotlin -> content.replaceKdocLinks { query ->
+                queried.queryDocumentablesForPath(
+                    query = query,
                     documentables = allDocumentables,
-                ) == it
+                    pathIsValid = { path, it ->
 
-            content.replaceAll(aliasedLinkRegex) { // replace all [Aliased][ReferenceLinks] with [Aliased][ExpandedPath]
-                it.groupValues.let {
-                    buildString {
-                        append(it[1])
-                        append(
-                            queried.queryDocumentablesForPath(
-                                query = it[2],
-                                documentables = allDocumentables,
-                                pathIsValid = ::pathIsValid,
-                            ) ?: it[2]
-                        )
-                        append(it[3])
-                    }
-                }
-            }.replaceAll(singleLinkRegex) { // replace all [ReferenceLinks] with [ReferenceLinks][ExpandedPath]
-                // TODO NOTE: This puts an extra space between `[two] [separate references]`
-
-                it.groupValues.let {
-                    buildString {
-                        append(it[0].dropLastWhile { it != ']' })
-                        append(it[1].drop(1))
-                        append(
-                            queried.queryDocumentablesForPath(
-                                query = it[2],
-                                documentables = allDocumentables,
-                                pathIsValid = ::pathIsValid,
-                            ) ?: it[2]
-                        )
-                        append(it[3])
-                    }
-                }
+                        // ensure that the given path points to the same element in the destination place and
+                        // that it's queryable
+                        documentable.queryDocumentables(
+                            query = path,
+                            documentables = allDocumentables,
+                        ) == it
+                    },
+                ) ?: query
             }
 
-        } else {
-            // TODO?: Java {@link ReferenceLinks}
-            if (javaLinkRegex in content) {
-                println(
-                    "Java {@link statements} are not replaced by their fully qualified path. " +
-                            "Make sure to use fully qualified paths in {@link statements} when " +
-                            "@including docs with {@link statements}."
-                )
+            else -> {
+                // TODO?: Java {@link ReferenceLinks}
+                if (javaLinkRegex in content) {
+                    println(
+                        "Java {@link statements} are not replaced by their fully qualified path. " +
+                                "Make sure to use fully qualified paths in {@link statements} when " +
+                                "@including docs with {@link statements}."
+                    )
+                }
+
+                // Escape HTML characters in Java docs
+                StringEscapeUtils.escapeHtml(content)
+                    .replace("@", "&#64;")
+                    .replace("*/", "&#42;&#47;")
             }
-            StringEscapeUtils.escapeHtml(content)
-                .replace("@", "&#64;")
-                .replace("*/", "&#42;&#47;")
         }
 
         // replace the include statement with the kdoc of the queried node (if found)

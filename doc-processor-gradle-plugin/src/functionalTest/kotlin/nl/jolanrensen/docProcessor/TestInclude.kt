@@ -175,6 +175,49 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
+    fun `Test expanding link kotlin`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /** 
+              * Hello World! 
+              * [Some aliased link][helloWorld2] 
+              * [helloWorld]
+              */
+            fun helloWorld() {}
+            
+            /** @include [helloWorld] */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /** 
+              * Hello World! 
+              * [Some aliased link][helloWorld2] 
+              * [helloWorld]
+              */
+            fun helloWorld() {}
+            
+            /**
+             * Hello World! 
+             * [Some aliased link][com.example.plugin.helloWorld2] 
+             * [helloWorld][com.example.plugin.helloWorld]
+             */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
     fun `Test transitive include java`() {
         @Language("java")
         val content = """
