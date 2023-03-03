@@ -7,7 +7,7 @@ import org.junit.Test
 class TestDocContent {
 
     @Test
-    fun `KDoc 1`() {
+    fun `Simple doc`() {
         val kdoc = """
             /**
              *       Hello World!
@@ -24,7 +24,7 @@ class TestDocContent {
     }
 
     @Test
-    fun `KDoc 2`() {
+    fun `Simple doc no surrounding newlines 1`() {
         val kdoc = """
             /** Hello World!
              * 
@@ -39,7 +39,7 @@ class TestDocContent {
     }
 
     @Test
-    fun `KDoc 3`() {
+    fun `Simple doc no surrounding newlines 2`() {
         val kdoc = """
             /** Hello World!
              * @see [com.example.plugin.KdocIncludePlugin] */
@@ -53,7 +53,7 @@ class TestDocContent {
     }
 
     @Test
-    fun `KDoc 4`() {
+    fun `Single line doc`() {
         val kdoc = """
             /** Hello World! */
         """.trimIndent()
@@ -66,7 +66,7 @@ class TestDocContent {
     }
 
     @Test
-    fun `KDoc 5`() {
+    fun `Single line doc with newlines`() {
         val kdoc = """
             /**
              * Hello World!
@@ -81,7 +81,7 @@ class TestDocContent {
     }
 
     @Test
-    fun `KDoc 6`() {
+    fun `Wrongly formatted doc`() {
         val kdoc = """
             /**
              *Hello World!
@@ -102,7 +102,7 @@ class TestDocContent {
     }
 
     @Test
-    fun `KDoc 7`() {
+    fun `Doc inside doc`() {
         val kdoc = """
             /**
              * Hello World! /** Some doc inside the doc */
@@ -117,7 +117,7 @@ class TestDocContent {
     }
 
     @Test
-    fun `KDoc 8`() {
+    fun `Wrong doc`() {
         val kdoc = """
             
             /**
@@ -132,7 +132,19 @@ class TestDocContent {
     }
 
     @Test
-    fun `KDoc 9`() {
+    fun `Empty doc`() {
+        val kdoc = """
+            /** */
+        """.trimIndent()
+
+        val expected = ""
+
+        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContent().toDoc() shouldBe kdoc
+    }
+
+    @Test
+    fun `Empty doc newlines`() {
         val kdoc = """
             /**
              * 
