@@ -10,19 +10,44 @@ typealias DocContent = String
 /**
  * Returns the actual content of the KDoc/Javadoc comment
  */
-fun String.getDocContent(): DocContent = this
-    .split('\n')
-    .joinToString("\n") {
-        it
-            .trimStart()
-            .removePrefix("/**")
-            .removeSuffix("*/")
-            .removePrefix("*")
-            .let {
-                if (it.startsWith(" ")) it.drop(1)
-                else it
+fun String.getDocContent(): DocContent {
+    if (isBlank()) return ""
+
+    require(startsWith("/**") && endsWith("*/")) {
+        "`$this` doesn't match expected doc structure."
+    }
+
+    val lines = split('\n').withIndex()
+
+    val result = lines.joinToString("\n") { (i, it) ->
+        var line = it
+
+        if (i == 0) {
+            line = line.trimStart().removePrefix("/**")
+        }
+        if (i == lines.count() - 1) {
+            val lastLine = line.trimStart()
+
+            line = if (lastLine == "*/") {
+                ""
+            } else {
+                lastLine
+                    .removePrefix("*")
+                    .removeSuffix("*/")
+                    .removeSuffix(" ") // optional extra space at the end
             }
-    }.trimEnd()
+        }
+        if (i != 0 && i != lines.count() - 1) {
+            line = line.trimStart().removePrefix("*")
+        }
+
+        line = line.removePrefix(" ") // optional extra space at the start
+
+        line
+    }
+
+    return result
+}
 
 
 /**

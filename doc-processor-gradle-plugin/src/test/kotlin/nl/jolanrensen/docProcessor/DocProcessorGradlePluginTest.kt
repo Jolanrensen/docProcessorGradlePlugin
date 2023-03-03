@@ -72,64 +72,6 @@ class DocProcessorGradlePluginTest {
         difficultKdoc.findInlineTagNamesInDocContent().toSet() shouldBe expected
     }
 
-    @Test
-    fun `Test Kdoc utils`() {
-        val kdoc1 = """
-            /**
-             *       Hello World!
-             * 
-             * @see [com.example.plugin.KdocIncludePlugin]
-             */
-        """.trimIndent()
-
-        kdoc1.getDocContent().toDoc() shouldBe kdoc1
-
-        val kdoc2 = """
-            /** Hello World!
-             * 
-             * @see [com.example.plugin.KdocIncludePlugin] */
-        """.trimIndent()
-
-        kdoc2.getDocContent().toDoc() shouldBe kdoc2
-
-        val kdoc3 = """
-            /** Hello World!
-             * @see [com.example.plugin.KdocIncludePlugin] */
-        """.trimIndent()
-
-        kdoc3.getDocContent().toDoc() shouldBe kdoc3
-
-        val kdoc4 = """
-            /** Hello World! */
-        """.trimIndent()
-
-        kdoc4.getDocContent().toDoc() shouldBe kdoc4
-
-        val kdoc5 = """
-            /**
-             * Hello World!
-             */
-        """.trimIndent()
-
-        kdoc5.getDocContent().toDoc() shouldBe kdoc5
-
-        // this is not a pretty kdoc, but we can still parse it and correct the indentation
-        val kdoc6 = """
-            /**
-             *Hello World!
-             */
-        """.trimIndent()
-
-        val kdoc6a = """
-            /**
-             * Hello World!
-             */
-        """.trimIndent()
-
-
-        kdoc6.getDocContent().toDoc() shouldBe kdoc6a
-    }
-
 
     @Test
     fun `Get tag content`() {

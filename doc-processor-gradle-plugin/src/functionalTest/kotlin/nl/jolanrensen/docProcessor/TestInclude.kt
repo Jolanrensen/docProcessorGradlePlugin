@@ -42,7 +42,6 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /**
              * Hello World!
-             * 
              * Hello World!
              */
             fun helloWorld2() {}
@@ -90,7 +89,6 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
                 /**
                  * Hello World!
-                 * 
                  * Hello World!
                  */
                 public void helloWorld2() {}
@@ -319,7 +317,6 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /**
              * Hello World!
-             * 
              * Hello World!
              */
             fun helloWorld(a: Int) {}
@@ -367,7 +364,6 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
                 /**
                  * Hello World!
-                 * 
                  * Hello World!
                  */
                 public void helloWorld(int a) {}
