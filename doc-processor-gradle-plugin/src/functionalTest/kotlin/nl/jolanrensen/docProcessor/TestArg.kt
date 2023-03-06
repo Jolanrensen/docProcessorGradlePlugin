@@ -140,6 +140,45 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
     }
 
     @Test
+    fun `Test arg order 2`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello {@includeArg name}!
+             * @arg name Everyone
+             * @arg name World
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+
+
+
+
+
+
+
+
+    @Test
     fun `Test Readme example`() {
         @Language("kt")
         val content = """

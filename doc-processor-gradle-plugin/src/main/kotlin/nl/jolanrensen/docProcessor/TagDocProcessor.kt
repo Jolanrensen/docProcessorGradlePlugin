@@ -272,7 +272,7 @@ abstract class TagDocProcessor : DocProcessor() {
         // Then process the normal tags
         val processedDoc: DocContent = processedInlineTagsDoc
             .splitDocContentPerBlock()
-            .joinToString("\n") { split ->
+            .map { split ->
                 val shouldProcess =
                     split.trimStart().startsWith("@") &&
                             split.getTagNameOrNull()
@@ -289,7 +289,14 @@ abstract class TagDocProcessor : DocProcessor() {
                 } else {
                     split
                 }
+            }.let { list ->
+                // skip empty blocks, making sure to keep the first and last blocks
+                // even if they are empty, to preserve original newlines
+                list.filterIndexed { i, it ->
+                    i == 0 || i == list.lastIndex || it.isNotEmpty()
+                }
             }
+            .joinToString("\n")
 
         return processedDoc
     }
