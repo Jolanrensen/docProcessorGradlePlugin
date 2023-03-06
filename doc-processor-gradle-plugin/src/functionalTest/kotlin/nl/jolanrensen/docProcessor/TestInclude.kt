@@ -47,7 +47,6 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             fun helloWorld2() {}
             """.trimIndent()
 
-
         processContent(
             content = content,
             packageName = "com.example.plugin",

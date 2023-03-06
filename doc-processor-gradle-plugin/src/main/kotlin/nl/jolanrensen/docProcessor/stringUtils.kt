@@ -79,3 +79,29 @@ fun CharSequence.replaceAll(
 
     return text.replaceRanges(replacements)
 }
+
+fun String.indexOfFirstOrNullWhile(char: Char, startIndex: Int = 0, whileCondition: (Char) -> Boolean): Int? {
+    try {
+        for (i in startIndex until length) {
+            if (this[i] == char) return i
+            if (!whileCondition(this[i])) break
+        }
+        return null
+    } catch (e: IndexOutOfBoundsException) {
+        return null
+    }
+}
+
+fun String.indexOfLastOrNullWhile(char: Char, startIndex: Int = lastIndex, whileCondition: (Char) -> Boolean): Int? {
+    try {
+        for (i in startIndex downTo 0) {
+            if (this[i] == char) return i
+            if (!whileCondition(this[i])) break
+        }
+        return null
+    } catch (e: IndexOutOfBoundsException) {
+        return null
+    }
+}
+
+val IntRange.size get() = last - first + 1

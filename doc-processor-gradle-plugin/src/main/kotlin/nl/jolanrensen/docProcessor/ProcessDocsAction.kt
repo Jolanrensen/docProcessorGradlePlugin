@@ -241,12 +241,30 @@ abstract class ProcessDocsAction : SimpleLogger {
                         val docContent = documentable.docContent
                         val indent = documentable.docIndent
 
-                        if (docContent.isEmpty())
-                            return@map range to "" // don't create empty kdoc, just remove it altogether
+                        if (docContent.isEmpty() && range.size > 1) {
+                            // don't create empty kdoc, just remove it altogether
+                            // We need to expand the replace-range so that the newline is also removed
+                            val prependingNewlineIndex =
+                                content.indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
 
-                        val newKdoc = docContent.toDoc(indent!!).trimStart()
+                            val trailingNewlineIndex =
+                                content.indexOfFirstOrNullWhile('\n', range.last + 1) { it.isWhitespace() }
 
-                        range to newKdoc
+                            when {
+                                prependingNewlineIndex != null -> prependingNewlineIndex..range.last
+                                trailingNewlineIndex != null -> range.first..trailingNewlineIndex
+                                else -> range
+                            } to ""
+                        } else if (docContent.isNotEmpty() && range.size <= 1) {
+                            // create a new kdoc at given range TODO!
+                            val newKdoc = docContent.toDoc(indent!!).trimStart()
+
+                            range to newKdoc
+                        } else {
+                            val newKdoc = docContent.toDoc(indent!!).trimStart()
+
+                            range to newKdoc
+                        }
                     }.toMap()
 
                 val processedContent = content.replaceRanges(modificationsByRange)

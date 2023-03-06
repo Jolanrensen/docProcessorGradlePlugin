@@ -55,4 +55,27 @@ class TestStringUtils {
             I hope you [like][NewPath] [right?][NewPath]""".trimIndent()
     }
 
+    @Test
+    fun `Test index of first`() {
+        val string = "Hello World!"
+
+        string.indexOfFirstOrNullWhile('H') { true } shouldBe 0
+        string.indexOfFirstOrNullWhile('H') { false } shouldBe 0
+        string.indexOfFirstOrNullWhile('e') { false } shouldBe null
+        string.indexOfFirstOrNullWhile('l') { true } shouldBe 2
+        string.indexOfFirstOrNullWhile('l', 5) { true } shouldBe 9
+        string.indexOfFirstOrNullWhile('i', 0) { true } shouldBe null
+    }
+
+    @Test
+    fun `Test index of last`() {
+        val string = "Hello World!"
+
+        string.indexOfLastOrNullWhile('H') { true } shouldBe 0
+        string.indexOfLastOrNullWhile('H') { false } shouldBe null
+        string.indexOfLastOrNullWhile('l') { true } shouldBe 9
+        string.indexOfLastOrNullWhile('l', 5) { true } shouldBe 3
+        string.indexOfLastOrNullWhile('i', 0) { true } shouldBe null
+    }
+
 }

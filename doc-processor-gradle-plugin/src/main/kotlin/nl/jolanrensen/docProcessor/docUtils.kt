@@ -136,9 +136,6 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
                 currentBlock += char
         }
 
-        if (currentBlock.endsWith('\n'))
-            currentBlock = currentBlock.dropLast(1)
-
         add(currentBlock)
     }
     return arguments

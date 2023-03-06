@@ -44,6 +44,15 @@ class TestGetTagArguments {
     }
 
     @Test
+    fun `Content with newlines`() {
+        val tagContent = "@tag simple content with newlines\n\n"
+
+        tagContent.getTagArguments("tag", 1) shouldBe listOf("simple content with newlines\n\n")
+        tagContent.getTagArguments("tag", 2) shouldBe listOf("simple", "content with newlines\n\n")
+        tagContent.getTagArguments("tag", 3) shouldBe listOf("simple", "content", "with newlines\n\n")
+    }
+
+    @Test
     fun `Java link`() {
         val tagContent = "@include {@link com.example.plugin.JavaMain.Main2.TestB}"
 
@@ -57,20 +66,20 @@ class TestGetTagArguments {
 
     @Test
     fun `Kotlin link`() {
-        val tagContent = "@arg [Something] with a newline at the end\n"
+        val tagContent = "@tag [Something] with a newline at the end\n"
 
-        tagContent.getTagArguments("arg", 1) shouldBe
+        tagContent.getTagArguments("tag", 1) shouldBe
                 listOf(
-                    "[Something] with a newline at the end",
+                    "[Something] with a newline at the end\n",
                 )
 
-        tagContent.getTagArguments("arg", 2) shouldBe
+        tagContent.getTagArguments("tag", 2) shouldBe
                 listOf(
                     "[Something]",
-                    "with a newline at the end",
+                    "with a newline at the end\n",
                 )
 
-        tagContent.getTagArguments("arg", 2)
+        tagContent.getTagArguments("tag", 2)
             .first()
             .decodeCallableTarget() shouldBe "Something"
     }

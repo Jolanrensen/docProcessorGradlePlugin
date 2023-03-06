@@ -357,10 +357,17 @@ class ExampleDocProcessor : TagDocProcessor() {
       val contentWithoutTag = tagWithContent
          .getTagArguments(tag = "example", numberOfArguments = 1)
          .single()
+         .trim() // remove starting and trailing whitespaces/newlines
          .removeEscapeCharacters() // remove escape character "\" from the content
 
       // While we can play with the other arguments, let's just return some simple modified content
-      return "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
+      var newContent = "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
+
+      // Since we trimmed all trailing newlines from the content, we'll add one back if they were there.
+      if (tagWithContent.endsWith("\n"))
+         newContent += "\n"
+
+      return newContent
    }
 }
 ```

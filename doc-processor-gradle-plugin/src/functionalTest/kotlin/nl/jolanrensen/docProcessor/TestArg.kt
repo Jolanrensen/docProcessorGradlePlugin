@@ -6,11 +6,12 @@ import io.kotest.matchers.shouldBe
 import org.intellij.lang.annotations.Language
 import org.junit.Test
 
-class TestArg : DocProcessorFunctionalTest(name ="arg") {
+class TestArg : DocProcessorFunctionalTest(name = "arg") {
 
     private val processors = listOf(
         "INCLUDE_DOC_PROCESSOR",
-        "INCLUDE_ARG_DOC_PROCESSOR"
+        "INCLUDE_ARG_DOC_PROCESSOR",
+        "COMMENT_DOC_PROCESSOR",
     )
 
     @Test
@@ -177,6 +178,7 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
             /**
              * Hello {@includeArg name}!
              * @arg name World
+             * @comment This comment ensures that the arg does not have a newline at the end.
              * {@arg name Everyone}
              */
             fun helloWorld() {}
