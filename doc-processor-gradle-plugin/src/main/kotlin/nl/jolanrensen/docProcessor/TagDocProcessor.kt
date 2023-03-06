@@ -232,12 +232,12 @@ abstract class TagDocProcessor : DocProcessor() {
 
                 var wasModified = false
                 for ((_, range) in inlineTagNames) {
-                    val tagContent = text
-                        .substring(range)
-                        .trim()
-                        .removePrefix("\n")
-                        .removeSuffix("\n")
-                        .trim()
+                    val tagContent = text.substring(range)
+
+                    // sanity check
+                    require(tagContent.startsWith("{@") && tagContent.endsWith("}")) {
+                        "Tag content must start with '{@' and end with '}'"
+                    }
 
                     val newTagContent = processInlineTagWithContent(
                         tagWithContent = tagContent,

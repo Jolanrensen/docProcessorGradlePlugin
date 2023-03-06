@@ -16,9 +16,12 @@ class TestFindingTagsInDocs {
     }
 
     private val difficultKdoc = """
+        
+        
         blablah
           @a a
         Some extra text. @b nothing, this is skipped
+        
         Other test {@c [TestA
         blabla {@d TestA }
         }
@@ -28,16 +31,18 @@ class TestFindingTagsInDocs {
         {@f TestC }
         ```
         @g Test
+        
         """.trimIndent()
 
     @Test
     fun `Split doc content per block`() {
         val expected = listOf(
-            "blablah",
+            "\n\nblablah",
 
             """
                  @a a
                Some extra text. @b nothing, this is skipped
+               
                Other test {@c [TestA
                blabla {@d TestA }
                }
@@ -48,11 +53,23 @@ class TestFindingTagsInDocs {
                ```
                """.trimIndent(),
 
-            "@g Test",
+            "@g Test\n",
         )
 
         difficultKdoc.splitDocContentPerBlock() shouldBe expected
         difficultKdoc.splitDocContentPerBlock().joinToString("\n") shouldBe difficultKdoc
+    }
+
+    @Test
+    fun `Find inline tag names with ranges`() {
+        val expected = listOf(
+            "d" to 92..102,
+            "c" to 74..104,
+            "h" to 118..127,
+            "f" to 149..159,
+        )
+
+        difficultKdoc.findInlineTagNamesInDocContentWithRanges() shouldBe expected
     }
 
     @Test
@@ -71,5 +88,45 @@ class TestFindingTagsInDocs {
         )
 
         difficultKdoc.findBlockTagNamesInDocContent().toSet() shouldBe expected
+    }
+
+    @Test
+    fun `Split by block simple`() {
+        val kdoc = """
+            /**
+             * Hello World! 
+             * [Some aliased link][helloWorld2] 
+             * [helloWorld]
+             */
+        """.trimIndent()
+
+        kdoc.getDocContentOrNull()
+            ?.splitDocContentPerBlock()
+            ?.joinToString("\n")
+            ?.toDoc() shouldBe kdoc
+    }
+
+    @Test
+    fun `Split by block one line`() {
+        val kdoc = """
+            /** Hello World! */
+        """.trimIndent()
+
+        kdoc.getDocContentOrNull()
+            ?.splitDocContentPerBlock()
+            ?.joinToString("\n")
+            ?.toDoc() shouldBe kdoc
+    }
+
+    @Test
+    fun `Split by block one line with tag`() {
+        val kdoc = """
+            /** @include Hello World! */
+        """.trimIndent()
+
+        kdoc.getDocContentOrNull()
+            ?.splitDocContentPerBlock()
+            ?.joinToString("\n")
+            ?.toDoc() shouldBe kdoc
     }
 }

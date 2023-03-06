@@ -51,6 +51,7 @@ fun String.replaceRanges(rangeToReplacement: Map<IntRange, String>): String {
  * Matches are temporarily replaced with [intermediateReplacementChar] (so that we don't get an infinite loop dependent
  * on the result of [transform]) before being actually replaced with the result of [transform].
  */
+@Deprecated("No use for it anymore?")
 fun CharSequence.replaceAll(
     regex: Regex,
     limit: Int = 10_000,

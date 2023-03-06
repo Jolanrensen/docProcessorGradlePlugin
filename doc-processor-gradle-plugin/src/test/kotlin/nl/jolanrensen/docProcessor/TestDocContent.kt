@@ -126,9 +126,7 @@ class TestDocContent {
              
         """.trimIndent()
 
-        shouldThrow<IllegalArgumentException> {
-            kdoc.getDocContentOrNull()
-        }
+        kdoc.getDocContentOrNull() shouldBe null
     }
 
     @Test

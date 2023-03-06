@@ -54,7 +54,7 @@ fun DocContent.toDoc(indent: Int = 0): String =
         .split('\n')
         .toMutableList()
         .let {
-            it[0] = "/** ${it[0]}".trim()
+            it[0] = if (it[0].isEmpty()) "/**" else "/** ${it[0]}"
 
             val lastIsBlank = it.last().isBlank()
 
@@ -197,61 +197,64 @@ fun DocContent.getTagNameOrNull(): String? =
  * Block "marks" are ignored if "\" escaped.
  * Can be joint with '\n' to get the original content.
  */
-fun DocContent.splitDocContentPerBlock(): List<DocContent> = buildList {
+fun DocContent.splitDocContentPerBlock(): List<DocContent> {
     val docContent = this@splitDocContentPerBlock.split('\n')
+    return buildList {
+        var currentBlock = ""
+        val blocksIndicators = mutableListOf<String>()
+        for (line in docContent) {
 
-    var currentBlock = ""
-    val blocksIndicators = mutableListOf<String>()
-    for (line in docContent) {
-
-        // start a new block if the line starts with a tag and we're not
-        // in a {} or `````` block
-        if (line.trimStart().startsWith("@") && blocksIndicators.isEmpty()) {
-            add(currentBlock)
-            currentBlock = line
-        } else {
-            if (currentBlock.isEmpty()) {
-                currentBlock = line
+            // start a new block if the line starts with a tag and we're not
+            // in a {} or `````` block
+            if (line.trimStart().startsWith("@") && blocksIndicators.isEmpty()) {
+                if (currentBlock.isNotEmpty()) add(currentBlock.removeSuffix("\n"))
+                currentBlock = "$line\n"
+            } else if (line.isEmpty() && blocksIndicators.isEmpty()) {
+                currentBlock += "\n"
             } else {
-                currentBlock += "\n$line"
+                if (currentBlock.isEmpty()) {
+                    currentBlock = "$line\n"
+                } else {
+                    currentBlock += "$line\n"
+                }
+            }
+            var escapeNext = false
+            for (char in line) {
+
+                if (escapeNext) {
+                    escapeNext = false
+                    continue
+                }
+
+                when (char) {
+                    '\\' -> escapeNext = true
+
+                    '{' -> blocksIndicators += "{}"
+                    '}' -> blocksIndicators.removeAllElementsFromLast("{}")
+
+                    '[' -> blocksIndicators += "[]"
+                    ']' -> blocksIndicators.removeAllElementsFromLast("[]")
+
+                    '(' -> blocksIndicators += "()"
+                    ')' -> blocksIndicators.removeAllElementsFromLast("()")
+
+                    '<' -> blocksIndicators += "<>"
+                    '>' -> blocksIndicators.removeAllElementsFromLast("<>")
+
+                    '`' -> if (!blocksIndicators.removeAllElementsFromLast("`")) blocksIndicators += "`"
+
+                    // TODO html tags
+                }
             }
         }
-        var escapeNext = false
-        for (char in line) {
-
-            if (escapeNext) {
-                escapeNext = false
-                continue
-            }
-
-            when (char) {
-                '\\' -> escapeNext = true
-
-                '{' -> blocksIndicators += "{}"
-                '}' -> blocksIndicators.removeAllElementsFromLast("{}")
-
-                '[' -> blocksIndicators += "[]"
-                ']' -> blocksIndicators.removeAllElementsFromLast("[]")
-
-                '(' -> blocksIndicators += "()"
-                ')' -> blocksIndicators.removeAllElementsFromLast("()")
-
-                '<' -> blocksIndicators += "<>"
-                '>' -> blocksIndicators.removeAllElementsFromLast("<>")
-
-                '`' -> if (!blocksIndicators.removeAllElementsFromLast("`")) blocksIndicators += "`"
-
-                // TODO html tags
-            }
-        }
+        add(currentBlock.removeSuffix("\n"))
     }
-    add(currentBlock)
 }
 
 /** Finds any inline tag with its depth, preferring the innermost one.
  * "{@}" marks are ignored if "\" escaped.
  */
-private fun DocContent.findInlineTagRangeWithDepthOrNull(): Pair<IntRange, Int>? {
+private fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
     var depth = 0
     var start: Int? = null
     var escapeNext = false
@@ -287,8 +290,8 @@ fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, Int
     var text = this
 
     return buildMap<Int, MutableList<Pair<String, IntRange>>> {
-        while (text.findInlineTagRangeWithDepthOrNull() != null) {
-            val (range, depth) = text.findInlineTagRangeWithDepthOrNull()!!
+        while (text.findInlineTagRangesWithDepthOrNull() != null) {
+            val (range, depth) = text.findInlineTagRangesWithDepthOrNull()!!
             val comment = text.substring(range)
             comment.getTagNameOrNull()?.let { tagName ->
                 getOrPut(depth) { mutableListOf() } += Pair(tagName, range)

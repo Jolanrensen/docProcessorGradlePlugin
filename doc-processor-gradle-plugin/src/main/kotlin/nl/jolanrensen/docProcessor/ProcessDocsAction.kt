@@ -241,18 +241,10 @@ abstract class ProcessDocsAction : SimpleLogger {
                         val docContent = documentable.docContent
                         val indent = documentable.docIndent
 
-                        if (docContent.isBlank())
+                        if (docContent.isEmpty())
                             return@map range to "" // don't create empty kdoc, just remove it altogether
 
-                        var fixedDoc = docContent.trim()
-
-                        // fix start and end newlines of kdoc
-                        if (fixedDoc.split('\n').size > 1) {
-                            if (fixedDoc.first() != '\n') fixedDoc = "\n$fixedDoc"
-                            if (fixedDoc.last() != '\n') fixedDoc = "$fixedDoc\n"
-                        }
-
-                        val newKdoc = fixedDoc.toDoc(indent!!).trimStart()
+                        val newKdoc = docContent.toDoc(indent!!).trimStart()
 
                         range to newKdoc
                     }.toMap()

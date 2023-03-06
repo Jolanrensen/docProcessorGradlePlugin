@@ -16,6 +16,37 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
     // TODO
 
     @Test
+    fun `Test simple arg kotlin`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             * {@arg name World}
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             * 
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
     fun `Test Readme example`() {
         @Language("kt")
         val content = """
@@ -34,16 +65,14 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
 
             /**
              * Hello World 2!
-             * @include [Test1]
-             * {@arg source Test2}
+             * @include [Test1] {@arg source Test2}
              */
             @AnnotationTest(a = 24)
             private interface Test2
 
             /** 
              * Some extra text
-             * @include [Test2]
-             * {@arg source someFun} */
+             * @include [Test2] {@arg source someFun} */
             fun someFun() {
                 println("Hello World!")
             }
@@ -65,6 +94,7 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
              * 
              * @param name The name of the person to greet
              * @see [com.example.plugin.KdocIncludePlugin]
+             * 
              */
             private interface Test1
 
@@ -76,6 +106,7 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
              * 
              * @param name The name of the person to greet
              * @see [com.example.plugin.KdocIncludePlugin][com.example.plugin.KdocIncludePlugin]
+             *  
              */
             @AnnotationTest(a = 24)
             private interface Test2
@@ -94,8 +125,7 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
                 println("Hello World!")
             }
 
-            /**
-             * Hello World 2!
+            /** Hello World 2!
              * Hello World!
              * 
              * This is a large example of how the plugin will work from someMoreFun

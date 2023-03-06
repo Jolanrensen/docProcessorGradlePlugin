@@ -221,6 +221,7 @@ package com.example.plugin
  *
  * @param name The name of the person to greet
  * @see [com.example.plugin.KdocIncludePlugin]
+ *
  */
 private interface Test1
 
@@ -232,6 +233,7 @@ private interface Test1
  *
  * @param name The name of the person to greet
  * @see [com.example.plugin.KdocIncludePlugin][com.example.plugin.KdocIncludePlugin]
+ *
  */
 @AnnotationTest(a = 24)
 private interface Test2
@@ -250,8 +252,7 @@ fun someFun() {
    println("Hello World!")
 }
 
-/**
- * Hello World 2!
+/** Hello World 2!
  * Hello World!
  *
  * This is a large example of how the plugin will work from someMoreFun
