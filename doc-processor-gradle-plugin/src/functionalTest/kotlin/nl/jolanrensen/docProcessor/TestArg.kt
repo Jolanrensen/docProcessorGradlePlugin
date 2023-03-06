@@ -34,7 +34,100 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
             
             /**
              * Hello World!
-             * 
+             *
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test simple include arg kotlin`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello {@includeArg name}!
+             * {@arg name World}
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             *
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test arg not present kotlin`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello {@includeArg name}!
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /**
+             * Hello {@includeArg name}!
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test arg order 1`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello {@includeArg name}!
+             * {@arg name Everyone}
+             * {@arg name World}
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             *
+             *
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -70,7 +163,7 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
             @AnnotationTest(a = 24)
             private interface Test2
 
-            /** 
+            /**
              * Some extra text
              * @include [Test2] {@arg source someFun} */
             fun someFun() {
@@ -89,21 +182,21 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
 
             /**
              * Hello World!
-             * 
+             *
              * This is a large example of how the plugin will work from Test1
-             * 
+             *
              * @param name The name of the person to greet
              * @see [com.example.plugin.KdocIncludePlugin]
-             * 
+             *
              */
             private interface Test1
 
             /**
              * Hello World 2!
              * Hello World!
-             * 
+             *
              * This is a large example of how the plugin will work from Test2
-             * 
+             *
              * @param name The name of the person to greet
              * @see [com.example.plugin.KdocIncludePlugin][com.example.plugin.KdocIncludePlugin]
              *  
@@ -115,9 +208,9 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
              * Some extra text
              * Hello World 2!
              * Hello World!
-             * 
+             *
              * This is a large example of how the plugin will work from someFun
-             * 
+             *
              * @param name The name of the person to greet
              * @see [com.example.plugin.KdocIncludePlugin][com.example.plugin.KdocIncludePlugin]
              */
@@ -127,9 +220,9 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
 
             /** Hello World 2!
              * Hello World!
-             * 
+             *
              * This is a large example of how the plugin will work from someMoreFun
-             * 
+             *
              * @param name The name of the person to greet
              * @see [com.example.plugin.KdocIncludePlugin][com.example.plugin.KdocIncludePlugin]
              */

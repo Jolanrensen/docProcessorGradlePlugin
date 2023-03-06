@@ -66,7 +66,8 @@ fun DocContent.toDoc(indent: Int = 0): String =
                     append(" ".repeat(indent))
 
                     if (!(index == 0 || index == it.lastIndex && lastIsBlank)) {
-                        append(" * ")
+                        append(" *")
+                        if (s.isNotEmpty()) append(" ")
                     }
                     append(s)
                 }

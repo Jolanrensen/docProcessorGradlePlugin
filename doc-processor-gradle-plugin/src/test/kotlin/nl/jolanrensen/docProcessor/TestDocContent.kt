@@ -11,7 +11,7 @@ class TestDocContent {
         val kdoc = """
             /**
              *       Hello World!
-             * 
+             *
              * @see [com.example.plugin.KdocIncludePlugin]
              */
         """.trimIndent()
@@ -27,7 +27,7 @@ class TestDocContent {
     fun `Simple doc no surrounding newlines 1`() {
         val kdoc = """
             /** Hello World!
-             * 
+             *
              * @see [com.example.plugin.KdocIncludePlugin] */
         """.trimIndent()
 
@@ -145,7 +145,7 @@ class TestDocContent {
     fun `Empty doc newlines`() {
         val kdoc = """
             /**
-             * 
+             *
              */
         """.trimIndent()
 
