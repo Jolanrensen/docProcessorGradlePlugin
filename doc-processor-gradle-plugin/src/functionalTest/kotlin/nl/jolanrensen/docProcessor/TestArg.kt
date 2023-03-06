@@ -13,10 +13,8 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
         "INCLUDE_ARG_DOC_PROCESSOR"
     )
 
-    // TODO
-
     @Test
-    fun `Test simple arg kotlin`() {
+    fun `Test simple arg`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -47,7 +45,7 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
     }
 
     @Test
-    fun `Test simple include arg kotlin`() {
+    fun `Test simple include arg`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -78,7 +76,7 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
     }
 
     @Test
-    fun `Test arg not present kotlin`() {
+    fun `Test arg not present`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -107,7 +105,7 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
     }
 
     @Test
-    fun `Test arg order 1`() {
+    fun `Test arg order inline`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -140,7 +138,7 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
     }
 
     @Test
-    fun `Test arg order 2`() {
+    fun `Test arg order block`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -170,13 +168,149 @@ class TestArg : DocProcessorFunctionalTest(name ="arg") {
         ) shouldBe expectedOutput
     }
 
+    @Test
+    fun `Test arg order block and inline`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello {@includeArg name}!
+             * @arg name World
+             * {@arg name Everyone}
+             */
+            fun helloWorld() {}
+            """.trimIndent()
 
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+            """.trimIndent()
 
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
 
+    @Test
+    fun `Test reference key simple kotlin`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
 
+            interface Key
+            
+            /**
+             * Hello {@includeArg [Key]}!
+             * {@arg [Key] World}
+             */
+            fun helloWorld() {}
+            """.trimIndent()
 
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
 
+            interface Key
+            
+            /**
+             * Hello World!
+             *
+             */
+            fun helloWorld() {}
+            """.trimIndent()
 
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test escaping character kotlin`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+
+            interface Key
+            
+            /**
+             * Hello {@includeArg [Key]}!
+             * {@arg [Key] {World\}}
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+
+            interface Key
+            
+            /**
+             * Hello {World}!
+             *
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Test with include from other file kotlin`() {
+        @Language("kt")
+        val otherFile = """
+            package com.example.plugin
+            
+            interface Key
+
+            /**
+             * Hello {@includeArg [Key]}!
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /** @include [helloWorld] {@arg [Key] World} */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /** Hello World! */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            additionalFiles = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/Test2.kt",
+                    content = otherFile,
+                )
+            ),
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
 
     @Test
     fun `Test Readme example`() {

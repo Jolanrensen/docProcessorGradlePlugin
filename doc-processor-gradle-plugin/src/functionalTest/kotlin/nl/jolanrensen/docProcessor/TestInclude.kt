@@ -185,6 +185,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             /** 
               * Hello World! 
               * [Some aliased link][helloWorld2] 
+              * [helloWorld\]
               * [helloWorld]
               */
             fun helloWorld() {}
@@ -200,12 +201,14 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             /** 
               * Hello World! 
               * [Some aliased link][helloWorld2] 
+              * [helloWorld\]
               * [helloWorld]
               */
             fun helloWorld() {}
             
             /** Hello World! 
              * [Some aliased link][com.example.plugin.helloWorld2] 
+             * [helloWorld][helloWorld]
              * [helloWorld][com.example.plugin.helloWorld] */
             fun helloWorld2() {}
             """.trimIndent()

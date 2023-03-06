@@ -179,7 +179,6 @@ class IncludeDocProcessor : TagDocProcessor() {
             .removePrefix("\n")
             .removeSuffix("\n")
 
-
         if (extraContent.isNotBlank()) {
             content = "$content $extraContent"
         }

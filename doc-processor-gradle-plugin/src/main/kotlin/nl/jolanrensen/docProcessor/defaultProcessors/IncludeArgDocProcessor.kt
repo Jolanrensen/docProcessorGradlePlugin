@@ -7,6 +7,7 @@ import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.findTagNamesInDocContent
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.getTagNameOrNull
+import nl.jolanrensen.docProcessor.javaLinkRegex
 import nl.jolanrensen.docProcessor.removeEscapeCharacters
 
 /**
@@ -137,14 +138,23 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                     numberOfArguments = 2,
                 )
 
-                val argIncludeDeclaration = includeArgArguments.first()
+                val originalKey = includeArgArguments.first()
 
                 // for stuff written after the @includeArg tag, save and include it later
                 val extraContent = includeArgArguments.getOrElse(1) { "" }
                     .trimStart()
 
-                val originalKey = argIncludeDeclaration
                 var keys = listOf(originalKey)
+
+                // TODO?: Java {@link ReferenceLinks}
+                if (javaLinkRegex in originalKey) {
+                    println(
+                        "Java {@link statements} are not replaced by their fully qualified path. " +
+                                "Make sure to use fully qualified paths in {@link statements} when " +
+                                "using {@link statements} as a key in @arg."
+                    )
+                }
+
                 if (originalKey.startsWith('[') && originalKey.contains(']')) {
                     keys = buildReferenceKeys(originalKey, documentable, allDocumentables)
                 }
