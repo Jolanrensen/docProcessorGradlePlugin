@@ -256,8 +256,13 @@ abstract class ProcessDocsAction : SimpleLogger {
                                 else -> range
                             } to ""
                         } else if (docContent.isNotEmpty() && range.size <= 1) {
-                            // create a new kdoc at given range TODO!
-                            val newKdoc = docContent.toDoc(indent!!).trimStart()
+                            // create a new kdoc at given range
+                            val newKdoc = buildString {
+                                append("\n")
+                                append(docContent.toDoc(indent!!).trimStart())
+                                append("\n")
+                                append(" ".repeat(indent))
+                            }
 
                             range to newKdoc
                         } else {
