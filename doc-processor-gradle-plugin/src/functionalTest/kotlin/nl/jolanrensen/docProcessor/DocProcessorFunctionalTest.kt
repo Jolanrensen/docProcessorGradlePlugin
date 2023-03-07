@@ -46,46 +46,26 @@ abstract class DocProcessorFunctionalTest(name: String) {
         tasks.compileKotlin { dependsOn(processKdocMain) }
     """.trimIndent()
 
-    val projectDir = File("build/$name")
-    val outputDir = File(projectDir, "build/docProcessor/processKdocMain")
+    val projectDirectory = File("build/$name")
+    val outputDirectory = File(projectDirectory, "build/docProcessor/processKdocMain")
 
-    private fun initializeProjectFiles(processors: List<String>) {
-        // Set up the test build
-        projectDir.deleteRecursively()
-        projectDir.mkdirs()
-
-        File(projectDir, "settings.gradle.kts")
-            .writeString(settingsFile)
-
-        File(projectDir, "build.gradle.kts")
-            .writeString(getBuildFileContent(processors))
-    }
-
-    private fun runBuild(): BuildResult =
-        GradleRunner.create()
-            .forwardOutput()
-            .withArguments("processKdocMain")
-            .withProjectDir(projectDir)
-            .withDebug(true)
-            .build()
-
-    enum class JavaOrKotlin {
+    enum class Language {
         JAVA, KOTLIN
     }
 
     fun createUniqueFileName(
-        dir: File,
-        javaOrKotlin: JavaOrKotlin,
+        directory: File,
+        language: Language,
     ): String {
-        val extension = when (javaOrKotlin) {
-            JavaOrKotlin.JAVA -> "java"
-            JavaOrKotlin.KOTLIN -> "kt"
+        val fileExtension = when (language) {
+            Language.JAVA -> "java"
+            Language.KOTLIN -> "kt"
         }
 
         var i = 0
         while (true) {
-            val fileName = "Test$i.$extension"
-            if (!File(dir, fileName).exists()) return fileName
+            val fileName = "Test$i.$fileExtension"
+            if (!File(directory, fileName).exists()) return fileName
             i++
         }
     }
@@ -95,50 +75,89 @@ abstract class DocProcessorFunctionalTest(name: String) {
         val content: String,
     )
 
+    /**
+     * This function allows you to process content with any given processors.
+     * Make sure to enter the [packageName] and [fileName] correctly, since this is
+     * where the temporary file will be created.
+     *
+     * @param content Content of the file to be processed
+     * @param packageName Package name of the file to be processed
+     * @param fileName File name of the file to be processed
+     * @param language Language of the file to be processed
+     * @param processors Processors to be used
+     * @param additionalFiles [Additional files][AdditionalFile] to be created in the project that are
+     *   processed but not returned
+     * @return The processed content of [content]
+     */
+    @kotlin.jvm.Throws(IOException::class)
     fun processContent(
         content: String,
         packageName: String,
         fileName: String = "Test",
-        javaOrKotlin: JavaOrKotlin = JavaOrKotlin.KOTLIN,
+        language: Language = Language.KOTLIN,
         processors: List<String>,
         additionalFiles: List<AdditionalFile> = emptyList(),
     ): String {
         initializeProjectFiles(processors)
 
         for (additionalFile in additionalFiles) {
-            File(projectDir, additionalFile.relativePath)
-                .writeString(additionalFile.content)
+            File(projectDirectory, additionalFile.relativePath)
+                .write(additionalFile.content)
         }
 
         val relativePath = buildString {
             append("src/main/")
             append(
-                when (javaOrKotlin) {
-                    JavaOrKotlin.JAVA -> "java/"
-                    JavaOrKotlin.KOTLIN -> "kotlin/"
+                when (language) {
+                    Language.JAVA -> "java/"
+                    Language.KOTLIN -> "kotlin/"
                 }
             )
             append(packageName.replace('.', '/'))
         }
-        val dir = File(projectDir, relativePath)
+        val directory = File(projectDirectory, relativePath)
 
-        val extension = when (javaOrKotlin) {
-            JavaOrKotlin.JAVA -> "java"
-            JavaOrKotlin.KOTLIN -> "kt"
+        val extension = when (language) {
+            Language.JAVA -> "java"
+            Language.KOTLIN -> "kt"
         }
         val fileNameWithExtension = "$fileName.$extension"
 
-        File(dir, fileNameWithExtension).writeString(content)
+        File(directory, fileNameWithExtension)
+            .write(content)
 
         runBuild()
 
-        return File(File(outputDir, relativePath), fileNameWithExtension).readText()
+        return File(File(outputDirectory, relativePath), fileNameWithExtension).readText()
     }
 
-    @Throws(IOException::class)
-    private fun File.writeString(string: String) {
+    private fun initializeProjectFiles(processors: List<String>) {
+        // Set up the test build
+        projectDirectory.deleteRecursively()
+        projectDirectory.mkdirs()
+
+        File(projectDirectory, "settings.gradle.kts")
+            .write(settingsFile)
+
+        File(projectDirectory, "build.gradle.kts")
+            .write(getBuildFileContent(processors))
+    }
+
+    private fun runBuild(): BuildResult =
+        GradleRunner.create()
+            .forwardOutput()
+            .withArguments("processKdocMain")
+            .withProjectDir(projectDirectory)
+            .withDebug(true)
+            .build()
+
+    @Throws(IOException::class, SecurityException::class)
+    private fun File.write(string: String) {
         if (!parentFile.exists()) {
-            parentFile.mkdirs()
+            val result = parentFile.mkdirs()
+            if (!result) {
+                throw IOException("Could not create parent directories for $this")
+            }
         }
 
         FileWriter(this).use { writer -> writer.write(string) }

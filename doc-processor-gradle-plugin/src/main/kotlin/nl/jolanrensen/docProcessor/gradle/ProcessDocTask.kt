@@ -1,10 +1,11 @@
 package nl.jolanrensen.docProcessor.gradle
 
+import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.model.ObjectFactory
@@ -13,6 +14,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
 import org.gradle.workers.WorkerExecutor
@@ -32,6 +34,9 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     val sources: ListProperty<File> = factory
         .listProperty(File::class.java)
 
+    /** Source root folders for preprocessing. This needs to be set! */
+    fun sources(files: Iterable<File>): Unit = sources.set(files)
+
     /**
      * Set base directory which will be used for relative source paths.
      * By default, it is '$projectDir'.
@@ -42,12 +47,23 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         .convention(project.projectDir)
 
     /**
+     * Set base directory which will be used for relative source paths.
+     * By default, it is '$projectDir'.
+     */
+    fun baseDir(file: File): Unit = baseDir.set(file)
+
+    /**
      * Target folder to place the preprocessing results in.
      */
     @get:Input
     val target: Property<File> = factory
         .property(File::class.java)
         .convention(File(project.buildDir, "docProcessor${File.separatorChar}${taskIdentity.name}"))
+
+    /**
+     * Target folder to place the preprocessing results in.
+     */
+    fun target(file: File): Unit = target.set(file)
 
     /**
      * Where the generated sources are placed.
@@ -64,12 +80,22 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         .convention(false)
 
     /**
+     * Whether to print debug information.
+     */
+    fun debug(boolean: Boolean): Unit = debug.set(boolean)
+
+    /**
      * The limit for while-true loops in processors. This is to prevent infinite loops.
      */
     @get:Input
     val processLimit: Property<Int> = factory
         .property(Int::class.java)
         .convention(10_000)
+
+    /**
+     * The limit for while-true loops in processors. This is to prevent infinite loops.
+     */
+    fun processLimit(int: Int): Unit = processLimit.set(int)
 
     /**
      * The processors to use. These must be fully qualified names, such as:
@@ -79,6 +105,12 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     val processors: ListProperty<String> = factory
         .listProperty(String::class.java)
         .convention(emptyList())
+
+    /**
+     * The processors to use. These must be fully qualified names, such as:
+     * `"com.example.plugin.MyProcessor"`
+     */
+    fun processors(vararg strings: String): Unit = processors.set(strings.toList())
 
     /** The classpath of this task. */
     @Classpath
@@ -100,29 +132,58 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     private fun <T : Any> NamedDomainObjectContainer<T>.maybeCreate(name: String, configuration: T.() -> Unit): T =
         findByName(name) ?: create(name, configuration)
 
-    /**
-     * Adds dependency to plugin.
-     * Don't forget to add any new processor to the [processors] list.
-     *
-     * @param dependencyNotation Dependency notation
-     *
-     * @see org.gradle.api.artifacts.dsl.DependencyHandler.create
-     */
-    fun addPlugins(vararg dependencyNotation: Any) {
-        classpath.dependencies.addAll(
-            dependencyNotation.map { project.dependencies.create(it) }
-        )
+    inner class DependencySetPluginDsl {
+
+        /**
+         * Adds a plugin dependency to the classpath of this task.
+         * Don't forget to add any new processor to the [processors] list.
+         *
+         * @param dependencyNotation Dependency notation
+         */
+        fun plugin(dependencyNotation: Any) {
+            dependencies.add(project.dependencies.create(dependencyNotation))
+        }
+
+        /**
+         * Gets the set of declared dependencies directly contained in this configuration
+         * (ignoring superconfigurations).
+         * <p>
+         * This method does not resolve the configuration. Therefore, the return value does not include
+         * transitive dependencies.
+         *
+         * @return the set of dependencies
+         * @see #extendsFrom(Configuration...)
+         */
+        val dependencies: DependencySet = classpath.dependencies
     }
 
     /**
-     * Adds dependency to plugin.
-     * Don't forget to add any new processor to the [processors] list.
+     * DSL to add plugin dependencies to the current task. If you want to include a processor from an external library,
+     * that library needs to be added to the classpath of this task using this DSL.
      *
-     * @param dependency Dependency
+     * For example:
+     *
+     * ```groovy
+     * dependencies.plugin("com.example.plugin:my-doc-processor-plugin:1.4.32")
+     * ```
      */
-    fun addPlugins(vararg dependency: Dependency) {
-        classpath.dependencies.addAll(dependency)
-    }
+    @get:Internal
+    val dependencies = DependencySetPluginDsl()
+
+    /**
+     * DSL to add plugin dependencies to the current task. If you want to include a processor from an external library,
+     * that library needs to be added to the classpath of this task using this DSL.
+     *
+     * For example:
+     *
+     * ```groovy
+     * dependencies {
+     *     plugin "com.example.plugin:my-doc-processor-plugin:1.4.32"
+     * }
+     * ```
+     */
+    fun dependencies(action: Action<DependencySetPluginDsl>): Unit = action.execute(dependencies)
+
 
     private fun println(message: Any?) {
         if (debug.get()) {

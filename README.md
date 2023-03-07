@@ -44,7 +44,7 @@ The sky is the limit :).
 
 Clone the project and run `./gradlew publishToMavenLocal` in the source folder.
 
-In your project's `settings.gradle.kts` add
+In your project's `settings.gradle.kts` or `settings.gradle` add:
 
 ```kts
 pluginManagement {
@@ -54,17 +54,19 @@ pluginManagement {
 }
 ```
 
-In `build.gradle.kts` add `id("nl.jolanrensen.docProcessor") version "1.0-SNAPSHOT"` to `plugins {}`.
+In `build.gradle.kts` or `build.gradle` add `id("nl.jolanrensen.docProcessor") version "1.0-SNAPSHOT"` to `plugins { .. }`.
 
 ### From JitPack
 
-In your project's `settings.gradle.kts` add
+In your project's `settings.gradle.kts` add:
 
 ```kts
 pluginManagement {
     repositories {
+        ..
         maven(url = "https://jitpack.io")
     }
+
     resolutionStrategy {
         eachPlugin {
             requested.apply {
@@ -81,12 +83,39 @@ pluginManagement {
 }
 ```
 
-In `build.gradle.kts` add `id("com.github.jolanrensen.docProcessorGradlePlugin") version "v0.0.1"` to `plugins {}`.
+Alternatively, if you use `settings.gradle`:
+
+```groovy
+pluginManagement {
+    repositories {
+        ..
+        maven { url = "https://jitpack.io" }
+    }
+
+    resolutionStrategy {
+        eachPlugin {
+            requested.with {
+                def jitpackPlugins = [
+                  "com.github.jolanrensen.docProcessorGradlePlugin",
+                ]
+                if ("$id" in jitpackPlugins) {
+                    def (_0, _1, user, name) = "$id".split(".", limit = 4)
+                    useModule("com.github.$user:$name:$version")
+                }
+            }
+        }
+    }
+}
+```
+
+In `build.gradle.kts` or `build.gradle` add `id("com.github.jolanrensen.docProcessorGradlePlugin") version "v0.0.1"` to `plugins { .. }`.
 
 ## How to use
 
 Say you want to create a task that will run when you're making a sources Jar such that the modified files appear in the
 Jar:
+
+`build.gradle.kts`:
 
 ```kts
 import nl.jolanrensen.docProcessor.gradle.*
@@ -100,7 +129,7 @@ plugins {
     id("nl.jolanrensen.docProcessor") version "1.0-SNAPSHOT"
 
     // When taking the plugin from JitPack
-    id("com.github.jolanrensen.docProcessorGradlePlugin") version "main-SNAPSHOT"
+    id("com.github.jolanrensen.docProcessorGradlePlugin") version "v0.X.Y"
     ..
 }
 
@@ -119,7 +148,7 @@ val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
 val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
 
     // Optional. The target folder of the processed files. By default ${project.buildDir}/docProcessor/${taskName}.
-    target = File(..)
+    target = file(..)
 
     // Optional. If you want to see more logging. By default, false.
     debug = true
@@ -175,8 +204,102 @@ tasks.withType<Jar> {
 tasks.withType<org.jetbrains.dokka.gradle.AbstractDokkaLeafTask> {
     dokkaSourceSets {
         all {
-            for (root in processKdocMain.targets)
-                sourceRoot(root)
+            sourceRoot(processKdocMain.target.get())
+        }
+    }
+}
+```
+
+`build.gradle`:
+
+```groovy
+import nl.jolanrensen.docProcessor.gradle.*
+import nl.jolanrensen.docProcessor.defaultProcessors.*
+import org.gradle.jvm.tasks.Jar
+
+..
+
+plugins {
+    // When taking the plugin from sources
+    id "nl.jolanrensen.docProcessor" version "1.0-SNAPSHOT"
+
+    // When taking the plugin from JitPack
+    id "com.github.jolanrensen.docProcessorGradlePlugin" version "v0.X.Y"
+    ..
+}
+
+repositories {
+    mavenLocal()
+    ..
+}
+
+..
+
+// Backup the kotlin source files location
+def kotlinMainSources = kotlin.sourceSets.main.kotlin.sourceDirectories
+
+// Create the processing task and point it to the right sources. 
+// This can also be the test sources for instance.
+def processKdocMain = tasks.register('processKdocMain', ProcessDocTask) {
+
+    // Optional. The target folder of the processed files. By default ${project.buildDir}/docProcessor/${taskName}.
+    target file(..)
+
+    // Optional. If you want to see more logging. By default, false.
+    debug true
+
+    // The processors you want to use in this task.
+    // The recommended order of default processors is as follows:
+    processors(
+            IncludeDocProcessorKt.INCLUDE_DOC_PROCESSOR, // The @include processor
+            IncludeFileDocProcessorKt.INCLUDE_FILE_DOC_PROCESSOR, // The @includeFile processor
+            IncludeArgDocProcessorKt.INCLUDE_ARG_DOC_PROCESSOR, // The @arg and @includeArg processor
+            CommentDocProcessorKt.COMMENT_DOC_PROCESSOR, // The @comment processor
+            SampleDocProcessorKt.SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
+      
+        "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
+    )
+
+    // Optional dependencies for this task. These dependencies can introduce custom processors.
+    dependencies {
+        plugin "com.example:plugin:SOME_VERSION"
+    }
+}.get()
+
+// Modify all Jar tasks such that before running the Kotlin sources are set to 
+// the target of processKdocMain and they are returned back to normal afterwards.
+tasks.withType(Jar).configureEach {
+    dependsOn(processKdocMain)
+    outputs.upToDateWhen { false }
+
+    doFirst {
+        kotlin {
+            sourceSets {
+                main {
+                    kotlin.srcDirs = processKdocMain.targets
+                }
+            }
+        }
+    }
+
+    doLast {
+        kotlin {
+            sourceSets {
+                main {
+                    kotlin.srcDirs = kotlinMainSources
+                }
+            }
+        }
+    }
+}
+
+..
+
+// As a bonus, this will update dokka to use the processed files as sources as well.
+tasks.withType(org.jetbrains.dokka.gradle.AbstractDokkaLeafTask).configureEach {
+    dokkaSourceSets.with {
+        configureEach {
+            sourceRoot(processKdocMain.target.get())
         }
     }
 }
