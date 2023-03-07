@@ -28,29 +28,20 @@ repositories {
 }
 
 dependencies {
-    // Use JUnit test framework for unit tests
-    testImplementation(kotlin("test"))
-    testImplementation("io.kotest:kotest-assertions-core:5.5.4")
+    // Gradle plugin dependencies
     implementation(gradleApi())
     implementation(gradleKotlinDsl())
 
-
-    // this is causing issues
+    // Dokka dependencies
     compileOnly("org.jetbrains.dokka:dokka-analysis:1.7.20")
-
-    // Use JUnit test framework for unit tests
-    testImplementation(kotlin("test"))
-    testImplementation("io.kotest:kotest-assertions-core:5.5.4")
-    implementation(gradleApi())
     implementation("org.jetbrains.dokka:dokka-base:1.7.20")
     implementation("org.jetbrains.dokka:dokka-core:1.7.20")
     implementation("org.jetbrains.dokka:dokka-base-test-utils:1.7.20")
     implementation("org.jetbrains.dokka:dokka-gradle-plugin:1.7.20")
 
-    // get included with dokka-analysis
-//    compileOnly("org.jetbrains.dokka:kotlin-analysis-compiler:1.7.20")
-//    compileOnly("org.jetbrains.dokka:kotlin-analysis-intellij:1.7.20")
-
+    // Use JUnit test framework for unit tests
+    testImplementation(kotlin("test"))
+    testImplementation("io.kotest:kotest-assertions-core:5.5.4")
 }
 
 gradlePlugin {
@@ -63,6 +54,7 @@ gradlePlugin {
         implementationClass = "nl.jolanrensen.docProcessor.gradle.DocProcessorPlugin"
     }
 
+    // Define the plugin for JitPack
     val docProcessorJitpack by plugins.creating {
         id = "com.github.jolanrensen.docProcessorGradlePlugin"
         displayName = "KDoc/Javadoc processor Gradle Plugin"
@@ -92,10 +84,9 @@ tasks.check {
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
 }
+
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(8))
     }
 }
-
-
