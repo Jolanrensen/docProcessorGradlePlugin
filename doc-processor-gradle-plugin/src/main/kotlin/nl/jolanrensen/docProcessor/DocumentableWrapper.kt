@@ -87,7 +87,6 @@ open class DocumentableWrapper internal constructor(
             val file = File(source.path)
 
             if (!file.exists()) {
-                // println("Warning: Could not find file for $path")
                 return null
             }
 

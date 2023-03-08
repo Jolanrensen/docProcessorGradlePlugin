@@ -1,5 +1,6 @@
 package nl.jolanrensen.docProcessor
 
+import com.intellij.openapi.util.TextRange
 import nl.jolanrensen.docProcessor.ProcessDocsAction.Parameters
 import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
 import org.jetbrains.dokka.CoreExtensions
@@ -13,7 +14,9 @@ import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.withDescendants
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import java.io.File
+import java.io.IOException
 import java.util.*
+import kotlin.jvm.Throws
 
 /**
  * Process docs action.
@@ -38,48 +41,6 @@ abstract class ProcessDocsAction : SimpleLogger {
         val debug: Boolean
         val processors: List<String>
         val processLimit: Int
-
-        companion object {
-            operator fun invoke(
-                baseDir: File,
-                sources: DokkaSourceSetImpl,
-                sourceRoots: List<File>,
-                target: File?,
-                debug: Boolean,
-                processors: List<String>,
-                processLimit: Int,
-            ): Parameters = object : Parameters {
-                override val baseDir: File = baseDir
-                override val sources: DokkaSourceSetImpl = sources
-                override val sourceRoots: List<File> = sourceRoots
-                override val target: File? = target
-                override val debug: Boolean = debug
-                override val processors: List<String> = processors
-                override val processLimit: Int = processLimit
-            }
-        }
-    }
-
-    companion object {
-        operator fun invoke(
-            baseDir: File,
-            sources: DokkaSourceSetImpl,
-            sourceRoots: List<File>,
-            target: File?,
-            debug: Boolean,
-            processors: List<String>,
-            processLimit: Int,
-        ): ProcessDocsAction = object : ProcessDocsAction() {
-            override val parameters = Parameters(
-                baseDir = baseDir,
-                sources = sources,
-                sourceRoots = sourceRoots,
-                target = target,
-                debug = debug,
-                processors = processors,
-                processLimit = processLimit,
-            )
-        }
     }
 
     abstract val parameters: Parameters
@@ -219,6 +180,7 @@ abstract class ProcessDocsAction : SimpleLogger {
             }
             .groupBy { it.file }
 
+    @Throws(IOException::class)
     private fun copyAndModifySources(modifiedDocumentablesPerFile: Map<File, List<DocumentableWrapper>>) {
         for (source in parameters.sourceRoots) {
             for (file in source.walkTopDown()) {
@@ -226,74 +188,107 @@ abstract class ProcessDocsAction : SimpleLogger {
 
                 val relativePath = parameters.baseDir.toPath().relativize(file.toPath())
                 val targetFile = File(parameters.target, relativePath.toString())
-                targetFile.parentFile.mkdirs()
+                try {
+                    targetFile.parentFile.mkdirs()
+                } catch (e: Exception) {
+                    throw IOException(
+                        "Could not create parent directory for $targetFile using target file ${parameters.target}",
+                        e,
+                    )
+                }
 
-                val content = file.readText()
+                val fileContent = try {
+                    file.readText()
+                } catch (e: Exception) {
+                    throw IOException("Could not read source file $file", e)
+                }
+
                 val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 
                 val modificationsByRange = modifications
                     .groupBy { it.docTextRange!! }
                     .mapValues { it.value.first() }
                     .toSortedMap(compareBy { it.startOffset })
-                    .map { (textRange, documentable) ->
-                        val range = textRange!!.toIntRange()
-
-                        val docContent = documentable.docContent
-                        val indent = documentable.docIndent
-                        val sourceHasDocumentation = documentable.sourceHasDocumentation
-
-                        when {
-                            // don't create empty kdoc, just remove it altogether
-                            docContent.isEmpty() && !sourceHasDocumentation -> range to ""
-
-                            // don't create empty kdoc, just remove it altogether
-                            // We need to expand the replace-range so that the newline is also removed
-                            docContent.isEmpty() && sourceHasDocumentation -> {
-                                val prependingNewlineIndex = content
-                                    .indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
-
-                                val trailingNewlineIndex = content
-                                    .indexOfFirstOrNullWhile('\n', range.last + 1) { it.isWhitespace() }
-
-                                val newRange = when {
-                                    prependingNewlineIndex != null && trailingNewlineIndex != null ->
-                                        prependingNewlineIndex..range.last
-
-                                    trailingNewlineIndex != null ->
-                                        range.first..trailingNewlineIndex
-
-                                    else -> range
-                                }
-
-                                newRange to ""
-                            }
-
-                            // create a new kdoc at given range
-                            docContent.isNotEmpty() && !sourceHasDocumentation -> {
-                                val newKdoc = buildString {
-                                    append(docContent.toDoc())
-                                    append("\n")
-                                    append(" ".repeat(indent!!))
-                                }
-
-                                range to newKdoc
-                            }
-
-                            // replace the existing kdoc with the new one
-                            docContent.isNotEmpty() && sourceHasDocumentation -> {
-                                val newKdoc = docContent.toDoc(indent!!).trimStart()
-
-                                range to newKdoc
-                            }
-
-                            else -> error("Unreachable")
-                        }
+                    .map { (docTextRange, documentable) ->
+                        getNewDocTextRangeAndDoc(
+                            fileContent = fileContent,
+                            docTextRange = docTextRange,
+                            newDocContent = documentable.docContent,
+                            docIndent = documentable.docIndent!!,
+                            sourceHasDocumentation = documentable.sourceHasDocumentation,
+                        )
                     }
 
-                val processedContent = content.replaceRanges(*modificationsByRange.toTypedArray())
+                val processedFileContent = fileContent.replaceRanges(*modificationsByRange.toTypedArray())
 
-                targetFile.writeText(processedContent)
+                try {
+                    targetFile.writeText(processedFileContent)
+                } catch (e: Exception) {
+                    throw IOException("Could not write to target file $targetFile", e)
+                }
             }
+        }
+    }
+
+    /**
+     * Returns the new range (in [fileContent]) and documentation (with `/** */` if [newDocContent] is not empty)
+     * for the documentation found at [docTextRange] in [fileContent],
+     * based on the given new [newDocContent].
+     */
+    private fun getNewDocTextRangeAndDoc(
+        fileContent: String,
+        docTextRange: TextRange?,
+        newDocContent: DocContent,
+        docIndent: Int,
+        sourceHasDocumentation: Boolean,
+    ): Pair<IntRange, String> {
+        val range = docTextRange!!.toIntRange()
+
+        return when {
+            // don't create empty kdoc, just remove it altogether
+            newDocContent.isEmpty() && !sourceHasDocumentation -> range to ""
+
+            // don't create empty kdoc, just remove it altogether
+            // We need to expand the replace-range so that the newline is also removed
+            newDocContent.isEmpty() && sourceHasDocumentation -> {
+                val prependingNewlineIndex = fileContent
+                    .indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
+
+                val trailingNewlineIndex = fileContent
+                    .indexOfFirstOrNullWhile('\n', range.last + 1) { it.isWhitespace() }
+
+                val newRange = when {
+                    prependingNewlineIndex != null && trailingNewlineIndex != null ->
+                        prependingNewlineIndex..range.last
+
+                    trailingNewlineIndex != null ->
+                        range.first..trailingNewlineIndex
+
+                    else -> range
+                }
+
+                newRange to ""
+            }
+
+            // create a new kdoc at given range
+            newDocContent.isNotEmpty() && !sourceHasDocumentation -> {
+                val newKdoc = buildString {
+                    append(newDocContent.toDoc())
+                    append("\n")
+                    append(" ".repeat(docIndent))
+                }
+
+                range to newKdoc
+            }
+
+            // replace the existing kdoc with the new one
+            newDocContent.isNotEmpty() && sourceHasDocumentation -> {
+                val newKdoc = newDocContent.toDoc(docIndent).trimStart()
+
+                range to newKdoc
+            }
+
+            else -> error("Unreachable")
         }
     }
 }

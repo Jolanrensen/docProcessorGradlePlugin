@@ -34,5 +34,4 @@ abstract class ProcessDocsGradleAction : ProcessDocsAction(), WorkAction<Process
             throw e
         }
     }
-
 }
