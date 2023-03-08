@@ -5,6 +5,7 @@ import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
+import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtFile
@@ -12,7 +13,8 @@ import org.jetbrains.kotlin.resolve.ImportPath
 import java.io.File
 
 /**
- * Wrapper around [Documentable][documentable] that adds easy access
+ * Wrapper around [documentable], [Dokka's Documentable][Documentable],
+ * and [source], [Dokka's DocumentableSource][DocumentableSource], that adds easy access
  * to several useful properties and functions.
  *
  * Instantiate it with [documentable], [source] and [logger] using
@@ -24,24 +26,32 @@ import java.io.File
  *
  * All other properties are read-only and based upon the source-documentable.
  *
- * @property documentable The documentable. Should be given.
- * @property source The source. Should be given.
- * @property logger Dokka logger that's needed for [findClosestDocComment]. Should be given.
+ * @property [documentable] The Dokka [Documentable]. Should be given.
+ *   This represents the class, function, or another entity that potentially has some doc comment.
+ * @property [source] The Dokka [DocumentableSource], either a [PsiDocumentableSource] for Java,
+ *   or a [DescriptorDocumentableSource] for Kotlin. Usually provided by a [WithSources] in Dokka. Should be given.
+ *   This represents the source of the [documentable] pointing to a language-specific AST/PSI.
+ * @property [logger] [Dokka logger][DokkaConsoleLogger] that's needed for [findClosestDocComment]. Should be given.
  *
- * @property docComment The doc comment found from [documentable] with [findClosestDocComment]
- * @property path The path of the [documentable].
- * @property extensionPath If the documentable is an extension function/property:
+ * @property [sourceHasDocumentation] Whether the original [documentable] has a doc comment or not.
+ * @property [fullyQualifiedPath] The fully qualified path of the [documentable], its key if you will.
+ * @property [fullyQualifiedExtensionPath] If the documentable is an extension function/property:
  *   "(The path of the receiver).(name of the [documentable])".
- * @property file The file of the [documentable]'s [source].
- * @property fileText The text of the [documentable]'s [file].
- * @property docTextRange The text range of the [file] where the original comment can be found.
- * @property docIndent The amount of spaces the comment is indented with.
+ * @property [file] The file in which the [documentable] can be found.
+ * @property [docTextRange] The text range of the [file] where the original comment can be found.
+ *   This is the range from `/**` to `*/`. If there is no comment, the range is empty. `null` if the [doc comment][DocComment]
+ *   could not be found (e.g. because the PSI/AST of the file is not found).
+ * @property [docIndent] The amount of spaces the comment is indented with. `null` if the [doc comment][DocComment]
+ *   could not be found (e.g. because the PSI/AST of the file is not found).
  *
- * @property docContent Just the contents of the comment, without the `*`-stuff.
- * @property tags List of tag names present in this documentable.
- * @property isModified Whether the [docContent] was modified.
+ * @property [docContent] Just the contents of the comment, without the `*`-stuff. Can be modified with [copy] or via
+ *   [asMutable].
+ * @property [tags] List of tag names present in this documentable. Can be modified with [copy] or via
+ *   [asMutable]. Must be updated manually if [docContent] is modified.
+ * @property [isModified] Whether the [docContent] was modified. Can be modified with [copy] or via
+ *   [asMutable]. Must be updated manually if [docContent] is modified.
  *
- * @see MutableDocumentableWrapper
+ * @see [MutableDocumentableWrapper]
  */
 @Suppress("DataClassPrivateConstructor")
 open class DocumentableWrapper internal constructor(
@@ -49,11 +59,10 @@ open class DocumentableWrapper internal constructor(
     val source: DocumentableSource,
     private val logger: DokkaConsoleLogger,
 
-    val docComment: DocComment?,
-    val path: String,
-    val extensionPath: String?,
+    val sourceHasDocumentation: Boolean,
+    val fullyQualifiedPath: String,
+    val fullyQualifiedExtensionPath: String?,
     val file: File,
-    val fileText: String,
     val docTextRange: TextRange?,
     val docIndent: Int?,
 
@@ -73,8 +82,8 @@ open class DocumentableWrapper internal constructor(
                 logger = logger,
             )
 
-            val path = documentable.dri.path
-            val extensionPath = documentable.dri.extensionPath
+            val path = documentable.dri.fullyQualifiedPath
+            val extensionPath = documentable.dri.fullyQualifiedExtensionPath
             val file = File(source.path)
 
             if (!file.exists()) {
@@ -127,16 +136,16 @@ open class DocumentableWrapper internal constructor(
 
             val tags = docContent?.findTagNamesInDocContent() ?: emptyList()
             val isModified = false
+            val sourceHasDocumentation = docTextRange?.toIntRange()?.let { it.size > 1 } == true
 
             return DocumentableWrapper(
                 documentable = documentable,
                 source = source,
                 logger = logger,
-                docComment = docComment,
-                path = path,
-                extensionPath = extensionPath,
+                sourceHasDocumentation = sourceHasDocumentation,
+                fullyQualifiedPath = path,
+                fullyQualifiedExtensionPath = extensionPath,
                 file = file,
-                fileText = fileText,
                 docTextRange = docTextRange,
                 docIndent = docIndent,
                 docContent = docContent ?: "",
@@ -150,10 +159,13 @@ open class DocumentableWrapper internal constructor(
     val isKotlin: Boolean = source is DescriptorDocumentableSource
 
     /** Query file for doc text range. */
-    fun queryFileForDocTextRange(): String? = docTextRange?.substring(fileText)
+    fun queryFileForDocTextRange(): String? = docTextRange?.substring(file.readText())
 
-    /** Returns all imports available to this documentable. */
-    fun getImports(): List<ImportPath> =
+    /**
+     * Returns all imports available to this documentable.
+     * TODO: Support Java imports.
+     */
+    private fun getImports(): List<ImportPath> =
         source.psi
             ?.containingFile
             .let { it as? KtFile }
@@ -163,11 +175,11 @@ open class DocumentableWrapper internal constructor(
 
     /**
      * Returns a list of paths that can be meant for the given [targetPath] in the context of this documentable.
-     * It takes the current [path] and [imports][getImports] into account.
+     * It takes the current [fullyQualifiedPath] and [imports][getImports] into account.
      */
     fun getAllFullPathsFromHereForTargetPath(targetPath: String): List<String> {
         val subPaths = buildList {
-            val current = path.split(".").toMutableList()
+            val current = fullyQualifiedPath.split(".").toMutableList()
             while (current.isNotEmpty()) {
                 add(current.joinToString("."))
                 current.removeLast()
@@ -226,7 +238,7 @@ open class DocumentableWrapper internal constructor(
     }
 
     /**
-     * Queries the [documentables] map for a [DocumentableSource]'s [path] or [extensionPath] that exists for
+     * Queries the [documentables] map for a [DocumentableSource]'s [fullyQualifiedPath] or [fullyQualifiedExtensionPath] that exists for
      * the given [query]. If there is no [DocumentableSource] for the given [query] but the path
      * still exists as a key in the [documentables] map, then that path is returned.
      */
@@ -239,7 +251,7 @@ open class DocumentableWrapper internal constructor(
         val docPath = queryDocumentables(query, documentables, filter)?.let {
             // take either the normal path to the doc or the extension path depending on which is valid and
             // causes the smallest number of collisions
-            listOfNotNull(it.path, it.extensionPath)
+            listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath)
                 .filter { path -> pathIsValid(path, it) }
                 .minByOrNull { documentables[it]?.size ?: 0 }
         }
@@ -258,11 +270,10 @@ open class DocumentableWrapper internal constructor(
             documentable = documentable,
             source = source,
             logger = logger,
-            docComment = docComment,
-            path = path,
-            extensionPath = extensionPath,
+            sourceHasDocumentation = sourceHasDocumentation,
+            fullyQualifiedPath = fullyQualifiedPath,
+            fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
             file = file,
-            fileText = fileText,
             docTextRange = docTextRange,
             docIndent = docIndent,
             docContent = docContent,
@@ -280,11 +291,10 @@ open class DocumentableWrapper internal constructor(
             documentable = documentable,
             source = source,
             logger = logger,
-            docComment = docComment,
-            path = path,
-            extensionPath = extensionPath,
+            sourceHasDocumentation = sourceHasDocumentation,
+            fullyQualifiedPath = fullyQualifiedPath,
+            fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
             file = file,
-            fileText = fileText,
             docTextRange = docTextRange,
             docIndent = docIndent,
             docContent = docContent,
@@ -303,11 +313,10 @@ open class MutableDocumentableWrapper internal constructor(
     source: DocumentableSource,
     logger: DokkaConsoleLogger,
 
-    docComment: DocComment?,
-    path: String,
-    extensionPath: String?,
+    sourceHasDocumentation: Boolean,
+    fullyQualifiedPath: String,
+    fullyQualifiedExtensionPath: String?,
     file: File,
-    fileText: String,
     docTextRange: TextRange?,
     docIndent: Int?,
 
@@ -318,11 +327,10 @@ open class MutableDocumentableWrapper internal constructor(
     documentable = documentable,
     source = source,
     logger = logger,
-    docComment = docComment,
-    path = path,
-    extensionPath = extensionPath,
+    sourceHasDocumentation = sourceHasDocumentation,
+    fullyQualifiedPath = fullyQualifiedPath,
+    fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
     file = file,
-    fileText = fileText,
     docTextRange = docTextRange,
     docIndent = docIndent,
     docContent = docContent,

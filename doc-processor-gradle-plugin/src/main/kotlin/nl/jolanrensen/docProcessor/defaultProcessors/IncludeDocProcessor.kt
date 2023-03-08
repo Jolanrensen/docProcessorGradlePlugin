@@ -94,7 +94,7 @@ class IncludeDocProcessor : TagDocProcessor() {
      */
     override fun <T : DocumentableWrapper> filterDocumentables(documentable: T): Boolean =
         documentable.documentable.isLinkableElement() &&
-                documentable.docComment != null
+                documentable.sourceHasDocumentation
 
     /**
      * Provides a helpful message when a circular reference is detected.

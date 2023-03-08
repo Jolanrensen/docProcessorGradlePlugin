@@ -77,7 +77,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         // argument is not found, as it might be defined in a different file.
         if (i > 0 && !anyModifications) {
             val argsNotFound = argsNotFound.flatMap { (documentable, args) ->
-                args.map { arg -> "`${documentable.path}` -> @$useArgumentTag $arg" }
+                args.map { arg -> "`${documentable.fullyQualifiedPath}` -> @$useArgumentTag $arg" }
             }.joinToString("\n")
             println("IncludeArgDocProcessor WARNING: Could not find all arguments:[\n$argsNotFound\n]")
             return false
@@ -233,8 +233,8 @@ class IncludeArgDocProcessor : TagDocProcessor() {
 
         if (referencedDocumentable != null)
             keys = listOfNotNull(
-                referencedDocumentable.path,
-                referencedDocumentable.extensionPath,
+                referencedDocumentable.fullyQualifiedPath,
+                referencedDocumentable.fullyQualifiedExtensionPath,
             ).map { "[$it]" }
 
         return keys

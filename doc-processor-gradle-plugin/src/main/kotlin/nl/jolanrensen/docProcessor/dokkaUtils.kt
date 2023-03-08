@@ -305,7 +305,7 @@ fun PsiElement.resolveToGetDri(): PsiElement? =
  * Gets the fully qualified path of a linkable target.
  * If it's an extension function/property, the receiver is ignored.
  */
-val DRI.path: String
+val DRI.fullyQualifiedPath: String
     get() = listOf(
         packageName?.split('.').orEmpty(),
         classNames?.split('.').orEmpty(),
@@ -317,7 +317,7 @@ val DRI.path: String
  * function/property from the perspective of the receiver. So
  * `com.something.Receiver.extension`
  */
-val DRI.extensionPath: String?
+val DRI.fullyQualifiedExtensionPath: String?
     get() = callable?.receiver?.let { receiver ->
         listOf(
             receiver.path.split('.'),

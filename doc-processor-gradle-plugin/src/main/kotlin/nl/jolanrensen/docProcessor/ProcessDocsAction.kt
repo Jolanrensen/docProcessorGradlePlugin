@@ -111,7 +111,7 @@ abstract class ProcessDocsAction : SimpleLogger {
         // filter to only include the modified documentables
         val modifiedDocumentablesPerFile = getModifiedDocumentablesPerFile(modifiedDocumentables)
 
-        println("Modified documentables: ${modifiedDocumentablesPerFile.values.flatMap { it.map { it.path } }}")
+        println("Modified documentables: ${modifiedDocumentablesPerFile.values.flatMap { it.map { it.fullyQualifiedPath } }}")
 
         // copy the sources to the target folder while replacing all docs in modified documentables
         copyAndModifySources(modifiedDocumentablesPerFile)
@@ -156,8 +156,8 @@ abstract class ProcessDocsAction : SimpleLogger {
                 val (withSources, withoutSources) = it.partition { it is WithSources }
 
                 // paths without sources are likely generated files or external sources, such as dependencies
-                pathsWithoutSources += withoutSources.map { it.dri.path }
-                pathsWithoutSources += withoutSources.mapNotNull { it.dri.extensionPath }
+                pathsWithoutSources += withoutSources.map { it.dri.fullyQualifiedPath }
+                pathsWithoutSources += withoutSources.mapNotNull { it.dri.fullyQualifiedExtensionPath }
 
                 withSources.mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
@@ -174,7 +174,7 @@ abstract class ProcessDocsAction : SimpleLogger {
         // collect the documentables with sources per path
         val documentablesPerPath: MutableMap<String, List<DocumentableWrapper>> = documentables
             .flatMap { doc ->
-                listOfNotNull(doc.path, doc.extensionPath).map { it to doc }
+                listOfNotNull(doc.fullyQualifiedPath, doc.fullyQualifiedExtensionPath).map { it to doc }
             }
             .groupBy { it.first }
             .mapValues { it.value.map { it.second } }
@@ -240,15 +240,15 @@ abstract class ProcessDocsAction : SimpleLogger {
 
                         val docContent = documentable.docContent
                         val indent = documentable.docIndent
-                        val originalHasDoc = range.size > 1
+                        val sourceHasDocumentation = documentable.sourceHasDocumentation
 
                         when {
                             // don't create empty kdoc, just remove it altogether
-                            docContent.isEmpty() && !originalHasDoc -> range to ""
+                            docContent.isEmpty() && !sourceHasDocumentation -> range to ""
 
                             // don't create empty kdoc, just remove it altogether
                             // We need to expand the replace-range so that the newline is also removed
-                            docContent.isEmpty() && originalHasDoc -> {
+                            docContent.isEmpty() && sourceHasDocumentation -> {
                                 val prependingNewlineIndex = content
                                     .indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
 
@@ -269,7 +269,7 @@ abstract class ProcessDocsAction : SimpleLogger {
                             }
 
                             // create a new kdoc at given range
-                            docContent.isNotEmpty() && !originalHasDoc -> {
+                            docContent.isNotEmpty() && !sourceHasDocumentation -> {
                                 val newKdoc = buildString {
                                     append(docContent.toDoc())
                                     append("\n")
@@ -280,7 +280,7 @@ abstract class ProcessDocsAction : SimpleLogger {
                             }
 
                             // replace the existing kdoc with the new one
-                            docContent.isNotEmpty() && originalHasDoc -> {
+                            docContent.isNotEmpty() && sourceHasDocumentation -> {
                                 val newKdoc = docContent.toDoc(indent!!).trimStart()
 
                                 range to newKdoc
