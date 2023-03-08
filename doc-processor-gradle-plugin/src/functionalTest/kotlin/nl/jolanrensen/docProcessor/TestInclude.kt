@@ -98,7 +98,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             content = content,
             packageName = "com.example.plugin",
             processors = processors,
-            language = Language.JAVA,
+            language = FileLanguage.JAVA,
         ) shouldBe expectedOutput
     }
 
@@ -259,7 +259,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             content = content,
             packageName = "com.example.plugin",
             processors = processors,
-            language = Language.JAVA,
+            language = FileLanguage.JAVA,
         ) shouldBe expectedOutput
     }
 
@@ -329,7 +329,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             content = content,
             packageName = "com.example.plugin",
             processors = processors,
-            language = Language.JAVA,
+            language = FileLanguage.JAVA,
         ) shouldBe expectedOutput
     }
 
@@ -419,7 +419,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             content = content,
             packageName = "com.example.plugin",
             processors = processors,
-            language = Language.JAVA,
+            language = FileLanguage.JAVA,
         ) shouldBe expectedOutput
     }
 
@@ -464,7 +464,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 content = content,
                 packageName = "com.example.plugin",
                 processors = processors,
-                language = Language.JAVA,
+                language = FileLanguage.JAVA,
             )
         }
     }
@@ -510,7 +510,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 content = content,
                 packageName = "com.example.plugin",
                 processors = processors,
-                language = Language.JAVA,
+                language = FileLanguage.JAVA,
             )
         }
     }
@@ -604,7 +604,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 )
             ),
             processors = processors,
-            language = Language.JAVA,
+            language = FileLanguage.JAVA,
         ) shouldBe expectedOutput
     }
 
@@ -653,7 +653,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 )
             ),
             processors = processors,
-            language = Language.JAVA,
+            language = FileLanguage.JAVA,
         ) shouldBe expectedOutput
     }
 

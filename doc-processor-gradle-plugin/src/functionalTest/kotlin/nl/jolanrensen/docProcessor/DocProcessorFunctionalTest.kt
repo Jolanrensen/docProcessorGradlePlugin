@@ -2,6 +2,7 @@
 
 package nl.jolanrensen.docProcessor
 
+import io.kotest.matchers.shouldBe
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.intellij.lang.annotations.Language
@@ -49,17 +50,17 @@ abstract class DocProcessorFunctionalTest(name: String) {
     val projectDirectory = File("build/$name")
     val outputDirectory = File(projectDirectory, "build/docProcessor/processKdocMain")
 
-    enum class Language {
+    enum class FileLanguage {
         JAVA, KOTLIN
     }
 
     fun createUniqueFileName(
         directory: File,
-        language: Language,
+        language: FileLanguage,
     ): String {
         val fileExtension = when (language) {
-            Language.JAVA -> "java"
-            Language.KOTLIN -> "kt"
+            FileLanguage.JAVA -> "java"
+            FileLanguage.KOTLIN -> "kt"
         }
 
         var i = 0
@@ -94,43 +95,32 @@ abstract class DocProcessorFunctionalTest(name: String) {
         content: String,
         packageName: String,
         fileName: String = "Test",
-        language: Language = Language.KOTLIN,
+        language: FileLanguage = FileLanguage.KOTLIN,
         processors: List<String>,
         additionalFiles: List<AdditionalFile> = emptyList(),
     ): String {
         initializeProjectFiles(processors)
+        writeAdditionalFiles(additionalFiles)
 
-        for (additionalFile in additionalFiles) {
-            File(projectDirectory, additionalFile.relativePath)
-                .write(additionalFile.content)
-        }
+        // Get source- and destination directories based on the package name
+        val relativePath = getRelativePath(language, packageName)
+        val sourceDirectory = File(projectDirectory, relativePath)
+        val destinationDirectory = File(outputDirectory, relativePath)
 
-        val relativePath = buildString {
-            append("src/main/")
-            append(
-                when (language) {
-                    Language.JAVA -> "java/"
-                    Language.KOTLIN -> "kotlin/"
-                }
-            )
-            append(packageName.replace('.', '/'))
-        }
-        val directory = File(projectDirectory, relativePath)
+        val fileNameWithExtension = getFileNameWithExtension(fileName, language)
 
-        val extension = when (language) {
-            Language.JAVA -> "java"
-            Language.KOTLIN -> "kt"
-        }
-        val fileNameWithExtension = "$fileName.$extension"
-
-        File(directory, fileNameWithExtension)
-            .write(content)
+        val sourceFile = File(sourceDirectory, fileNameWithExtension)
+        sourceFile.write(content)
 
         runBuild()
 
-        return File(File(outputDirectory, relativePath), fileNameWithExtension).readText()
+        val destinationFile = File(destinationDirectory, fileNameWithExtension)
+        return destinationFile.readText()
     }
 
+    /**
+     * Clears the project directory and creates the build files.
+     */
     private fun initializeProjectFiles(processors: List<String>) {
         // Set up the test build
         projectDirectory.deleteRecursively()
@@ -143,6 +133,47 @@ abstract class DocProcessorFunctionalTest(name: String) {
             .write(getBuildFileContent(processors))
     }
 
+    /**
+     * Writes the [additionalFiles] to the project directory.
+     */
+    private fun writeAdditionalFiles(additionalFiles: List<AdditionalFile>) {
+        for (additionalFile in additionalFiles) {
+            File(projectDirectory, additionalFile.relativePath)
+                .write(additionalFile.content)
+        }
+    }
+
+    /**
+     * Returns the relative path for the given [packageName] and [language].
+     */
+    private fun getRelativePath(
+        language: FileLanguage,
+        packageName: String
+    ): String = buildString {
+        append("src/main/")
+        append(
+            when (language) {
+                FileLanguage.JAVA -> "java/"
+                FileLanguage.KOTLIN -> "kotlin/"
+            }
+        )
+        append(packageName.replace('.', '/'))
+    }
+
+    /**
+     * Returns the file name with the correct extension for the given [fileName] and [language].
+     */
+    private fun getFileNameWithExtension(fileName: String, language: FileLanguage): String {
+        val extension = when (language) {
+            FileLanguage.JAVA -> "java"
+            FileLanguage.KOTLIN -> "kt"
+        }
+        return "$fileName.$extension"
+    }
+
+    /**
+     * Runs the build and returns the result.
+     */
     private fun runBuild(): BuildResult =
         GradleRunner.create()
             .forwardOutput()
@@ -151,6 +182,9 @@ abstract class DocProcessorFunctionalTest(name: String) {
             .withDebug(true)
             .build()
 
+    /**
+     * Writes the given [string] to this file.
+     */
     @Throws(IOException::class, SecurityException::class)
     private fun File.write(string: String) {
         if (!parentFile.exists()) {
