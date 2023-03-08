@@ -112,7 +112,7 @@ open class DocumentableWrapper internal constructor(
                 // throws an exception if it's not in the file
                 val sourceTextRange = source.textRange!!
 
-                TextRange(sourceTextRange.startOffset - 1, sourceTextRange.startOffset)
+                TextRange(sourceTextRange.startOffset, sourceTextRange.startOffset)
             } catch (_: Throwable) {
                 null
             }

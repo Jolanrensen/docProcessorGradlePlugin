@@ -14,7 +14,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     )
 
     @Test
-    fun `Test include with and without package kotlin`() {
+    fun `Include with and without package kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -55,7 +55,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test include with and without package java`() {
+    fun `Include with and without package java`() {
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -103,7 +103,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test include no package`() {
+    fun `Include no package`() {
         @Language("kt")
         val content = """
             /**
@@ -138,7 +138,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test transitive include kotlin`() {
+    fun `Transitive include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -176,7 +176,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test expanding link kotlin`() {
+    fun `Expanding link kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -220,7 +220,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test transitive include java`() {
+    fun `Transitive include java`() {
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -264,7 +264,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test inline include kotlin`() {
+    fun `Inline include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -296,7 +296,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test inline include java`() {
+    fun `Inline include java`() {
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -334,7 +334,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test function overload include kotlin`() {
+    fun `Function overload include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -376,7 +376,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test function overload include java`() {
+    fun `Function overload include java`() {
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -424,7 +424,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test self reference include kotlin`() {
+    fun `Self reference include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -445,7 +445,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test self reference include java`() {
+    fun `Self reference include java`() {
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -470,7 +470,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test unavailable reference include kotlin`() {
+    fun `Unavailable reference include kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -491,7 +491,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test unavailable reference include java`() {
+    fun `Unavailable reference include java`() {
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -516,7 +516,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test multiple files kotlin`() {
+    fun `Multiple files kotlin`() {
         @Language("kt")
         val otherFile = """
             package com.example.plugin
@@ -557,7 +557,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test multiple files java`() {
+    fun `Multiple files java`() {
         @Language("java")
         val otherFile = """
             package com.example.plugin;
@@ -609,7 +609,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test multiple files kotlin to java`() {
+    fun `Multiple files kotlin to java`() {
         @Language("kt")
         val otherFile = """
             package com.example.plugin
@@ -658,7 +658,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
-    fun `Test multiple files java to kotlin`() {
+    fun `Multiple files java to kotlin`() {
         @Language("java")
         val otherFile = """
             package com.example.plugin;

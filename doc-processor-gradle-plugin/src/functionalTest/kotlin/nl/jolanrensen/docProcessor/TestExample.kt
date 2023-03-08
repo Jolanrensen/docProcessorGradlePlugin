@@ -1,3 +1,5 @@
+@file:Suppress("FunctionName")
+
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
@@ -11,7 +13,7 @@ class TestExample : DocProcessorFunctionalTest(name = "example") {
     )
 
     @Test
-    fun `Test example block tag`() {
+    fun `Example block tag`() {
 
         @Language("kt")
         val content = """
@@ -41,7 +43,7 @@ class TestExample : DocProcessorFunctionalTest(name = "example") {
     }
 
     @Test
-    fun `Test example inline tag`() {
+    fun `Example inline tag`() {
 
         @Language("kt")
         val content = """

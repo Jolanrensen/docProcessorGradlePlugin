@@ -15,7 +15,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     )
 
     @Test
-    fun `Test simple arg`() {
+    fun `Simple arg`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -46,7 +46,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Test simple include arg`() {
+    fun `Simple includeArg with arg`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -77,7 +77,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Test arg not present`() {
+    fun `Arg not present for includeArg`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -106,7 +106,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Test arg order inline`() {
+    fun `Arg order inline`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -139,7 +139,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Test arg order block`() {
+    fun `Arg order block`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -170,7 +170,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Test arg order block and inline`() {
+    fun `Arg order block and inline`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -202,7 +202,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Test reference key simple kotlin`() {
+    fun `Reference key simple kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -237,7 +237,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Test escaping character kotlin`() {
+    fun `Escaping character reference key kotlin`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -272,7 +272,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Test with include from other file kotlin`() {
+    fun `Include from other file kotlin`() {
         @Language("kt")
         val otherFile = """
             package com.example.plugin
@@ -315,7 +315,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Test Readme example`() {
+    fun `Readme example`() {
         @Language("kt")
         val content = """
             package com.example.plugin

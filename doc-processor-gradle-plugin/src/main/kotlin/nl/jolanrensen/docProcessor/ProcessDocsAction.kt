@@ -236,43 +236,61 @@ abstract class ProcessDocsAction : SimpleLogger {
                     .mapValues { it.value.first() }
                     .toSortedMap(compareBy { it.startOffset })
                     .map { (textRange, documentable) ->
-                        val range = textRange!!.startOffset until textRange.endOffset
+                        val range = textRange!!.toIntRange()
 
                         val docContent = documentable.docContent
                         val indent = documentable.docIndent
+                        val originalHasDoc = range.size > 1
 
-                        if (docContent.isEmpty() && range.size > 1) {
+                        when {
+                            // don't create empty kdoc, just remove it altogether
+                            docContent.isEmpty() && !originalHasDoc -> range to ""
+
                             // don't create empty kdoc, just remove it altogether
                             // We need to expand the replace-range so that the newline is also removed
-                            val prependingNewlineIndex =
-                                content.indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
+                            docContent.isEmpty() && originalHasDoc -> {
+                                val prependingNewlineIndex = content
+                                    .indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
 
-                            val trailingNewlineIndex =
-                                content.indexOfFirstOrNullWhile('\n', range.last + 1) { it.isWhitespace() }
+                                val trailingNewlineIndex = content
+                                    .indexOfFirstOrNullWhile('\n', range.last + 1) { it.isWhitespace() }
 
-                            when {
-                                prependingNewlineIndex != null -> prependingNewlineIndex..range.last
-                                trailingNewlineIndex != null -> range.first..trailingNewlineIndex
-                                else -> range
-                            } to ""
-                        } else if (docContent.isNotEmpty() && range.size <= 1) {
-                            // create a new kdoc at given range
-                            val newKdoc = buildString {
-                                append("\n")
-                                append(docContent.toDoc(indent!!).trimStart())
-                                append("\n")
-                                append(" ".repeat(indent))
+                                val newRange = when {
+                                    prependingNewlineIndex != null && trailingNewlineIndex != null ->
+                                        prependingNewlineIndex..range.last
+
+                                    trailingNewlineIndex != null ->
+                                        range.first..trailingNewlineIndex
+
+                                    else -> range
+                                }
+
+                                newRange to ""
                             }
 
-                            range to newKdoc
-                        } else {
-                            val newKdoc = docContent.toDoc(indent!!).trimStart()
+                            // create a new kdoc at given range
+                            docContent.isNotEmpty() && !originalHasDoc -> {
+                                val newKdoc = buildString {
+                                    append(docContent.toDoc())
+                                    append("\n")
+                                    append(" ".repeat(indent!!))
+                                }
 
-                            range to newKdoc
+                                range to newKdoc
+                            }
+
+                            // replace the existing kdoc with the new one
+                            docContent.isNotEmpty() && originalHasDoc -> {
+                                val newKdoc = docContent.toDoc(indent!!).trimStart()
+
+                                range to newKdoc
+                            }
+
+                            else -> error("Unreachable")
                         }
-                    }.toMap()
+                    }
 
-                val processedContent = content.replaceRanges(modificationsByRange)
+                val processedContent = content.replaceRanges(*modificationsByRange.toTypedArray())
 
                 targetFile.writeText(processedContent)
             }

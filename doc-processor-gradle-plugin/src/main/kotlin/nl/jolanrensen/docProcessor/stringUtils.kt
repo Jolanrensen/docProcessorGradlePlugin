@@ -1,5 +1,7 @@
 package nl.jolanrensen.docProcessor
 
+import com.intellij.openapi.util.TextRange
+
 /**
  * Last index of not [char] moving from startIndex down to 0.
  * Returns 0 if char is not found (since last index looked at is 0).
@@ -37,11 +39,17 @@ fun String.removeEscapeCharacters(escapeChars: List<Char> = listOf('\\')): Strin
  * Replaces multiple ranges with their respective replacements.
  * The replacements can be of any size.
  */
-fun String.replaceRanges(rangeToReplacement: Map<IntRange, String>): String {
+fun String.replaceRanges(vararg rangeToReplacement: Pair<IntRange, String>): String {
     val textRange = this.indices.associateWith { this[it].toString() }.toMutableMap()
     for ((range, replacement) in rangeToReplacement) {
-        range.forEach(textRange::remove)
-        textRange[range.first] = replacement
+        if (range.size == 0 && replacement.isEmpty()) continue
+
+        if (range.isEmpty()) {
+            textRange[range.last] += replacement
+        } else {
+            range.forEach(textRange::remove)
+            textRange[range.first] = replacement
+        }
     }
     return textRange.toSortedMap().values.joinToString("")
 }
@@ -77,7 +85,7 @@ fun CharSequence.replaceAll(
         }
     }
 
-    return text.replaceRanges(replacements)
+    return text.replaceRanges(*replacements.map { it.key to it.value }.toTypedArray())
 }
 
 fun String.indexOfFirstOrNullWhile(char: Char, startIndex: Int = 0, whileCondition: (Char) -> Boolean): Int? {
@@ -105,3 +113,7 @@ fun String.indexOfLastOrNullWhile(char: Char, startIndex: Int = lastIndex, while
 }
 
 val IntRange.size get() = last - first + 1
+
+fun TextRange.toIntRange(): IntRange = startOffset until endOffset
+
+fun IntRange.toTextRange(): TextRange = TextRange(start, endInclusive + 1)

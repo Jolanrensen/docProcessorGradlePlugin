@@ -13,7 +13,7 @@ class TestComment : DocProcessorFunctionalTest(name = "comment") {
     )
 
     @Test
-    fun `Test block comments`() {
+    fun `Block comments`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -47,7 +47,7 @@ class TestComment : DocProcessorFunctionalTest(name = "comment") {
     }
 
     @Test
-    fun `Test inline tags`() {
+    fun `Inline tags`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -79,7 +79,7 @@ class TestComment : DocProcessorFunctionalTest(name = "comment") {
     }
 
     @Test
-    fun `Test all is comment`() {
+    fun `All is comment`() {
         @Language("kt")
         val content = """
             package com.example.plugin
