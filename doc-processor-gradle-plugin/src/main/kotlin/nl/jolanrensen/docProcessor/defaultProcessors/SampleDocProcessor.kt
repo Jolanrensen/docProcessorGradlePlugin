@@ -64,7 +64,7 @@ class SampleDocProcessor : TagDocProcessor() {
         }
 
         return queried?.let {
-            val indent = queried.docIndent?.let { " ".repeat(it) } ?: ""
+            val indent = " ".repeat(queried.docIndent)
             val rawQueriedSource = queried.source.psi
                 ?.text
                 ?.let {

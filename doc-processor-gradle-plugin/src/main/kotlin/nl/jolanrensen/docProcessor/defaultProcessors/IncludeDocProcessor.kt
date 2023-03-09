@@ -113,7 +113,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                 buildString {
                     appendLine("$path:")
                     appendLine(documentables.joinToString("\n\n") {
-                        it.queryFileForDocTextRange()?.getDocContentOrNull()?.toDoc(4) ?: ""
+                        it.queryFileForDocTextRange().getDocContentOrNull()?.toDoc(4) ?: ""
                     })
                 }
             }

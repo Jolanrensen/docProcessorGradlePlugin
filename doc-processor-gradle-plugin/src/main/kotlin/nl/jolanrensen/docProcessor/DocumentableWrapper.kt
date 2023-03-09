@@ -1,6 +1,7 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.PsiJavaFile
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
@@ -65,8 +66,8 @@ open class DocumentableWrapper internal constructor(
     val fullyQualifiedPath: String,
     val fullyQualifiedExtensionPath: String?,
     val file: File,
-    val docTextRange: TextRange?,
-    val docIndent: Int?,
+    val docTextRange: TextRange,
+    val docIndent: Int,
 
     open val docContent: DocContent,
     open val tags: Set<String>,
@@ -121,23 +122,23 @@ open class DocumentableWrapper internal constructor(
                 // if there is no comment, we give the text range for where a new comment could be.
                 // throws an exception if it's not in the file
                 val sourceTextRange = source.textRange!!
-
                 TextRange(sourceTextRange.startOffset, sourceTextRange.startOffset)
             } catch (_: Throwable) {
-                null
+                return null
             }
 
             // calculate the indent of the doc comment by looking at how many spaces are on the first line before /**
-            val docIndent = docTextRange?.let {
-                docTextRange.startOffset - fileText.lastIndexOfNot('\n', docTextRange.startOffset)
-            }?.coerceAtLeast(0)
+            val docIndent = (docTextRange.startOffset -
+                    fileText
+                        .lastIndexOfNot('\n', docTextRange.startOffset)
+                    ).coerceAtLeast(0)
 
             // grab just the contents of the doc without the *-stuff
-            val docContent = docTextRange?.substring(fileText)?.getDocContentOrNull()
+            val docContent = docTextRange.substring(fileText).getDocContentOrNull()
 
             val tags = docContent?.findTagNamesInDocContent() ?: emptyList()
             val isModified = false
-            val sourceHasDocumentation = docTextRange?.toIntRange()?.let { it.size > 1 } == true
+            val sourceHasDocumentation = docTextRange.toIntRange().size > 1
 
             return DocumentableWrapper(
                 documentable = documentable,
@@ -164,23 +165,69 @@ open class DocumentableWrapper internal constructor(
         }
 
     /** Query file for doc text range. */
-    fun queryFileForDocTextRange(): String? = docTextRange?.substring(file.readText())
+    fun queryFileForDocTextRange(): String = docTextRange.substring(file.readText())
 
     /**
-     * Returns all imports available to this documentable.
-     * TODO: Support Java imports.
+     * Returns all possible paths using [targetPath] and the imports in this file.
      */
-    private fun getImports(): List<ImportPath> =
-        source.psi
-            ?.containingFile
-            .let { it as? KtFile }
-            ?.importDirectives
-            ?.mapNotNull { it.importPath }
-            ?: emptyList()
+    private fun getPathsUsingImports(targetPath: String): List<String> =
+        when (programmingLanguage) {
+            JAVA -> {
+                val file = source.psi
+                    ?.containingFile as? PsiJavaFile
+
+                val implicitImports = file?.implicitlyImportedPackages?.toList().orEmpty()
+                val writtenImports = file
+                    ?.importList
+                    ?.allImportStatements
+                    ?.toList().orEmpty()
+
+                buildList {
+                    for (import in implicitImports) {
+                        this += "$import.$targetPath"
+                    }
+
+                    for (import in writtenImports) {
+                        val qualifiedName = import.importReference?.qualifiedName ?: continue
+                        val identifier = import.importReference?.referenceName ?: continue
+
+                        if (import.isOnDemand) {
+                            this += "$qualifiedName.$targetPath"
+                        } else {
+                            this += targetPath.replaceFirst(identifier, qualifiedName)
+                        }
+                    }
+                }
+            }
+
+            KOTLIN -> {
+                val writtenImports = source.psi
+                    ?.containingFile
+                    .let { it as? KtFile }
+                    ?.importDirectives
+                    ?.mapNotNull { it.importPath }
+                    ?: emptyList()
+
+                val allImports = writtenImports + ImportPath(FqName("kotlin"), true)
+
+                buildList {
+                    for (import in allImports) {
+                        val qualifiedName = import.pathStr
+                        val identifier = import.importedName?.identifier
+
+                        if (import.hasStar) {
+                            this += qualifiedName.removeSuffix("*") + targetPath
+                        } else if (targetPath.startsWith(identifier!!)) {
+                            this += targetPath.replaceFirst(identifier, qualifiedName)
+                        }
+                    }
+                }
+            }
+        }
 
     /**
      * Returns a list of paths that can be meant for the given [targetPath] in the context of this documentable.
-     * It takes the current [fullyQualifiedPath] and [imports][getImports] into account.
+     * It takes the current [fullyQualifiedPath] and [imports][getPathsUsingImports] into account.
      */
     fun getAllFullPathsFromHereForTargetPath(targetPath: String): List<String> {
         val subPaths = buildList {
@@ -198,16 +245,9 @@ open class DocumentableWrapper internal constructor(
             }
 
             // check imports too
-            val imports = getImports() + ImportPath(FqName("kotlin"), true)
-            for (import in imports) {
-                val identifier = import.importedName?.identifier
-
-                if (import.hasStar) {
-                    this += import.pathStr.removeSuffix("*") + targetPath
-                } else if (targetPath.startsWith(identifier!!)) {
-                    this += targetPath.replaceFirst(identifier, import.pathStr)
-                }
-            }
+            this.addAll(
+                getPathsUsingImports(targetPath)
+            )
 
             // finally, add the path itself in case it's a top level/fq path
             this += targetPath
@@ -322,8 +362,8 @@ open class MutableDocumentableWrapper internal constructor(
     fullyQualifiedPath: String,
     fullyQualifiedExtensionPath: String?,
     file: File,
-    docTextRange: TextRange?,
-    docIndent: Int?,
+    docTextRange: TextRange,
+    docIndent: Int,
 
     override var docContent: DocContent,
     override var tags: Set<String>,

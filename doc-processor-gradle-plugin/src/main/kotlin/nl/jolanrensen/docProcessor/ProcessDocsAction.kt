@@ -173,9 +173,7 @@ abstract class ProcessDocsAction : SimpleLogger {
             .entries
             .flatMap {
                 it.value.filter {
-                    it.isModified && // filter out unmodified documentables and those without a place to put the docs
-                            it.docTextRange != null &&
-                            it.docIndent != null
+                    it.isModified // filter out unmodified documentables
                 }
             }
             .groupBy { it.file }
@@ -206,7 +204,7 @@ abstract class ProcessDocsAction : SimpleLogger {
                 val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 
                 val modificationsByRange = modifications
-                    .groupBy { it.docTextRange!! }
+                    .groupBy { it.docTextRange }
                     .mapValues { it.value.first() }
                     .toSortedMap(compareBy { it.startOffset })
                     .map { (docTextRange, documentable) ->
@@ -214,7 +212,7 @@ abstract class ProcessDocsAction : SimpleLogger {
                             fileContent = fileContent,
                             docTextRange = docTextRange,
                             newDocContent = documentable.docContent,
-                            docIndent = documentable.docIndent!!,
+                            docIndent = documentable.docIndent,
                             sourceHasDocumentation = documentable.sourceHasDocumentation,
                         )
                     }
@@ -237,12 +235,12 @@ abstract class ProcessDocsAction : SimpleLogger {
      */
     private fun getNewDocTextRangeAndDoc(
         fileContent: String,
-        docTextRange: TextRange?,
+        docTextRange: TextRange,
         newDocContent: DocContent,
         docIndent: Int,
         sourceHasDocumentation: Boolean,
     ): Pair<IntRange, String> {
-        val range = docTextRange!!.toIntRange()
+        val range = docTextRange.toIntRange()
 
         return when {
             // don't create empty kdoc, just remove it altogether

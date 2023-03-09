@@ -20,7 +20,7 @@ class TodoDocProcessor : DocProcessor() {
     ): Map<String, List<DocumentableWrapper>> =
         documentablesByPath.mapValues { (_, documentables) ->
             documentables.map {
-                if (it.docContent.isBlank() && it.docTextRange != null && it.docIndent != null) {
+                if (it.docContent.isBlank() || !it.sourceHasDocumentation) {
                     it.copy(
                         docContent = "TODO",
                         isModified = true,

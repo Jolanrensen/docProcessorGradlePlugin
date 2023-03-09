@@ -609,6 +609,114 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     }
 
     @Test
+    fun `Multiple files with import kotlin`() {
+        @Language("kt")
+        val otherFile = """
+            package com.example.plugin
+            
+            object Test2 {
+                /**
+                 * Hello World!
+                 */
+                fun helloWorld() {}
+            }
+            """.trimIndent()
+
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            import com.example.plugin.Test2.*
+            
+            /** @include [helloWorld] */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            import com.example.plugin.Test2.*
+            
+            /** Hello World! */
+            fun helloWorld2() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            additionalFiles = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/Test2.kt",
+                    content = otherFile,
+                )
+            ),
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Multiple files with import java`() {
+        @Language("java")
+        val otherFile = """
+            package com.example.plugin;
+            
+            public class Test {
+            
+                /**
+                 * Hello World!
+                 */
+                public void helloWorld() {}
+                public static void helloWorld3() {}
+            }
+            """.trimIndent()
+
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            import com.example.plugin.Test.*;
+            import com.example.plugin.Test.helloWorld;
+            import static com.example.plugin.Test.helloWorld3;
+            
+            public class Test2 {
+            
+                /** @include helloWorld */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        @Language("java")
+        val expectedOutput = """
+            package com.example.plugin;
+            
+            import com.example.plugin.Test.*;
+            import com.example.plugin.Test.helloWorld;
+            import static com.example.plugin.Test.helloWorld3;
+            
+            public class Test2 {
+            
+                /** Hello World! */
+                public void helloWorld2() {}
+            }
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            fileName = "Test2",
+            packageName = "com.example.plugin",
+            additionalFiles = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/java/com/example/plugin/Test.java",
+                    content = otherFile,
+                )
+            ),
+            processors = processors,
+            language = FileLanguage.JAVA,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
     fun `Multiple files kotlin to java`() {
         @Language("kt")
         val otherFile = """
