@@ -33,11 +33,12 @@ dependencies {
     implementation(gradleKotlinDsl())
 
     // Dokka dependencies
-    compileOnly("org.jetbrains.dokka:dokka-analysis:1.7.20")
-    implementation("org.jetbrains.dokka:dokka-base:1.7.20")
-    implementation("org.jetbrains.dokka:dokka-core:1.7.20")
-    implementation("org.jetbrains.dokka:dokka-base-test-utils:1.7.20")
-    implementation("org.jetbrains.dokka:dokka-gradle-plugin:1.7.20")
+    val dokkaVersion = "1.7.20"
+    compileOnly("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
+    api("org.jetbrains.dokka:dokka-base:$dokkaVersion")
+    api("org.jetbrains.dokka:dokka-core:$dokkaVersion")
+    api("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
+    api("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))

@@ -1,6 +1,9 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.ProgrammingLanguage
+import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
+import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.docRegex
@@ -83,19 +86,28 @@ class SampleDocProcessor : TagDocProcessor() {
             }
 
             buildString {
-                if (documentable.isJava) {
-                    appendLine("<pre>")
-                    appendLine(
-                        StringEscapeUtils.escapeHtml(content)
-                            .replace("@", "&#64;")
-                            .replace("*/", "&#42;&#47;")
-                    )
-                    appendLine("</pre>")
-                } else {
-                    append("```")
-                    appendLine(if (queried.isJava) "java" else "kotlin")
-                    appendLine(content)
-                    appendLine("```")
+                when (documentable.programmingLanguage) {
+                    JAVA -> {
+                        appendLine("<pre>")
+                        appendLine(
+                            StringEscapeUtils.escapeHtml(content)
+                                .replace("@", "&#64;")
+                                .replace("*/", "&#42;&#47;")
+                        )
+                        appendLine("</pre>")
+                    }
+
+                    KOTLIN -> {
+                        append("```")
+                        appendLine(
+                            when (queried.programmingLanguage) {
+                                JAVA -> "java"
+                                KOTLIN -> "kotlin"
+                            }
+                        )
+                        appendLine(content)
+                        appendLine("```")
+                    }
                 }
 
                 if (extraContent.isNotBlank())
@@ -108,6 +120,11 @@ class SampleDocProcessor : TagDocProcessor() {
         )
     }
 
+    /**
+     * How to process the `@sample tag` when it's an inline tag.
+     *
+     * [processContent] can handle inner tags perfectly fine.
+     */
     override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
@@ -121,6 +138,14 @@ class SampleDocProcessor : TagDocProcessor() {
         path = path,
     )
 
+
+    /**
+     * How to process the `@sample tag` when it's a block tag.
+     *
+     * [tagWithContent] is the content after the `@sample tag`, e.g. `"[SomeClass]"`
+     * including any new lines below.
+     * We will only replace the first line and skip the rest.
+     */
     override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,
@@ -128,8 +153,6 @@ class SampleDocProcessor : TagDocProcessor() {
         filteredDocumentables: Map<String, List<DocumentableWrapper>>,
         allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = tagWithContent.split('\n').mapIndexed { i, line ->
-        // tagWithContent is the content after the @sample tag, e.g. "[SomeClass]"
-        // including any new lines below. We will only replace the first line and skip the rest.
         if (i == 0) {
             processContent(
                 line = line.trimStart(),

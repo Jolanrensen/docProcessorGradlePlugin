@@ -1,6 +1,8 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
+import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
+import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.model.Documentable
@@ -154,8 +156,12 @@ open class DocumentableWrapper internal constructor(
         }
     }
 
-    val isJava: Boolean = source is PsiDocumentableSource
-    val isKotlin: Boolean = source is DescriptorDocumentableSource
+    val programmingLanguage: ProgrammingLanguage =
+        when (source) {
+            is PsiDocumentableSource -> JAVA
+            is DescriptorDocumentableSource -> KOTLIN
+            else -> error("Unknown source type: ${source::class.simpleName}")
+        }
 
     /** Query file for doc text range. */
     fun queryFileForDocTextRange(): String? = docTextRange?.substring(file.readText())
@@ -222,7 +228,7 @@ open class DocumentableWrapper internal constructor(
     ): DocumentableWrapper? {
         val queries = getAllFullPathsFromHereForTargetPath(query).toMutableList()
 
-        if (isJava) { // support KotlinFileKt.Notation from java
+        if (programmingLanguage == JAVA) { // support KotlinFileKt.Notation from java
             val splitQuery = query.split(".")
             if (splitQuery.firstOrNull()?.endsWith("Kt") == true) {
                 queries += getAllFullPathsFromHereForTargetPath(

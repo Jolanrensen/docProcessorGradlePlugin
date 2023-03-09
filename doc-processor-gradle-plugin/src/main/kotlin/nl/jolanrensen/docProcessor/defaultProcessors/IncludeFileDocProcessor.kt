@@ -1,10 +1,14 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.ProgrammingLanguage
+import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
+import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.getTagArguments
 import org.apache.commons.lang.StringEscapeUtils
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
+import java.io.File
 
 /**
  * @see IncludeFileDocProcessor
@@ -47,27 +51,31 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         // for stuff written after the @includeFile tag, save and include it later
         val extraContent = includeFileArguments.getOrElse(1) { "" }.trimStart()
 
-        val currentDir = documentable.file.parentFile!!
-        val targetFile = currentDir.resolve(filePath)
+        val currentDir: File? = documentable.file.parentFile
+        val targetFile = currentDir?.resolve(filePath)
 
-        if (!targetFile.exists()) error("IncludeFileProcessor ERROR: File $filePath (-> ${targetFile.absolutePath}) does not exist. Called from $path.")
+        if (targetFile == null || !targetFile.exists()) error("IncludeFileProcessor ERROR: File $filePath (-> ${targetFile?.absolutePath}) does not exist. Called from $path.")
         if (targetFile.isDirectory) error("IncludeFileProcessor ERROR: File $filePath (-> ${targetFile.absolutePath}) is a directory. Called from $path.")
 
         val content = targetFile.readText()
-        val currentIsJava = documentable.source is PsiDocumentableSource
 
-        return if (currentIsJava) {
-            StringEscapeUtils.escapeHtml(content)
+        return when (documentable.programmingLanguage) {
+            JAVA -> StringEscapeUtils.escapeHtml(content)
                 .replace("@", "&#64;")
                 .replace("*/", "&#42;&#47;")
-        } else {
-            content
+
+            KOTLIN -> content
         }.let {
             if (extraContent.isNotBlank()) "$it $extraContent"
             else it
         }
     }
 
+    /**
+     * How to process the `{@includeFile (../tags)}` when it's inline.
+     *
+     * [processContent] can handle inner tags perfectly fine.
+     */
     override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
@@ -80,6 +88,13 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         path = path,
     )
 
+    /**
+     * How to process the `@includeFile tag` when it's a block tag.
+     *
+     * [tagWithContent] is the content after the `@includeFile tag`, e.g. `"(../../someFile.txt)"`
+     * including any new lines below.
+     * We will only replace the first line and skip the rest.
+     */
     override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,

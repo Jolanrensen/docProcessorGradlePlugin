@@ -2,6 +2,9 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.ProgrammingLanguage
+import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
+import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.getDocContentOrNull
@@ -135,30 +138,30 @@ class IncludeDocProcessor : TagDocProcessor() {
             .trimStart()
 
         // query the filtered documentables for the @include paths
-        val queried = documentable.queryDocumentables(
+        val targetDocumentable = documentable.queryDocumentables(
             query = includePath,
             documentables = filteredDocumentables,
         ) { it != documentable }
 
-        if (queried == null) {
-            val queriedNoFilter = documentable.queryDocumentables(
+        if (targetDocumentable == null) {
+            val targetDocumentableNoFilter = documentable.queryDocumentables(
                 query = includePath,
                 documentables = filteredDocumentables,
             )
             val attemptedQueries = documentable.getAllFullPathsFromHereForTargetPath(includePath)
                 .joinToString("\n")
 
-            val queriedPath = documentable.queryDocumentablesForPath(
+            val targetPath = documentable.queryDocumentablesForPath(
                 query = includePath,
                 documentables = allDocumentables,
             )
 
             error(
                 when {
-                    queriedNoFilter == documentable ->
+                    targetDocumentableNoFilter == documentable ->
                         "IncludeDocProcessor ERROR: Self-reference detected. Called from \"$path\" in \"${documentable.file.absolutePath}\"."
 
-                    queriedPath != null ->
+                    targetPath != null ->
                         "IncludeDocProcessor ERROR: Include path found, but no documentation found for: " +
                                 "\"$includePath\". Including documentation from outside the library or from type-aliases " +
                                 "is currently not supported.\nCalled from \"$path\" in \"${documentable.file.absolutePath}\".\n" +
@@ -168,27 +171,27 @@ class IncludeDocProcessor : TagDocProcessor() {
 
                     else ->
                         "IncludeDocProcessor ERROR: Include not found: \"$includePath\".\nCalled from \"$path\" in \"${documentable.file.absolutePath}\".\n" +
-                                "Attempted queries: [\n$attemptedQueries]\n"+
+                                "Attempted queries: [\n$attemptedQueries]\n" +
                                 "Include line: \"$line\"\n" +
                                 "Full doc: \"${documentable.docContent}\""
                 }
             )
         }
 
-        var content: DocContent = queried.docContent
+        var targetContent: DocContent = targetDocumentable.docContent
             .removePrefix("\n")
             .removeSuffix("\n")
 
         if (extraContent.isNotBlank()) {
-            content = "$content $extraContent"
+            targetContent = "$targetContent $extraContent"
         }
 
-        content = when {
+        targetContent = when (documentable.programmingLanguage) {
 
             // if the content contains links to other elements, we need to expand the path
             // providing the original name or alias as new alias.
-            documentable.isKotlin -> content.replaceKdocLinks { query ->
-                queried.queryDocumentablesForPath(
+            KOTLIN -> targetContent.replaceKdocLinks { query ->
+                targetDocumentable.queryDocumentablesForPath(
                     query = query,
                     documentables = allDocumentables,
                     pathIsValid = { path, it ->
@@ -203,9 +206,9 @@ class IncludeDocProcessor : TagDocProcessor() {
                 ) ?: query
             }
 
-            else -> {
+            JAVA -> {
                 // TODO?: Java {@link ReferenceLinks}
-                if (javaLinkRegex in content) {
+                if (javaLinkRegex in targetContent) {
                     println(
                         "Java {@link statements} are not replaced by their fully qualified path. " +
                                 "Make sure to use fully qualified paths in {@link statements} when " +
@@ -214,16 +217,21 @@ class IncludeDocProcessor : TagDocProcessor() {
                 }
 
                 // Escape HTML characters in Java docs
-                StringEscapeUtils.escapeHtml(content)
+                StringEscapeUtils.escapeHtml(targetContent)
                     .replace("@", "&#64;")
                     .replace("*/", "&#42;&#47;")
             }
         }
 
         // replace the include statement with the kdoc of the queried node (if found)
-        return content.removeEscapeCharacters()
+        return targetContent.removeEscapeCharacters()
     }
 
+    /**
+     * How to process the `{@include tag}` when it's inline.
+     *
+     * [processContent] can handle inner tags perfectly fine.
+     */
     override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
@@ -231,7 +239,6 @@ class IncludeDocProcessor : TagDocProcessor() {
         filteredDocumentables: Map<String, List<DocumentableWrapper>>,
         allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = processContent(
-        // processContent can handle inner tags perfectly fine
         line = tagWithContent,
         documentable = documentable,
         filteredDocumentables = filteredDocumentables,
@@ -239,15 +246,20 @@ class IncludeDocProcessor : TagDocProcessor() {
         path = path,
     )
 
+    /**
+     * How to process the `@include tag` when it's a block tag.
+     *
+     * [tagWithContent] is the content after the `@include tag`, e.g. `"[SomeClass]"`
+     * including any new lines below.
+     * We will only replace the first line and skip the rest.
+     */
     override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
         filteredDocumentables: Map<String, List<DocumentableWrapper>>,
         allDocumentables: Map<String, List<DocumentableWrapper>>,
-    ): String = tagWithContent.split('\n').mapIndexed { i: Int, line: String ->
-        // tagWithContent is the content after the @include tag, e.g. "[SomeClass]"
-        // including any new lines below. We will only replace the first line and skip the rest.
+    ): String = tagWithContent.split('\n').mapIndexed { i, line ->
         if (i == 0) {
             processContent(
                 line = line,
