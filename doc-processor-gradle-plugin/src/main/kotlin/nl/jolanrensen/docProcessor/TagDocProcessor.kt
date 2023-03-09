@@ -8,8 +8,7 @@ package nl.jolanrensen.docProcessor
  * respectively.
  *
  * [filterDocumentables] can be overridden to change the value of `filteredDocumentables` in
- * [processBlockTagWithContent] and [processInlineTagWithContent].
- * By default, it filters out all documentables that do not have a supported tag.
+ * [processBlockTagWithContent], and [processInlineTagWithContent] and which documentables are processed at all.
  *
  * [onProcessError] can be overridden to change the error message when the process limit is reached
  * (defined in [ProcessDocsAction.Parameters.processLimit] and enforced in [shouldContinue]).
@@ -39,8 +38,13 @@ abstract class TagDocProcessor : DocProcessor() {
     val filteredDocumentables: Map<String, List<DocumentableWrapper>>
         get() = filteredMutableDocumentable
 
+    /** All (mutable) documentables in the source set. */
     private lateinit var allMutableDocumentables: Map<String, List<MutableDocumentableWrapper>>
 
+    /**
+     * Filtered (mutable) documentables by [filterDocumentables].
+     * The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
+     */
     private val filteredMutableDocumentable: Map<String, List<MutableDocumentableWrapper>> by lazy {
         allMutableDocumentables
             .mapValues { (_, documentables) ->
@@ -138,8 +142,6 @@ abstract class TagDocProcessor : DocProcessor() {
      *  Contains {} and tag.
      * @param [path] The path of the doc where the tag is found.
      * @param [documentable] The Documentable beloning to the current tag.
-     * @param [filteredDocumentables] Filtered documentables by [filterDocumentables], which, by default, filters the
-     *  documentables to have a supported tag in them. The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
      *
      * @return A [String] that will replace the tag with content entirely.
      */
@@ -182,7 +184,6 @@ abstract class TagDocProcessor : DocProcessor() {
                         docContent = docContent,
                         path = path,
                         documentable = documentable,
-                        filteredDocumentables = filteredMutableDocumentable,
                         parameters = parameters,
                     )
 
@@ -215,7 +216,6 @@ abstract class TagDocProcessor : DocProcessor() {
         docContent: DocContent,
         path: String,
         documentable: MutableDocumentableWrapper,
-        filteredDocumentables: Map<String, List<MutableDocumentableWrapper>>,
         parameters: ProcessDocsAction.Parameters,
     ): DocContent {
         // Process the inline tags first
