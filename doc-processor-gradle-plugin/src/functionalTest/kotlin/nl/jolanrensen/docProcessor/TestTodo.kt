@@ -94,4 +94,81 @@ class TestTodo : DocProcessorFunctionalTest(name = "todo") {
             language = FileLanguage.JAVA,
         ) shouldBe expectedOutput
     }
+
+    @Test
+    fun `Todo with other docs kotlin`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            fun helloWorld() {}
+            
+            /**
+             * This already has docs
+             */
+            fun helloWorld2() {}
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /** TODO */
+            fun helloWorld() {}
+            
+            /**
+             * This already has docs
+             */
+            fun helloWorld2() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Todo with other docs java`() {
+        @Language("java")
+        val content = """
+            package com.example.plugin;
+            
+            class HelloWorld {
+            
+                void helloWorld() {}
+                
+                /**
+                 * This already has docs
+                 */
+                void helloWorld2() {}
+            }
+        """.trimIndent()
+
+        @Language("java")
+        val expectedOutput = """
+            package com.example.plugin;
+            
+            /** TODO */
+            class HelloWorld {
+            
+                /** TODO */
+                void helloWorld() {}
+                
+                /**
+                 * This already has docs
+                 */
+                void helloWorld2() {}
+            }
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            fileName = "HelloWorld",
+            language = FileLanguage.JAVA,
+        ) shouldBe expectedOutput
+    }
 }

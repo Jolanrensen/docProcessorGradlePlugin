@@ -60,7 +60,7 @@ import java.io.File
 open class DocumentableWrapper internal constructor(
     val documentable: Documentable,
     val source: DocumentableSource,
-    private val logger: DokkaConsoleLogger,
+    internal val logger: DokkaConsoleLogger,
 
     val sourceHasDocumentation: Boolean,
     val fullyQualifiedPath: String,
@@ -170,60 +170,59 @@ open class DocumentableWrapper internal constructor(
     /**
      * Returns all possible paths using [targetPath] and the imports in this file.
      */
-    private fun getPathsUsingImports(targetPath: String): List<String> =
-        when (programmingLanguage) {
-            JAVA -> {
-                val file = source.psi
-                    ?.containingFile as? PsiJavaFile
+    private fun getPathsUsingImports(targetPath: String): List<String> = when (programmingLanguage) {
+        JAVA -> {
+            val file = source.psi
+                ?.containingFile as? PsiJavaFile
 
-                val implicitImports = file?.implicitlyImportedPackages?.toList().orEmpty()
-                val writtenImports = file
-                    ?.importList
-                    ?.allImportStatements
-                    ?.toList().orEmpty()
+            val implicitImports = file?.implicitlyImportedPackages?.toList().orEmpty()
+            val writtenImports = file
+                ?.importList
+                ?.allImportStatements
+                ?.toList().orEmpty()
 
-                buildList {
-                    for (import in implicitImports) {
-                        this += "$import.$targetPath"
-                    }
-
-                    for (import in writtenImports) {
-                        val qualifiedName = import.importReference?.qualifiedName ?: continue
-                        val identifier = import.importReference?.referenceName ?: continue
-
-                        if (import.isOnDemand) {
-                            this += "$qualifiedName.$targetPath"
-                        } else {
-                            this += targetPath.replaceFirst(identifier, qualifiedName)
-                        }
-                    }
+            buildList {
+                for (import in implicitImports) {
+                    this += "$import.$targetPath"
                 }
-            }
 
-            KOTLIN -> {
-                val writtenImports = source.psi
-                    ?.containingFile
-                    .let { it as? KtFile }
-                    ?.importDirectives
-                    ?.mapNotNull { it.importPath }
-                    ?: emptyList()
+                for (import in writtenImports) {
+                    val qualifiedName = import.importReference?.qualifiedName ?: continue
+                    val identifier = import.importReference?.referenceName ?: continue
 
-                val allImports = writtenImports + ImportPath(FqName("kotlin"), true)
-
-                buildList {
-                    for (import in allImports) {
-                        val qualifiedName = import.pathStr
-                        val identifier = import.importedName?.identifier
-
-                        if (import.hasStar) {
-                            this += qualifiedName.removeSuffix("*") + targetPath
-                        } else if (targetPath.startsWith(identifier!!)) {
-                            this += targetPath.replaceFirst(identifier, qualifiedName)
-                        }
+                    if (import.isOnDemand) {
+                        this += "$qualifiedName.$targetPath"
+                    } else {
+                        this += targetPath.replaceFirst(identifier, qualifiedName)
                     }
                 }
             }
         }
+
+        KOTLIN -> {
+            val writtenImports = source.psi
+                ?.containingFile
+                .let { it as? KtFile }
+                ?.importDirectives
+                ?.mapNotNull { it.importPath }
+                ?: emptyList()
+
+            val allImports = writtenImports + ImportPath(FqName("kotlin"), true)
+
+            buildList {
+                for (import in allImports) {
+                    val qualifiedName = import.pathStr
+                    val identifier = import.importedName?.identifier
+
+                    if (import.hasStar) {
+                        this += qualifiedName.removeSuffix("*") + targetPath
+                    } else if (targetPath.startsWith(identifier!!)) {
+                        this += targetPath.replaceFirst(identifier, qualifiedName)
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Returns a list of paths that can be meant for the given [targetPath] in the context of this documentable.
@@ -308,24 +307,6 @@ open class DocumentableWrapper internal constructor(
         return queries.firstOrNull { it in documentables }
     }
 
-    /** Cast or convert current [DocumentableWrapper] to [MutableDocumentableWrapper]. */
-    fun asMutable(): MutableDocumentableWrapper =
-        if (this is MutableDocumentableWrapper) this
-        else MutableDocumentableWrapper(
-            documentable = documentable,
-            source = source,
-            logger = logger,
-            sourceHasDocumentation = sourceHasDocumentation,
-            fullyQualifiedPath = fullyQualifiedPath,
-            fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
-            file = file,
-            docTextRange = docTextRange,
-            docIndent = docIndent,
-            docContent = docContent,
-            tags = tags,
-            isModified = isModified,
-        )
-
     /** Returns a copy of this [DocumentableWrapper] with the given parameters. */
     fun copy(
         docContent: DocContent = this.docContent,
@@ -347,38 +328,3 @@ open class DocumentableWrapper internal constructor(
             isModified = isModified,
         )
 }
-
-/**
- * Mutable version of [DocumentableWrapper] for [docContent], [tags], and [isModified].
- *
- * @see DocumentableWrapper
- */
-open class MutableDocumentableWrapper internal constructor(
-    documentable: Documentable,
-    source: DocumentableSource,
-    logger: DokkaConsoleLogger,
-
-    sourceHasDocumentation: Boolean,
-    fullyQualifiedPath: String,
-    fullyQualifiedExtensionPath: String?,
-    file: File,
-    docTextRange: TextRange,
-    docIndent: Int,
-
-    override var docContent: DocContent,
-    override var tags: Set<String>,
-    override var isModified: Boolean,
-) : DocumentableWrapper(
-    documentable = documentable,
-    source = source,
-    logger = logger,
-    sourceHasDocumentation = sourceHasDocumentation,
-    fullyQualifiedPath = fullyQualifiedPath,
-    fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
-    file = file,
-    docTextRange = docTextRange,
-    docIndent = docIndent,
-    docContent = docContent,
-    tags = tags,
-    isModified = isModified,
-)

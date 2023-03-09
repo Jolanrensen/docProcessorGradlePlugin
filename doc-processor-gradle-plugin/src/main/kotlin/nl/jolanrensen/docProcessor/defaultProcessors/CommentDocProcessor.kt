@@ -44,15 +44,11 @@ class CommentDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = ""
 
     override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = ""
 }

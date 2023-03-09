@@ -504,8 +504,6 @@ class ExampleDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = processContent(tagWithContent)
 
     /** How `  @block tags` are processed. */
@@ -513,8 +511,6 @@ class ExampleDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = processContent(tagWithContent)
 
     // We can use the same function for both processInlineTagWithContent and processTagWithContent

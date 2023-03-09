@@ -11,7 +11,7 @@ package nl.jolanrensen.docProcessor
  * [processBlockTagWithContent] and [processInlineTagWithContent].
  * By default, it filters out all documentables that do not have a supported tag.
  *
- * [onProcesError] can be overridden to change the error message when the process limit is reached
+ * [onProcessError] can be overridden to change the error message when the process limit is reached
  * (defined in [ProcessDocsAction.Parameters.processLimit] and enforced in [shouldContinue]).
  *
  * [shouldContinue] can also be overridden to change the conditions under which the process's while-loops should
@@ -25,8 +25,28 @@ abstract class TagDocProcessor : DocProcessor() {
     abstract fun tagIsSupported(tag: String): Boolean
 
     /** Returns true if [tagIsSupported] is in this [DocumentableWrapper]. */
-    val DocumentableWrapper.hasASupportedTag
+    val DocumentableWrapper.hasSupportedTag
         get() = tags.any(::tagIsSupported)
+
+    /** All documentables in the source set. */
+    val allDocumentables: Map<String, List<DocumentableWrapper>>
+        get() = allMutableDocumentables
+
+    /**
+     * Filtered documentables by [filterDocumentables].
+     * The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
+     */
+    val filteredDocumentables: Map<String, List<DocumentableWrapper>>
+        get() = filteredMutableDocumentable
+
+    private lateinit var allMutableDocumentables: Map<String, List<MutableDocumentableWrapper>>
+
+    private val filteredMutableDocumentable: Map<String, List<MutableDocumentableWrapper>> by lazy {
+        allMutableDocumentables
+            .mapValues { (_, documentables) ->
+                documentables.filter(::filterDocumentables)
+            }.filterValues { it.isNotEmpty() }
+    }
 
     /**
      * Converts a [Map]<[String], [List]<[DocumentableWrapper]>> to
@@ -45,38 +65,32 @@ abstract class TagDocProcessor : DocProcessor() {
         }
 
     /**
-     * Optionally, you can filter the [DocumentableWrapper]s that will appear in [processBlockTagWithContent].
-     * By default, all documentables are filtered to contain a supported tag.
-     * Override if you want to filter them differently.
+     * Optionally, you can filter the [DocumentableWrapper]s that will appear in
+     * [processBlockTagWithContent] and [processInlineTagWithContent] as `filteredDocumentables`.
+     * This can be useful as an optimization.
+     *
+     * This filter will also be applied to all the docs that are processed. Normally, all docs with
+     * a supported tag will be processed. If you want to filter them more strictly, override this method too.
      */
-    open fun <T : DocumentableWrapper> filterDocumentables(documentable: T): Boolean =
-        documentable.hasASupportedTag
+    open fun <T : DocumentableWrapper> filterDocumentables(documentable: T): Boolean = true
 
     /**
      * Provide a meaningful error message when the given process limit is reached.
      *
-     * @param filteredDocumentables Documentables filtered by [filterDocumentables]
-     * @param allDocumentables All documentables
      * @return [Nothing] must throw an error
      * @throws [IllegalStateException] On proces limit reached
      */
     @Throws(IllegalStateException::class)
-    open fun onProcesError(
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
-    ): Nothing = error("Process limit reached")
+    open fun onProcessError(): Nothing = error("Process limit reached")
 
     /**
      * Check the recursion limit to break the while loop.
-     * By default, it will call [onProcesError] if the process limit (defined in [ProcessDocsAction.Parameters.processLimit])
+     * By default, it will call [onProcessError] if the process limit (defined in [ProcessDocsAction.Parameters.processLimit])
      * is reached and if supported tags are present but no modifications are made (indicating an infinite loop).
      *
-     * @param i The current iteration.
-     * @param anyModifications `true` if any modifications were made, `false` otherwise.
-     * @param parameters The [ProcessDocsAction.Parameters] used to process the docs.
-     * @param filteredDocumentables Filtered documentables by [filterDocumentables], which, by default, filters the
-     * documentables to have a supported tag in them. The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
-     * @param allDocumentables All documentables in the source set.
+     * @param [i] The current iteration.
+     * @param [anyModifications] `true` if any modifications were made, `false` otherwise.
+     * @param [parameters] The [ProcessDocsAction.Parameters] used to process the docs.
      * @return `true` if recursion limit is reached, `false` otherwise.
      */
     @Throws(IllegalStateException::class)
@@ -84,12 +98,16 @@ abstract class TagDocProcessor : DocProcessor() {
         i: Int,
         anyModifications: Boolean,
         parameters: ProcessDocsAction.Parameters,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): Boolean {
-        val hasSupportedTags = filteredDocumentables.any { it.value.any { it.hasASupportedTag } }
-        if ((i > 0 && hasSupportedTags && !anyModifications) || i >= parameters.processLimit)
-            onProcesError(filteredDocumentables, allDocumentables)
+        val processLimitReached = i >= parameters.processLimit
+
+        val hasSupportedTags = filteredDocumentables.any { it.value.any { it.hasSupportedTag } }
+        val atLeastOneRun = i > 0
+        val tagsArePresentButNoModifications = hasSupportedTags && !anyModifications && atLeastOneRun
+
+        // Throw error if process limit is reached or if supported tags keep being present but no modifications are made
+        if (processLimitReached || tagsArePresentButNoModifications)
+            onProcessError()
 
         return hasSupportedTags
     }
@@ -97,15 +115,12 @@ abstract class TagDocProcessor : DocProcessor() {
     /**
      * Process a block tag with content ([tagWithContent]) into whatever you like.
      *
-     * @param tagWithContent Tag with content block to process.
+     * @param [tagWithContent] Tag with content block to process.
      *  For example: `@tag Some content`
      *  Can contain newlines, and does include tag.
      *  The block continues until the next tag block starts.
-     * @param path The path of the doc where the tag is found.
-     * @param documentable The Documentable beloning to the current tag.
-     * @param filteredDocumentables Filtered documentables by [filterDocumentables], which, by default, filters the
-     *  documentables to have a supported tag in them. The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
-     * @param allDocumentables All documentables in the source set.
+     * @param [path] The path of the doc where the tag is found.
+     * @param [documentable] The Documentable beloning to the current tag.
      *
      * @return A [String] that will replace the tag with content entirely.
      */
@@ -113,21 +128,18 @@ abstract class TagDocProcessor : DocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String
 
     /**
      * Process an inline tag with content ([tagWithContent]) into whatever you like.
      *
-     * @param tagWithContent Tag with content to process.
+     * @param [tagWithContent] Tag with content to process.
      *  For example: `{@tag Some content}`
      *  Contains {} and tag.
-     * @param path The path of the doc where the tag is found.
-     * @param documentable The Documentable beloning to the current tag.
-     * @param filteredDocumentables Filtered documentables by [filterDocumentables], which, by default, filters the
+     * @param [path] The path of the doc where the tag is found.
+     * @param [documentable] The Documentable beloning to the current tag.
+     * @param [filteredDocumentables] Filtered documentables by [filterDocumentables], which, by default, filters the
      *  documentables to have a supported tag in them. The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
-     * @param allDocumentables All documentables in the source set.
      *
      * @return A [String] that will replace the tag with content entirely.
      */
@@ -135,8 +147,6 @@ abstract class TagDocProcessor : DocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String
 
     /**
@@ -153,33 +163,26 @@ abstract class TagDocProcessor : DocProcessor() {
         documentablesByPath: Map<String, List<DocumentableWrapper>>,
     ): Map<String, List<DocumentableWrapper>> {
         // Convert to mutable
-        val allDocumentables = documentablesByPath.toMutable()
-
-        // Filter documentables
-        val filteredDocumentables = allDocumentables
-            .mapValues { (_, documentables) ->
-                documentables.filter(::filterDocumentables)
-            }.filterValues { it.isNotEmpty() }
+        allMutableDocumentables = documentablesByPath.toMutable()
 
         // Main recursion loop that will continue until all supported tags are replaced
         // or the process limit is reached.
         var i = 0
         while (true) {
-            val filteredDocumentablesWithTag = filteredDocumentables
-                .filter { it.value.any { it.hasASupportedTag } }
+            val filteredDocumentablesWithTag = filteredMutableDocumentable
+                .filter { it.value.any { it.hasSupportedTag } }
 
             var anyModifications = false
             for ((path, documentables) in filteredDocumentablesWithTag) {
                 for (documentable in documentables) {
-                    if (!documentable.hasASupportedTag) continue
+                    if (!documentable.hasSupportedTag) continue
 
                     val docContent = documentable.docContent
                     val processedDoc = processTagsInContent(
                         docContent = docContent,
                         path = path,
                         documentable = documentable,
-                        filteredDocumentables = filteredDocumentables,
-                        allDocumentables = allDocumentables,
+                        filteredDocumentables = filteredMutableDocumentable,
                         parameters = parameters,
                     )
 
@@ -201,8 +204,6 @@ abstract class TagDocProcessor : DocProcessor() {
                 i = i++,
                 anyModifications = anyModifications,
                 parameters = parameters,
-                filteredDocumentables = filteredDocumentables,
-                allDocumentables = allDocumentables,
             )
             if (!shouldContinue) break
         }
@@ -215,7 +216,6 @@ abstract class TagDocProcessor : DocProcessor() {
         path: String,
         documentable: MutableDocumentableWrapper,
         filteredDocumentables: Map<String, List<MutableDocumentableWrapper>>,
-        allDocumentables: Map<String, List<MutableDocumentableWrapper>>,
         parameters: ProcessDocsAction.Parameters,
     ): DocContent {
         // Process the inline tags first
@@ -243,8 +243,6 @@ abstract class TagDocProcessor : DocProcessor() {
                         tagWithContent = tagContent,
                         path = path,
                         documentable = documentable,
-                        filteredDocumentables = filteredDocumentables,
-                        allDocumentables = allDocumentables,
                     )
                     text = text.replaceRange(range, newTagContent)
 
@@ -260,8 +258,6 @@ abstract class TagDocProcessor : DocProcessor() {
                     i = i++,
                     anyModifications = wasModified,
                     parameters = parameters,
-                    filteredDocumentables = filteredDocumentables,
-                    allDocumentables = allDocumentables,
                 )
                 if (!shouldContinue) break
             }
@@ -283,8 +279,6 @@ abstract class TagDocProcessor : DocProcessor() {
                         tagWithContent = split,
                         path = path,
                         documentable = documentable,
-                        filteredDocumentables = filteredDocumentables,
-                        allDocumentables = allDocumentables,
                     )
                 } else {
                     split

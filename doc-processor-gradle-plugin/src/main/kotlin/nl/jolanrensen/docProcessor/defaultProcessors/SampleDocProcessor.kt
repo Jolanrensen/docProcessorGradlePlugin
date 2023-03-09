@@ -45,7 +45,6 @@ class SampleDocProcessor : TagDocProcessor() {
     private fun processContent(
         line: String,
         documentable: DocumentableWrapper,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
         path: String
     ): String {
         val noComments = line.startsWith("@$sampleNoComments")
@@ -129,12 +128,9 @@ class SampleDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = processContent(
         line = tagWithContent.removePrefix("{").removeSuffix("}"),
         documentable = documentable,
-        allDocumentables = allDocumentables,
         path = path,
     )
 
@@ -150,14 +146,11 @@ class SampleDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = tagWithContent.split('\n').mapIndexed { i, line ->
         if (i == 0) {
             processContent(
                 line = line.trimStart(),
                 documentable = documentable,
-                allDocumentables = allDocumentables,
                 path = path,
             )
         } else {

@@ -67,23 +67,27 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         i: Int,
         anyModifications: Boolean,
         parameters: ProcessDocsAction.Parameters,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): Boolean {
-        if (i >= parameters.processLimit)
-            onProcesError(filteredDocumentables, allDocumentables)
+        val processLimitReached = i >= parameters.processLimit
+        if (processLimitReached)
+            onProcessError()
+
+        val atLeastOneRun = i > 0
 
         // We can break out of the recursion if there are no more changes. We don't need to throw an error if an
         // argument is not found, as it might be defined in a different file.
-        if (i > 0 && !anyModifications) {
+        if (atLeastOneRun && !anyModifications) {
             val argsNotFound = argsNotFound.flatMap { (documentable, args) ->
-                args.map { arg -> "`${documentable.fullyQualifiedPath}` -> @$useArgumentTag $arg" }
+                args.map {
+                    "`${documentable.fullyQualifiedPath}` -> @$useArgumentTag $it"
+                }
             }.joinToString("\n")
+
             println("IncludeArgDocProcessor WARNING: Could not find all arguments:[\n$argsNotFound\n]")
             return false
         }
 
-        return super.shouldContinue(i, anyModifications, parameters, filteredDocumentables, allDocumentables)
+        return super.shouldContinue(i, anyModifications, parameters)
     }
 
     // @arg map for path -> arg name -> value
@@ -94,7 +98,6 @@ class IncludeArgDocProcessor : TagDocProcessor() {
     private fun process(
         tagWithContent: String,
         documentable: DocumentableWrapper,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String {
         val tagName = tagWithContent.getTagNameOrNull()
         val isArgDeclaration = tagName == declareArgumentTag
@@ -111,7 +114,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 var keys = listOf(originalKey)
 
                 if (originalKey.startsWith('[') && originalKey.contains(']')) {
-                    keys = buildReferenceKeys(originalKey, documentable, allDocumentables)
+                    keys = buildReferenceKeys(originalKey, documentable)
                 }
 
                 val value = argArguments.getOrElse(1) { "" }
@@ -156,7 +159,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 }
 
                 if (originalKey.startsWith('[') && originalKey.contains(']')) {
-                    keys = buildReferenceKeys(originalKey, documentable, allDocumentables)
+                    keys = buildReferenceKeys(originalKey, documentable)
                 }
 
                 val content = keys.firstNotNullOfOrNull { key ->
@@ -178,8 +181,6 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String {
         // split up the content for @includeArg but not for @arg
         val isIncludeArg = tagWithContent.trimStart().startsWith("@$useArgumentTag")
@@ -192,7 +193,6 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                     process(
                         tagWithContent = line,
                         documentable = documentable,
-                        allDocumentables = allDocumentables,
                     )
                 } else {
                     line
@@ -202,7 +202,6 @@ class IncludeArgDocProcessor : TagDocProcessor() {
             process(
                 tagWithContent = tagWithContent,
                 documentable = documentable,
-                allDocumentables = allDocumentables,
             )
         }
     }
@@ -211,18 +210,14 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = process(
         tagWithContent = tagWithContent,
         documentable = documentable,
-        allDocumentables = allDocumentables,
     )
 
     private fun buildReferenceKeys(
         originalKey: String,
         documentable: DocumentableWrapper,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): List<String> {
         var keys = listOf(originalKey)
         val reference = originalKey.decodeCallableTarget()

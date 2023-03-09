@@ -2,7 +2,6 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
-import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
@@ -102,12 +101,9 @@ class IncludeDocProcessor : TagDocProcessor() {
     /**
      * Provides a helpful message when a circular reference is detected.
      */
-    override fun onProcesError(
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
-    ): Nothing {
+    override fun onProcessError(): Nothing {
         val circularRefs = filteredDocumentables
-            .filter { it.value.any { it.hasASupportedTag } }
+            .filter { it.value.any { it.hasSupportedTag } }
             .entries
             .joinToString("\n\n") { (path, documentables) ->
                 buildString {
@@ -127,8 +123,6 @@ class IncludeDocProcessor : TagDocProcessor() {
     private fun processContent(
         line: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
         path: String,
     ): String {
         val includeArguments = line.getTagArguments(tag = tag, numberOfArguments = 2)
@@ -236,13 +230,9 @@ class IncludeDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = processContent(
         line = tagWithContent,
         documentable = documentable,
-        filteredDocumentables = filteredDocumentables,
-        allDocumentables = allDocumentables,
         path = path,
     )
 
@@ -257,15 +247,11 @@ class IncludeDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>,
     ): String = tagWithContent.split('\n').mapIndexed { i, line ->
         if (i == 0) {
             processContent(
                 line = line,
                 documentable = documentable,
-                filteredDocumentables = filteredDocumentables,
-                allDocumentables = allDocumentables,
                 path = path,
             )
         } else {

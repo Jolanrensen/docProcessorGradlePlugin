@@ -66,7 +66,7 @@ abstract class ProcessDocsAction : SimpleLogger {
         val modifiedDocumentables =
             processors.fold(sourceDocs) { acc, processor ->
                 println("Running processor: ${processor::class.qualifiedName}")
-                processor.process(parameters, acc)
+                processor.processSafely(parameters, acc)
             }
 
         // filter to only include the modified documentables
@@ -152,12 +152,15 @@ abstract class ProcessDocsAction : SimpleLogger {
     }
 
     private fun findProcessors(): List<DocProcessor> {
-        val availableProcessors: Set<DocProcessor> =
-            ServiceLoader.load(DocProcessor::class.java).toSet()
+        val availableProcessors: Set<DocProcessor> = ServiceLoader.load(DocProcessor::class.java).toSet()
 
-        val filteredProcessors = parameters.processors
+        val filteredProcessors = parameters
+            .processors
             .mapNotNull { name ->
                 availableProcessors.find { it::class.qualifiedName == name }
+            }.map {
+                // create a new instance of the processor, so it can safely be used multiple times
+                it::class.java.newInstance()
             }
 
         // set loggers enabled

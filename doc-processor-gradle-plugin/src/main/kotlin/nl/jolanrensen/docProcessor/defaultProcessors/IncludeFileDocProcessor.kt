@@ -80,8 +80,6 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = processContent(
         line = tagWithContent,
         documentable = documentable,
@@ -99,8 +97,6 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-        filteredDocumentables: Map<String, List<DocumentableWrapper>>,
-        allDocumentables: Map<String, List<DocumentableWrapper>>
     ): String = tagWithContent
         .split('\n')
         .mapIndexed { i, line ->

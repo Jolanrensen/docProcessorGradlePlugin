@@ -14,7 +14,7 @@ import java.io.Serializable
 abstract class DocProcessor : SimpleLogger, Serializable {
 
     /**
-     * Process given [documentablesByPath].
+     * Process given [documentablesByPath]. This function will only be called once per [DocProcessor] instance.
      * You can use [DocumentableWrapper.copy] to create a new [DocumentableWrapper] with modified
      * [doc content][DocumentableWrapper.docContent] or use [MutableDocumentableWrapper].
      * Mark the docs that were modified with [isModified][DocumentableWrapper.isModified] and
@@ -31,4 +31,17 @@ abstract class DocProcessor : SimpleLogger, Serializable {
 
     // make logEnabled mutable
     override var logEnabled: Boolean = true
+
+    // ensuring each doc processor instance is only run once
+    private var hasRun = false
+
+    // ensuring each doc processor instance is only run once
+    internal fun processSafely(
+        parameters: ProcessDocsAction.Parameters,
+        documentablesByPath: Map<String, List<DocumentableWrapper>>,
+    ): Map<String, List<DocumentableWrapper>> {
+        if (hasRun) error("This instance of ${this::class.qualifiedName} has already run and cannot be reused.")
+        hasRun = true
+        return process(parameters, documentablesByPath)
+    }
 }
