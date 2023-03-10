@@ -545,7 +545,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
 
         processContent(
             content = content,
-            additionalFiles = listOf(
+            additionals = listOf(
                 AdditionalFile(
                     relativePath = "src/main/kotlin/com/example/plugin/Test2.kt",
                     content = otherFile,
@@ -597,7 +597,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             content = content,
             fileName = "Test2",
             packageName = "com.example.plugin",
-            additionalFiles = listOf(
+            additionals = listOf(
                 AdditionalFile(
                     relativePath = "src/main/java/com/example/plugin/Test.java",
                     content = otherFile,
@@ -644,7 +644,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
 
         processContent(
             content = content,
-            additionalFiles = listOf(
+            additionals = listOf(
                 AdditionalFile(
                     relativePath = "src/main/kotlin/com/example/plugin/Test2.kt",
                     content = otherFile,
@@ -705,7 +705,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             content = content,
             fileName = "Test2",
             packageName = "com.example.plugin",
-            additionalFiles = listOf(
+            additionals = listOf(
                 AdditionalFile(
                     relativePath = "src/main/java/com/example/plugin/Test.java",
                     content = otherFile,
@@ -754,7 +754,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             content = content,
             fileName = "Test2",
             packageName = "com.example.plugin",
-            additionalFiles = listOf(
+            additionals = listOf(
                 AdditionalFile(
                     relativePath = "src/main/kotlin/com/example/plugin/Test.kt",
                     content = otherFile,
@@ -799,7 +799,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
         processContent(
             content = content,
             packageName = "com.example.plugin",
-            additionalFiles = listOf(
+            additionals = listOf(
                 AdditionalFile(
                     relativePath = "src/main/java/com/example/plugin/Test.java",
                     content = otherFile,

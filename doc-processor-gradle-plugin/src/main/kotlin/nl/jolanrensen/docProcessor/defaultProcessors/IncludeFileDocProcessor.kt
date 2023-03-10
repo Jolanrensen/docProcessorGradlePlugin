@@ -1,14 +1,13 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocumentableWrapper
-import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.getTagArguments
 import org.apache.commons.lang.StringEscapeUtils
-import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import java.io.File
+import java.io.FileNotFoundException
 
 /**
  * @see IncludeFileDocProcessor
@@ -54,8 +53,11 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         val currentDir: File? = documentable.file.parentFile
         val targetFile = currentDir?.resolve(filePath)
 
-        if (targetFile == null || !targetFile.exists()) error("IncludeFileProcessor ERROR: File $filePath (-> ${targetFile?.absolutePath}) does not exist. Called from $path.")
-        if (targetFile.isDirectory) error("IncludeFileProcessor ERROR: File $filePath (-> ${targetFile.absolutePath}) is a directory. Called from $path.")
+        if (targetFile == null || !targetFile.exists())
+            throw FileNotFoundException("IncludeFileProcessor ERROR: File $filePath (-> ${targetFile?.absolutePath}) does not exist. Called from $path.")
+
+        if (targetFile.isDirectory)
+            throw IllegalArgumentException("IncludeFileProcessor ERROR: File $filePath (-> ${targetFile.absolutePath}) is a directory. Called from $path.")
 
         val content = targetFile.readText()
 

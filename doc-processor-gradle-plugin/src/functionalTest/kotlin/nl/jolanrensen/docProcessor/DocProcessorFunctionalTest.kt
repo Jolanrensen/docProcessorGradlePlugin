@@ -2,7 +2,6 @@
 
 package nl.jolanrensen.docProcessor
 
-import io.kotest.matchers.shouldBe
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.intellij.lang.annotations.Language
@@ -33,7 +32,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
         import nl.jolanrensen.docProcessor.defaultProcessors.*
 
         plugins {  
-            kotlin("jvm") version "1.8.0"
+            kotlin("jvm") version "1.8.10"
             id("nl.jolanrensen.docProcessor") version "1.0-SNAPSHOT"
         }
         
@@ -71,10 +70,19 @@ abstract class DocProcessorFunctionalTest(name: String) {
         }
     }
 
+    sealed interface Additional {
+        val relativePath: String
+    }
+
     class AdditionalFile(
-        val relativePath: String = "src/main/kotlin/com/example/plugin/Test.kt",
+        override val relativePath: String = "src/main/kotlin/com/example/plugin/Test.kt",
         val content: String,
-    )
+    ) : Additional
+
+    class AdditionalDirectory(
+        override val relativePath: String = "src/main/kotlin/com/example/plugin",
+    ) : Additional
+
 
     /**
      * This function allows you to process content with any given processors.
@@ -86,7 +94,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
      * @param fileName File name of the file to be processed
      * @param language Language of the file to be processed
      * @param processors Processors to be used
-     * @param additionalFiles [Additional files][AdditionalFile] to be created in the project that are
+     * @param additionals [Additional files][AdditionalFile] to be created in the project that are
      *   processed but not returned
      * @return The processed content of [content]
      */
@@ -97,10 +105,10 @@ abstract class DocProcessorFunctionalTest(name: String) {
         fileName: String = "Test",
         language: FileLanguage = FileLanguage.KOTLIN,
         processors: List<String>,
-        additionalFiles: List<AdditionalFile> = emptyList(),
+        additionals: List<Additional> = emptyList(),
     ): String {
         initializeProjectFiles(processors)
-        writeAdditionalFiles(additionalFiles)
+        writeAdditionalFiles(additionals)
 
         // Get source- and destination directories based on the package name
         val relativePath = getRelativePath(language, packageName)
@@ -136,10 +144,14 @@ abstract class DocProcessorFunctionalTest(name: String) {
     /**
      * Writes the [additionalFiles] to the project directory.
      */
-    private fun writeAdditionalFiles(additionalFiles: List<AdditionalFile>) {
-        for (additionalFile in additionalFiles) {
-            File(projectDirectory, additionalFile.relativePath)
-                .write(additionalFile.content)
+    private fun writeAdditionalFiles(additionalFiles: List<Additional>) {
+        for (additional in additionalFiles) {
+            with(File(projectDirectory, additional.relativePath)) {
+                when (additional) {
+                    is AdditionalDirectory -> mkdirs()
+                    is AdditionalFile -> write(additional.content)
+                }
+            }
         }
     }
 

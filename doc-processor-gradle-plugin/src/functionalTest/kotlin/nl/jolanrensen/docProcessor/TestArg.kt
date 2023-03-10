@@ -303,7 +303,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
 
         processContent(
             content = content,
-            additionalFiles = listOf(
+            additionals = listOf(
                 AdditionalFile(
                     relativePath = "src/main/kotlin/com/example/plugin/Test2.kt",
                     content = otherFile,

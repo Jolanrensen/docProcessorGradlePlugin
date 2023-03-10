@@ -24,13 +24,13 @@ class TestStringUtils {
             I hope you like it.
         """.trimIndent()
 
-        val replacements = mapOf(
+        val replacements = arrayOf(
             0..4 to "Hi",
             6..11 to "World",
             26..29 to "other text then before",
         )
 
-        someText.replaceRanges(replacements) shouldBe
+        someText.replaceRanges(*replacements) shouldBe
                 """
                     Hi World
                     This is some other text then before.
