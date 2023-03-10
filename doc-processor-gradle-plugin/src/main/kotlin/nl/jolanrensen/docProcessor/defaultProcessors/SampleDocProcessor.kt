@@ -45,78 +45,121 @@ class SampleDocProcessor : TagDocProcessor() {
     private fun processContent(
         line: String,
         documentable: DocumentableWrapper,
-        path: String
+        path: String,
     ): String {
         val noComments = line.startsWith("@$sampleNoComments")
 
         // get the full @sample / @sampleNoComments path
-        val sampleArguments = line.getTagArguments(if (noComments) sampleNoComments else sampleTag, 2)
+        val sampleArguments = line.getTagArguments(
+            tag = if (noComments) sampleNoComments else sampleTag,
+            numberOfArguments = 2,
+        )
+
         val samplePath = sampleArguments.first().decodeCallableTarget()
+
         // for stuff written after the @sample tag, save and include it later
         val extraContent = sampleArguments.getOrElse(1) { "" }.trimStart()
 
         val queries = documentable.getAllFullPathsFromHereForTargetPath(samplePath)
 
         // query all documents for the sample path
-        val queried = queries.firstNotNullOfOrNull { query ->
+        val targetDocumentable = queries.firstNotNullOfOrNull { query ->
             allDocumentables[query]?.firstOrNull()
-        }
+        } ?: throwError(samplePath, path, queries)
 
-        return queried?.let {
-            val indent = " ".repeat(queried.docIndent)
-            val rawQueriedSource = queried.source.psi
-                ?.text
-                ?.let {
-                    if (noComments) it.replace(docRegex) { "" }
-                    else it
-                }
-                ?: return@let null
-            val queriedSource = (indent + rawQueriedSource).trimIndent()
+        // get the source text of the target documentable, optionally trimming to between the
+        // sampleStart and sampleEnd comments
+        val targetSourceText = getTargetSourceTextOrNull(
+            targetDocumentable = targetDocumentable,
+            noComments = noComments,
+        )?.getContentBetweenSampleComments()
+            ?: throwError(samplePath, path, queries)
 
-            val hasSampleComments = sampleStartRegex.containsMatchIn(queriedSource) &&
-                    sampleEndRegex.containsMatchIn(queriedSource)
+        // convert the source text to the correct comment content for the current language
+        val commentContent = convertSourceTextToCommentContent(
+            sampleSourceText = targetSourceText,
+            sampleLanguage = targetDocumentable.programmingLanguage,
+            currentLanguage = documentable.programmingLanguage,
+        )
 
-            val content = if (hasSampleComments) {
-                val start = sampleStartRegex.find(queriedSource)!!.range.last + 1
-                val end = sampleEndRegex.find(queriedSource)!!.range.first - 1
-                queriedSource.substring(start, end).trimIndent()
-            } else {
-                queriedSource
-            }
+        // add extra content back if it existed
+        return if (extraContent.isBlank()) commentContent else "$commentContent $extraContent"
+    }
 
-            buildString {
-                when (documentable.programmingLanguage) {
-                    JAVA -> {
-                        appendLine("<pre>")
-                        appendLine(
-                            StringEscapeUtils.escapeHtml(content)
-                                .replace("@", "&#64;")
-                                .replace("*/", "&#42;&#47;")
-                        )
-                        appendLine("</pre>")
-                    }
-
-                    KOTLIN -> {
-                        append("```")
-                        appendLine(
-                            when (queried.programmingLanguage) {
-                                JAVA -> "java"
-                                KOTLIN -> "kotlin"
-                            }
-                        )
-                        appendLine(content)
-                        appendLine("```")
-                    }
-                }
-
-                if (extraContent.isNotBlank())
-                    append(" $extraContent")
-            }
-        } ?: error(
+    private fun throwError(samplePath: String, path: String, queries: List<String>): Nothing =
+        error(
             "SampleDocProcessor ERROR: Sample not found: $samplePath. Called from $path. Attempted queries: [\n${
                 queries.joinToString("\n")
             }]"
         )
+
+    /**
+     * Returns the entire source text of the entire [targetDocumentable], optionally
+     * removing docs at the start with [noComments].
+     * Returns `null` if the source text cannot be found.
+     */
+    private fun getTargetSourceTextOrNull(
+        targetDocumentable: DocumentableWrapper,
+        noComments: Boolean,
+    ): String? {
+        val indent = " ".repeat(targetDocumentable.docIndent)
+        val rawQueriedSource = targetDocumentable.source.psi
+            ?.text
+            ?.let {
+                if (noComments) it.replace(docRegex) { "" }
+                else it
+            } ?: return null
+        return (indent + rawQueriedSource).trimIndent()
+    }
+
+    /**
+     * Trims the source text to only the code between the `// SampleStart` and `// SampleEnd` comments.
+     * If no such comments exist, the entire source text is returned.
+     */
+    private fun String.getContentBetweenSampleComments(): String {
+        val hasSampleComments = sampleStartRegex.containsMatchIn(this) &&
+                sampleEndRegex.containsMatchIn(this)
+
+        return if (hasSampleComments) {
+            val start = sampleStartRegex.find(this)!!.range.last + 1
+            val end = sampleEndRegex.find(this)!!.range.first - 1
+            this.substring(start, end).trimIndent()
+        } else this
+    }
+
+    /**
+     * Converts the [sample source text][sampleSourceText] to the correct comment content
+     * for the [sample source text language][sampleLanguage] and
+     * [current language][currentLanguage].
+     */
+    private fun convertSourceTextToCommentContent(
+        sampleSourceText: String,
+        sampleLanguage: ProgrammingLanguage,
+        currentLanguage: ProgrammingLanguage,
+    ): String = buildString {
+        when (currentLanguage) {
+            JAVA -> {
+                appendLine("<pre>")
+                appendLine(
+                    StringEscapeUtils.escapeHtml(sampleSourceText)
+                        .replace("@", "&#64;")
+                        .replace("*/", "&#42;&#47;")
+                )
+                appendLine("</pre>")
+            }
+
+            KOTLIN -> {
+                append("```")
+                appendLine(
+                    when (sampleLanguage) {
+                        JAVA -> "java"
+                        KOTLIN -> "kotlin"
+                    }
+                )
+                appendLine(sampleSourceText)
+                appendLine("```")
+            }
+        }
     }
 
     /**

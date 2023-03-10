@@ -1,5 +1,13 @@
 package nl.jolanrensen.docProcessor
 
+/**
+ * Many of the contents of this file are copied from Dokka's
+ * [DocComment][org.jetbrains.dokka.base.translators.psi.parsers.DocComment]
+ * since many of these methods were internal or private.
+ * However, there's no other way to access JavaDoc than with [findClosestDocComment].
+ * See https://github.com/Kotlin/dokka/blob/master/plugins/base/src/main/kotlin/translators/psi/parsers/PsiCommentsUtils.kt
+ */
+
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiDocCommentOwner
@@ -41,14 +49,6 @@ import org.jetbrains.kotlin.resolve.ImportPath
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import java.util.*
-
-/**
- * Many of the contents of this file are copied from Dokka's
- * [DocComment][org.jetbrains.dokka.base.translators.psi.parsers.DocComment]
- * since many of these methods were internal or private.
- * However, there's no other way to access JavaDoc than with [findClosestDocComment].
- * See https://github.com/Kotlin/dokka/blob/master/plugins/base/src/main/kotlin/translators/psi/parsers/PsiCommentsUtils.kt
- */
 
 /**
  * Is [linkable element](https://kotlinlang.org/docs/kotlin-doc.html#links-to-elements)

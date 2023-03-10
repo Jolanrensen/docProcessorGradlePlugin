@@ -33,13 +33,13 @@ class DocProcessorPlugin : Plugin<Project> {
  * }
  * ```
  *
- * @param sources The source directories to process
+ * @param [sources] The source directories to process
  *
- * @see TaskContainer.createProcessDocTask
- * @see TaskContainer.maybeCreateProcessDocTask
- * @see Project.creatingProcessDocTask
- * @see Project.createProcessDocTask
- * @see Project.maybeCreateProcessDocTask
+ * @see [TaskContainer.createProcessDocTask]
+ * @see [TaskContainer.maybeCreateProcessDocTask]
+ * @see [Project.creatingProcessDocTask]
+ * @see [Project.createProcessDocTask]
+ * @see [Project.maybeCreateProcessDocTask]
  */
 public fun TaskContainer.creatingProcessDocTask(
     sources: Iterable<File>,
@@ -59,13 +59,13 @@ public fun TaskContainer.creatingProcessDocTask(
  * }
  * ```
  *
- * @param sources The source directories to process
+ * @param [sources] The source directories to process
  *
- * @see TaskContainer.maybeCreateProcessDocTask
- * @see TaskContainer.creatingProcessDocTask
- * @see Project.creatingProcessDocTask
- * @see Project.createProcessDocTask
- * @see Project.maybeCreateProcessDocTask
+ * @see [TaskContainer.maybeCreateProcessDocTask]
+ * @see [TaskContainer.creatingProcessDocTask]
+ * @see [Project.creatingProcessDocTask]
+ * @see [Project.createProcessDocTask]
+ * @see [Project.maybeCreateProcessDocTask]
  */
 public fun TaskContainer.createProcessDocTask(
     name: String,
@@ -86,13 +86,13 @@ public fun TaskContainer.createProcessDocTask(
  * }
  * ```
  *
- * @param sources The source directories to process
+ * @param [sources] The source directories to process
  *
- * @see TaskContainer.createProcessDocTask
- * @see TaskContainer.creatingProcessDocTask
- * @see Project.creatingProcessDocTask
- * @see Project.createProcessDocTask
- * @see Project.maybeCreateProcessDocTask
+ * @see [TaskContainer.createProcessDocTask]
+ * @see [TaskContainer.creatingProcessDocTask]
+ * @see [Project.creatingProcessDocTask]
+ * @see [Project.createProcessDocTask]
+ * @see [Project.maybeCreateProcessDocTask]
  */
 public fun TaskContainer.maybeCreateProcessDocTask(
     name: String,
@@ -113,13 +113,13 @@ public fun TaskContainer.maybeCreateProcessDocTask(
  * }
  * ```
  *
- * @param sources The source directories to process
+ * @param [sources] The source directories to process
  *
- * @see TaskContainer.createProcessDocTask
- * @see TaskContainer.maybeCreateProcessDocTask
- * @see TaskContainer.creatingProcessDocTask
- * @see Project.creatingProcessDocTask
- * @see Project.createProcessDocTask
+ * @see [TaskContainer.createProcessDocTask]
+ * @see [TaskContainer.maybeCreateProcessDocTask]
+ * @see [TaskContainer.creatingProcessDocTask]
+ * @see [Project.creatingProcessDocTask]
+ * @see [Project.createProcessDocTask]
  */
 public fun Project.maybeCreateProcessDocTask(
     name: String,
@@ -138,13 +138,13 @@ public fun Project.maybeCreateProcessDocTask(
  * }
  * ```
  *
- * @param sources The source directories to process
+ * @param [sources] The source directories to process
  *
- * @see TaskContainer.createProcessDocTask
- * @see TaskContainer.maybeCreateProcessDocTask
- * @see TaskContainer.creatingProcessDocTask
- * @see Project.creatingProcessDocTask
- * @see Project.maybeCreateProcessDocTask
+ * @see [TaskContainer.createProcessDocTask]
+ * @see [TaskContainer.maybeCreateProcessDocTask]
+ * @see [TaskContainer.creatingProcessDocTask]
+ * @see [Project.creatingProcessDocTask]
+ * @see [Project.maybeCreateProcessDocTask]
  */
 public fun Project.createProcessDocTask(
     name: String,
@@ -163,13 +163,13 @@ public fun Project.createProcessDocTask(
  * }
  * ```
  *
- * @param sources The source directories to process
+ * @param [sources] The source directories to process
  *
- * @see TaskContainer.createProcessDocTask
- * @see TaskContainer.maybeCreateProcessDocTask
- * @see TaskContainer.creatingProcessDocTask
- * @see Project.createProcessDocTask
- * @see Project.maybeCreateProcessDocTask
+ * @see [TaskContainer.createProcessDocTask]
+ * @see [TaskContainer.maybeCreateProcessDocTask]
+ * @see [TaskContainer.creatingProcessDocTask]
+ * @see [Project.createProcessDocTask]
+ * @see [Project.maybeCreateProcessDocTask]
  */
 public fun Project.creatingProcessDocTask(
     sources: Iterable<File>,
