@@ -96,7 +96,7 @@ class SampleDocProcessor : TagDocProcessor() {
 
     private fun throwError(samplePath: String, path: String, queries: List<String>): Nothing =
         error(
-            "SampleDocProcessor ERROR: Sample not found: $samplePath. Called from $path. Attempted queries: [\n${
+            "Sample not found: $samplePath. Called from $path. Attempted queries: [\n${
                 queries.joinToString("\n")
             }]"
         )

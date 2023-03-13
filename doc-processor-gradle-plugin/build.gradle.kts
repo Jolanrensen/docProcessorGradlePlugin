@@ -40,6 +40,9 @@ dependencies {
     api("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
     api("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
+    // logging
+    api("io.github.microutils:kotlin-logging:1.5.9")
+
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-assertions-core:5.5.4")

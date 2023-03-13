@@ -1,5 +1,7 @@
 package nl.jolanrensen.docProcessor.gradle
 
+
+import mu.KotlinLogging
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.NamedDomainObjectContainer
@@ -8,6 +10,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -22,6 +25,8 @@ import org.jetbrains.dokka.DokkaSourceSetID
 import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
 import java.io.File
 import javax.inject.Inject
+
+private val log = KotlinLogging.logger { }
 
 /**
  * Process doc task you can instantiate in your build.gradle(.kts) file.
@@ -70,19 +75,6 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
      */
     @get:OutputFiles
     val targets: FileCollection = factory.fileCollection()
-
-    /**
-     * Whether to print debug information.
-     */
-    @get:Input
-    val debug: Property<Boolean> = factory
-        .property(Boolean::class.java)
-        .convention(false)
-
-    /**
-     * Whether to print debug information.
-     */
-    fun debug(boolean: Boolean): Unit = debug.set(boolean)
 
     /**
      * The limit for while-true loops in processors. This is to prevent infinite loops.
@@ -184,20 +176,19 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
      */
     fun dependencies(action: Action<DependencySetPluginDsl>): Unit = action.execute(dependencies)
 
-
-    private fun println(message: Any?) {
-        if (debug.get()) {
-            kotlin.io.println(message)
-        }
-    }
-
     init {
         outputs.upToDateWhen { false }
     }
 
     @TaskAction
     fun process() {
-        println("Hello from plugin 'nl.jolanrensen.docProcessor'")
+        // redirect println to INFO logs
+        logging.captureStandardOutput(LogLevel.INFO)
+
+        // redirect System.err to ERROR logs
+        logging.captureStandardError(LogLevel.ERROR)
+
+        log.lifecycle { "Hello from plugin 'nl.jolanrensen.docProcessor'" }
 
         val sourceRoots = sources.get()
         val target = target.get()
@@ -214,10 +205,10 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         if (target.exists()) target.deleteRecursively()
         target.mkdir()
 
-        println("Using target folder: $target")
-        println("Using source folders: $sourceRoots")
-        println("Using target folders: ${targets.files.toList()}")
-        println("Using runtime classpath: ${runtime.joinToString("\n")}")
+        log.info { "Using target folder: $target" }
+        log.info { "Using source folders: $sourceRoots" }
+        log.info { "Using target folders: ${targets.files.toList()}" }
+        log.info { "Using runtime classpath: ${runtime.joinToString("\n")}" }
 
         val sourceSetName = "sourceSet"
         val sources = GradleDokkaSourceSetBuilder(
@@ -239,7 +230,6 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
             it.sources = sources
             it.sourceRoots = sourceRoots
             it.target = target
-            it.debug = debug.get()
             it.processors = processors
             it.processLimit = processLimit.get()
         }

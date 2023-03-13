@@ -83,7 +83,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 }
             }.joinToString("\n")
 
-            println("IncludeArgDocProcessor WARNING: Could not find all arguments:[\n$argsNotFound\n]")
+            logger.warn { "Could not find all arguments:[\n$argsNotFound\n]" }
             return false
         }
 
@@ -150,11 +150,11 @@ class IncludeArgDocProcessor : TagDocProcessor() {
 
                 // TODO?: Java {@link ReferenceLinks}
                 if (javaLinkRegex in originalKey) {
-                    println(
+                    logger.warn {
                         "Java {@link statements} are not replaced by their fully qualified path. " +
                                 "Make sure to use fully qualified paths in {@link statements} when " +
                                 "using {@link statements} as a key in @arg."
-                    )
+                    }
                 }
 
                 if (originalKey.startsWith('[') && originalKey.contains(']')) {

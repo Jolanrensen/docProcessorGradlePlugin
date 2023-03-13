@@ -52,15 +52,6 @@ value class ProcessDocTaskDsl private constructor(public val task: ProcessDocTas
         get() = task.targets
 
     /**
-     * Whether to print debug information.
-     */
-    var debug: Boolean
-        get() = task.debug.get()
-        set(value) {
-            task.debug.set(value)
-        }
-
-    /**
      * The limit for while-true loops in processors. This is to prevent infinite loops.
      */
     var processLimit: Int

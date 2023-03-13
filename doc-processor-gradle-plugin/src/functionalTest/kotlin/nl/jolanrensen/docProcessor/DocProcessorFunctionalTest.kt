@@ -39,7 +39,6 @@ abstract class DocProcessorFunctionalTest(name: String) {
         val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
         
         val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
-            debug = true
             processors = listOf(${processors.joinToString()})
         }
         

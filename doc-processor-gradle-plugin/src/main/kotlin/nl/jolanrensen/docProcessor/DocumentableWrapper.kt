@@ -9,7 +9,7 @@ import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.model.WithSources
-import org.jetbrains.dokka.utilities.DokkaConsoleLogger
+import org.jetbrains.dokka.utilities.DokkaLogger
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.ImportPath
@@ -34,7 +34,7 @@ import java.io.File
  * @property [source] The Dokka [DocumentableSource], either a [PsiDocumentableSource] for Java,
  *   or a [DescriptorDocumentableSource] for Kotlin. Usually provided by a [WithSources] in Dokka. Should be given.
  *   This represents the source of the [documentable] pointing to a language-specific AST/PSI.
- * @property [logger] [Dokka logger][DokkaConsoleLogger] that's needed for [findClosestDocComment]. Should be given.
+ * @property [logger] [Dokka logger][DokkaLogger] that's needed for [findClosestDocComment]. Should be given.
  *
  * @property [sourceHasDocumentation] Whether the original [documentable] has a doc comment or not.
  * @property [fullyQualifiedPath] The fully qualified path of the [documentable], its key if you will.
@@ -60,7 +60,7 @@ import java.io.File
 open class DocumentableWrapper internal constructor(
     val documentable: Documentable,
     val source: DocumentableSource,
-    internal val logger: DokkaConsoleLogger,
+    internal val logger: DokkaLogger,
 
     val sourceHasDocumentation: Boolean,
     val fullyQualifiedPath: String,
@@ -78,7 +78,7 @@ open class DocumentableWrapper internal constructor(
         fun createOrNull(
             documentable: Documentable,
             source: DocumentableSource,
-            logger: DokkaConsoleLogger,
+            logger: DokkaLogger,
         ): DocumentableWrapper? {
             val docComment = findClosestDocComment(
                 element = source.psi,

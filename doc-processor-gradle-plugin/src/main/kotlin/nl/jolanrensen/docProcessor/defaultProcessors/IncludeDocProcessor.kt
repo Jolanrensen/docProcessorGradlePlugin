@@ -152,10 +152,10 @@ class IncludeDocProcessor : TagDocProcessor() {
             error(
                 when {
                     targetDocumentableNoFilter == documentable ->
-                        "IncludeDocProcessor ERROR: Self-reference detected. Called from \"$path\" in \"${documentable.file.absolutePath}\"."
+                        "Self-reference detected. Called from \"$path\" in \"${documentable.file.absolutePath}\"."
 
                     targetPath != null ->
-                        "IncludeDocProcessor ERROR: Include path found, but no documentation found for: " +
+                        "Include path found, but no documentation found for: " +
                                 "\"$includePath\". Including documentation from outside the library or from type-aliases " +
                                 "is currently not supported.\nCalled from \"$path\" in \"${documentable.file.absolutePath}\".\n" +
                                 "Attempted queries: [\n$attemptedQueries]\n" +
@@ -163,7 +163,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                                 "Full doc: \"${documentable.docContent}\""
 
                     else ->
-                        "IncludeDocProcessor ERROR: Include not found: \"$includePath\".\nCalled from \"$path\" in \"${documentable.file.absolutePath}\".\n" +
+                        "Include not found: \"$includePath\".\nCalled from \"$path\" in \"${documentable.file.absolutePath}\".\n" +
                                 "Attempted queries: [\n$attemptedQueries]\n" +
                                 "Include line: \"$line\"\n" +
                                 "Full doc: \"${documentable.docContent}\""
@@ -207,11 +207,11 @@ class IncludeDocProcessor : TagDocProcessor() {
             JAVA -> {
                 // TODO?: Java {@link ReferenceLinks}
                 if (javaLinkRegex in targetContent) {
-                    println(
+                    logger.warn {
                         "Java {@link statements} are not replaced by their fully qualified path. " +
                                 "Make sure to use fully qualified paths in {@link statements} when " +
                                 "@including docs with {@link statements}."
-                    )
+                    }
                 }
 
                 // Escape HTML characters in Java docs

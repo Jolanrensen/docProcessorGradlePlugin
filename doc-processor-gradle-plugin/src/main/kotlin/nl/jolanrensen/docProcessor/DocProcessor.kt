@@ -1,6 +1,9 @@
 package nl.jolanrensen.docProcessor
 
+import mu.KLogger
+import mu.KotlinLogging
 import java.io.Serializable
+import kotlin.jvm.Throws
 
 /**
  * Abstract class that can be used to create a doc processor.
@@ -11,7 +14,12 @@ import java.io.Serializable
  *
  * @see TagDocProcessor
  */
-abstract class DocProcessor : SimpleLogger, Serializable {
+abstract class DocProcessor : Serializable {
+
+    private val name: String = this::class.simpleName ?: "DocProcessor"
+
+    /** Main logging access point. */
+    val logger: KLogger = KotlinLogging.logger(name)
 
     /**
      * Process given [documentablesByPath]. This function will only be called once per [DocProcessor] instance.
@@ -29,19 +37,34 @@ abstract class DocProcessor : SimpleLogger, Serializable {
         documentablesByPath: Map<String, List<DocumentableWrapper>>,
     ): Map<String, List<DocumentableWrapper>>
 
-    // make logEnabled mutable
-    override var logEnabled: Boolean = true
-
     // ensuring each doc processor instance is only run once
     private var hasRun = false
 
     // ensuring each doc processor instance is only run once
+    @Throws(DocProcessorFailedException::class)
     internal fun processSafely(
         parameters: ProcessDocsAction.Parameters,
         documentablesByPath: Map<String, List<DocumentableWrapper>>,
     ): Map<String, List<DocumentableWrapper>> {
         if (hasRun) error("This instance of ${this::class.qualifiedName} has already run and cannot be reused.")
-        hasRun = true
-        return process(parameters, documentablesByPath)
+
+        return try {
+            process(parameters, documentablesByPath)
+        } catch (e: Throwable) {
+            throw DocProcessorFailedException(name, e)
+        } finally {
+            hasRun = true
+        }
     }
 }
+
+/**
+ * Exception that is thrown when a [DocProcessor] fails.
+ */
+class DocProcessorFailedException(
+    processorName: String,
+    cause: Throwable? = null,
+) : RuntimeException(
+    "Doc processor $processorName failed.",
+    cause,
+)

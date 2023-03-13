@@ -3,7 +3,7 @@ package nl.jolanrensen.docProcessor
 import com.intellij.openapi.util.TextRange
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
-import org.jetbrains.dokka.utilities.DokkaConsoleLogger
+import org.jetbrains.dokka.utilities.DokkaLogger
 import java.io.File
 
 /**
@@ -14,7 +14,7 @@ import java.io.File
 open class MutableDocumentableWrapper internal constructor(
     documentable: Documentable,
     source: DocumentableSource,
-    logger: DokkaConsoleLogger,
+    logger: DokkaLogger,
 
     sourceHasDocumentation: Boolean,
     fullyQualifiedPath: String,

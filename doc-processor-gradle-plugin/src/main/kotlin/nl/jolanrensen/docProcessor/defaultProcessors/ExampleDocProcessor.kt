@@ -27,11 +27,15 @@ class ExampleDocProcessor : TagDocProcessor() {
 
     // We can use the same function for both processInnerTagWithContent and processTagWithContent
     private fun processContent(tagWithContent: String): String {
+
+        // We can log stuff if we want to using https://github.com/oshai/kotlin-logging
+        logger.info { "Hi from the example logs!" }
+
         // We can get the content after the @example tag.
         val contentWithoutTag = tagWithContent
             .getTagArguments(tag = "example", numberOfArguments = 1)
             .single()
-            .trim() // remove starting and trailing whitespaces/newlines
+            .trimEnd() // remove trailing whitespaces/newlines
             .removeEscapeCharacters() // remove escape character "\" from the content
 
         // While we can play with the other arguments, let's just return some simple modified content

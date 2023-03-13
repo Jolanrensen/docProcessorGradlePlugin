@@ -18,7 +18,6 @@ abstract class ProcessDocsGradleAction : ProcessDocsAction(), WorkAction<Process
         override var sources: DokkaSourceSetImpl
         override var sourceRoots: List<File>
         override var target: File?
-        override var debug: Boolean
         override var processors: List<String>
         override var processLimit: Int
     }
@@ -30,7 +29,7 @@ abstract class ProcessDocsGradleAction : ProcessDocsAction(), WorkAction<Process
         try {
             process()
         } catch (e: Throwable) {
-            if (parameters.debug) e.printStackTrace()
+            e.printStackTrace(System.err)
             throw e
         }
     }

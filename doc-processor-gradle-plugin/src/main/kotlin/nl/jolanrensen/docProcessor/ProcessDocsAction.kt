@@ -1,22 +1,21 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
+import mu.KotlinLogging
 import nl.jolanrensen.docProcessor.ProcessDocsAction.Parameters
 import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
-import org.jetbrains.dokka.CoreExtensions
-import org.jetbrains.dokka.DokkaConfigurationImpl
-import org.jetbrains.dokka.DokkaGenerator
-import org.jetbrains.dokka.DokkaSourceSetImpl
+import nl.jolanrensen.docProcessor.gradle.lifecycle
+import org.jetbrains.dokka.*
 import org.jetbrains.dokka.base.DokkaBase
 import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
 import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
 import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.withDescendants
-import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import java.io.File
 import java.io.IOException
 import java.util.*
-import kotlin.jvm.Throws
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Process docs action.
@@ -31,48 +30,46 @@ import kotlin.jvm.Throws
  *
  * @see [ProcessDocsGradleAction] for a Gradle specific implementation.
  */
-abstract class ProcessDocsAction : SimpleLogger {
+abstract class ProcessDocsAction {
 
     interface Parameters {
         val baseDir: File
         val sources: DokkaSourceSetImpl
         val sourceRoots: List<File>
         val target: File?
-        val debug: Boolean
         val processors: List<String>
         val processLimit: Int
     }
 
     abstract val parameters: Parameters
 
-    override val logEnabled: Boolean
-        get() = parameters.debug
-
     protected fun process() {
         // analyse the sources with dokka to get the documentables
         val sourceDocs = analyseSourcesWithDokka()
 
-        println("Found ${sourceDocs.size} source docs: $sourceDocs")
+        log.info { "Found ${sourceDocs.size} source docs: $sourceDocs" }
 
         // Find all processors
         val processors = findProcessors()
 
         if (processors.isEmpty())
-            println("No processors found")
+            log.warn { "No processors found" }
         else
-            println("Found processors: ${processors.map { it::class.qualifiedName }}")
+            log.info { "Found processors: ${processors.map { it::class.qualifiedName }}" }
 
         // Run all processors
         val modifiedDocumentables =
             processors.fold(sourceDocs) { acc, processor ->
-                println("Running processor: ${processor::class.qualifiedName}")
+                log.lifecycle { "Running processor: ${processor::class.qualifiedName}" }
                 processor.processSafely(parameters, acc)
             }
 
         // filter to only include the modified documentables
         val modifiedDocumentablesPerFile = getModifiedDocumentablesPerFile(modifiedDocumentables)
 
-        println("Modified documentables: ${modifiedDocumentablesPerFile.values.flatMap { it.map { it.fullyQualifiedPath } }}")
+        log.info {
+            "Modified documentables: ${modifiedDocumentablesPerFile.values.flatMap { it.map { it.fullyQualifiedPath } }}"
+        }
 
         // copy the sources to the target folder while replacing all docs in modified documentables
         copyAndModifySources(modifiedDocumentablesPerFile)
@@ -83,7 +80,18 @@ abstract class ProcessDocsAction : SimpleLogger {
         val configuration = DokkaConfigurationImpl(
             sourceSets = listOf(parameters.sources),
         )
-        val logger = DokkaConsoleLogger()
+        val logger = DokkaBootstrapImpl.DokkaProxyLogger { level, message ->
+            with(log) {
+                when (level) {
+                    "debug" -> debug { message }
+                    "info" -> info { message }
+                    "progress" -> lifecycle { message }
+                    "warn" -> warn { message }
+                    "error" -> error { message }
+                    else -> info { message }
+                }
+            }
+        }
         val dokkaGenerator = DokkaGenerator(configuration, logger)
 
         // get the sourceToDocumentableTranslators from DokkaBase, both for java and kotlin files
@@ -162,9 +170,6 @@ abstract class ProcessDocsAction : SimpleLogger {
                 // create a new instance of the processor, so it can safely be used multiple times
                 it::class.java.newInstance()
             }
-
-        // set loggers enabled
-        filteredProcessors.forEach { it.logEnabled = parameters.debug }
 
         return filteredProcessors
     }
