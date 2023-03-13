@@ -129,7 +129,6 @@ class IncludeDocProcessor : TagDocProcessor() {
         val includePath = includeArguments.first().decodeCallableTarget()
         // for stuff written after the @include tag, save and include it later
         val extraContent = includeArguments.getOrElse(1) { "" }
-            .trimStart()
 
         // query the filtered documentables for the @include paths
         val targetDocumentable = documentable.queryDocumentables(
@@ -176,8 +175,13 @@ class IncludeDocProcessor : TagDocProcessor() {
             .removePrefix("\n")
             .removeSuffix("\n")
 
-        if (extraContent.isNotBlank()) {
-            targetContent = "$targetContent $extraContent"
+        if (extraContent.isNotEmpty()) {
+            targetContent = buildString {
+                append(targetContent)
+                if (!extraContent.first().isWhitespace())
+                    append(" ")
+                append(extraContent)
+            }
         }
 
         targetContent = when (documentable.programmingLanguage) {
@@ -247,15 +251,9 @@ class IncludeDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = tagWithContent.split('\n').mapIndexed { i, line ->
-        if (i == 0) {
-            processContent(
-                line = line,
-                documentable = documentable,
-                path = path,
-            )
-        } else {
-            line
-        }
-    }.joinToString("\n")
+    ): String = processContent(
+        line = tagWithContent,
+        documentable = documentable,
+        path = path,
+    )
 }

@@ -48,7 +48,7 @@ class IncludeFileDocProcessor : TagDocProcessor() {
             .trim()
 
         // for stuff written after the @includeFile tag, save and include it later
-        val extraContent = includeFileArguments.getOrElse(1) { "" }.trimStart()
+        val extraContent = includeFileArguments.getOrElse(1) { "" }
 
         val currentDir: File? = documentable.file.parentFile
         val targetFile = currentDir?.resolve(filePath)
@@ -68,8 +68,14 @@ class IncludeFileDocProcessor : TagDocProcessor() {
 
             KOTLIN -> content
         }.let {
-            if (extraContent.isNotBlank()) "$it $extraContent"
-            else it
+            if (extraContent.isNotEmpty()) {
+                buildString {
+                    append(it)
+                    if (!extraContent.first().isWhitespace())
+                        append(" ")
+                    append(extraContent)
+                }
+            } else it
         }
     }
 
@@ -99,18 +105,9 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = tagWithContent
-        .split('\n')
-        .mapIndexed { i, line ->
-            if (i == 0) {
-                processContent(
-                    line = line,
-                    documentable = documentable,
-                    path = path,
-                )
-            } else {
-                line
-            }
-        }
-        .joinToString("\n")
+    ): String = processContent(
+        line = tagWithContent,
+        documentable = documentable,
+        path = path,
+    )
 }

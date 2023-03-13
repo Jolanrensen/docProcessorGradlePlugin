@@ -43,14 +43,15 @@ class SampleDocProcessor : TagDocProcessor() {
     private val sampleEndRegex = Regex(" *// *SampleEnd *\n")
 
     private fun processContent(
-        line: String,
+        tagWithContent: String,
         documentable: DocumentableWrapper,
         path: String,
     ): String {
-        val noComments = line.startsWith("@$sampleNoComments")
+        val noComments = tagWithContent.startsWith("{@$sampleNoComments") ||
+                tagWithContent.trimStart().startsWith("@$sampleNoComments ")
 
         // get the full @sample / @sampleNoComments path
-        val sampleArguments = line.getTagArguments(
+        val sampleArguments = tagWithContent.getTagArguments(
             tag = if (noComments) sampleNoComments else sampleTag,
             numberOfArguments = 2,
         )
@@ -58,7 +59,7 @@ class SampleDocProcessor : TagDocProcessor() {
         val samplePath = sampleArguments.first().decodeCallableTarget()
 
         // for stuff written after the @sample tag, save and include it later
-        val extraContent = sampleArguments.getOrElse(1) { "" }.trimStart()
+        val extraContent = sampleArguments.getOrElse(1) { "" }
 
         val queries = documentable.getAllFullPathsFromHereForTargetPath(samplePath)
 
@@ -83,7 +84,14 @@ class SampleDocProcessor : TagDocProcessor() {
         )
 
         // add extra content back if it existed
-        return if (extraContent.isBlank()) commentContent else "$commentContent $extraContent"
+        return if (extraContent.isNotEmpty()) {
+            buildString {
+                append(commentContent)
+                if (!extraContent.first().isWhitespace())
+                    append(" ")
+                append(extraContent)
+            }
+        } else commentContent
     }
 
     private fun throwError(samplePath: String, path: String, queries: List<String>): Nothing =
@@ -172,7 +180,7 @@ class SampleDocProcessor : TagDocProcessor() {
         path: String,
         documentable: DocumentableWrapper,
     ): String = processContent(
-        line = tagWithContent.removePrefix("{").removeSuffix("}"),
+        tagWithContent = tagWithContent,
         documentable = documentable,
         path = path,
     )
@@ -189,15 +197,9 @@ class SampleDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = tagWithContent.split('\n').mapIndexed { i, line ->
-        if (i == 0) {
-            processContent(
-                line = line.trimStart(),
-                documentable = documentable,
-                path = path,
-            )
-        } else {
-            line
-        }
-    }.joinToString("\n")
+    ): String = processContent(
+        tagWithContent = tagWithContent,
+        documentable = documentable,
+        path = path,
+    )
 }

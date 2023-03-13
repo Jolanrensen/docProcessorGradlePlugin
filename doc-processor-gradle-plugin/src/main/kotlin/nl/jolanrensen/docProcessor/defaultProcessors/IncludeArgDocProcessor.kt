@@ -145,7 +145,6 @@ class IncludeArgDocProcessor : TagDocProcessor() {
 
                 // for stuff written after the @includeArg tag, save and include it later
                 val extraContent = includeArgArguments.getOrElse(1) { "" }
-                    .trimStart()
 
                 var keys = listOf(originalKey)
 
@@ -165,13 +164,20 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 val content = keys.firstNotNullOfOrNull { key ->
                     argMap[documentable]?.get(key)
                 }
-                if (content == null) {
-                    argsNotFound.getOrPut(documentable) { mutableSetOf() } += keys
+                when {
+                    content == null -> {
+                        argsNotFound.getOrPut(documentable) { mutableSetOf() } += keys
+                        tagWithContent
+                    }
 
-                    tagWithContent
-                } else {
-                    if (extraContent.isEmpty()) content
-                    else "$content $extraContent"
+                    extraContent.isNotEmpty() -> buildString {
+                        append(content)
+                        if (!extraContent.first().isWhitespace())
+                            append(" ")
+                        append(extraContent)
+                    }
+
+                    else -> content
                 }
             }
         }
@@ -181,30 +187,10 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String {
-        // split up the content for @includeArg but not for @arg
-        val isIncludeArg = tagWithContent.trimStart().startsWith("@$useArgumentTag")
-
-        return if (isIncludeArg) { // @includeArg
-            tagWithContent.split('\n').mapIndexed { i: Int, line: String ->
-                // tagWithContent is the content after the @includeArg tag
-                // including any new lines below. We will only replace the first line and skip the rest.
-                if (i == 0) {
-                    process(
-                        tagWithContent = line,
-                        documentable = documentable,
-                    )
-                } else {
-                    line
-                }
-            }.joinToString("\n")
-        } else { // @arg
-            process(
-                tagWithContent = tagWithContent,
-                documentable = documentable,
-            )
-        }
-    }
+    ): String = process(
+        tagWithContent = tagWithContent,
+        documentable = documentable,
+    )
 
     override fun processInlineTagWithContent(
         tagWithContent: String,

@@ -69,7 +69,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
 
                 /**
                  * @include {@link Test#helloWorld}
-                 * @include {@link com.example.plugin.Test#helloWorld}  
+                 * @include {@link com.example.plugin.Test#helloWorld}
                  */
                 public void helloWorld2() {}
             }

@@ -100,6 +100,19 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
         var currentBlock = ""
         val blocksIndicators = mutableListOf<Char>()
 
+        fun isDone(): Boolean = size >= numberOfArguments - 1
+
+        fun String.trimArgumentStart(): String = when {
+
+            // if this string consists of only one character and is not a space or tab,
+            // keep it as is (such as a \n)
+            length == 1 && this !in listOf(" ", "\t") -> this
+
+            // Else, remove the first \n (if it exists) and trim the start of spaces and tabs
+            else -> removePrefix("\n").trimStart(' ', '\t')
+
+        }
+
         var escapeNext = false
         for (char in content) {
             when {
@@ -107,10 +120,10 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
 
                 char == '\\' -> escapeNext = true
 
-                size >= numberOfArguments - 1 -> Unit
+                isDone() -> Unit
 
                 char.isWhitespace() && blocksIndicators.isEmpty() -> {
-                    if (currentBlock.isNotBlank()) add(currentBlock)
+                    if (currentBlock.isNotBlank()) add(currentBlock.trimArgumentStart())
                     currentBlock = ""
                 }
 
@@ -132,11 +145,11 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
 
                 // TODO html tags
             }
-            if (!(currentBlock.isEmpty() && char.isWhitespace()))
+            if (isDone() || !(currentBlock.isEmpty() && char.isWhitespace()))
                 currentBlock += char
         }
 
-        add(currentBlock)
+        add(currentBlock.trimArgumentStart())
     }
     return arguments
 }
