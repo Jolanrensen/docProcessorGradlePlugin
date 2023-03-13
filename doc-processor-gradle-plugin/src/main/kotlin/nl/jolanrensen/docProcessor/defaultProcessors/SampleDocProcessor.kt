@@ -129,8 +129,8 @@ class SampleDocProcessor : TagDocProcessor() {
                 sampleEndRegex.containsMatchIn(this)
 
         return if (hasSampleComments) {
-            val start = sampleStartRegex.find(this)!!.range.last + 1
-            val end = sampleEndRegex.find(this)!!.range.first - 1
+            val start = sampleStartRegex.findAll(this).first().range.last + 1
+            val end = sampleEndRegex.findAll(this).last().range.first - 1
             this.substring(start, end).trimIndent()
         } else this
     }
@@ -153,7 +153,7 @@ class SampleDocProcessor : TagDocProcessor() {
                         .replace("@", "&#64;")
                         .replace("*/", "&#42;&#47;")
                 )
-                appendLine("</pre>")
+                append("</pre>")
             }
 
             KOTLIN -> {
@@ -165,7 +165,7 @@ class SampleDocProcessor : TagDocProcessor() {
                     }
                 )
                 appendLine(sampleSourceText)
-                appendLine("```")
+                append("```")
             }
         }
     }
