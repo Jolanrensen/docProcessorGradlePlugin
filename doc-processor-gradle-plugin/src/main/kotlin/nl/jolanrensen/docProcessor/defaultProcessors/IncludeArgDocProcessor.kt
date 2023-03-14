@@ -1,14 +1,7 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import nl.jolanrensen.docProcessor.DocumentableWrapper
-import nl.jolanrensen.docProcessor.ProcessDocsAction
-import nl.jolanrensen.docProcessor.TagDocProcessor
-import nl.jolanrensen.docProcessor.decodeCallableTarget
-import nl.jolanrensen.docProcessor.findTagNamesInDocContent
-import nl.jolanrensen.docProcessor.getTagArguments
-import nl.jolanrensen.docProcessor.getTagNameOrNull
-import nl.jolanrensen.docProcessor.javaLinkRegex
-import nl.jolanrensen.docProcessor.removeEscapeCharacters
+import nl.jolanrensen.docProcessor.*
+import org.jetbrains.kotlin.idea.editor.fixers.start
 
 /**
  * @see IncludeArgDocProcessor
@@ -77,13 +70,21 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         // We can break out of the recursion if there are no more changes. We don't need to throw an error if an
         // argument is not found, as it might be defined in a different file.
         if (atLeastOneRun && !anyModifications) {
-            val argsNotFound = argsNotFound.flatMap { (documentable, args) ->
-                args.map {
-                    "`${documentable.fullyQualifiedPath}` -> @$useArgumentTag $it"
-                }
-            }.joinToString("\n")
+            val fileTexts = argsNotFound.keys.associateWith { it.file.readText() }
+            for ((documentable, args) in argsNotFound) {
+                val (line, char) = fileTexts[documentable]!!.getLineAndCharacterOffset(documentable.docTextRange.start)
 
-            logger.warn { "Could not find all arguments:[\n$argsNotFound\n]" }
+                if (args.isNotEmpty()) {
+                    logger.warn {
+                        buildString {
+                            val arguments = if (args.size == 1) "argument" else "arguments"
+                            appendLine("Could not find @arg $arguments in doc (${documentable.file.absolutePath}:$line:$char):")
+                            appendLine(args.joinToString(",\n") { "  \"@$useArgumentTag $it\"" })
+                        }
+                    }
+                }
+            }
+
             return false
         }
 

@@ -16,7 +16,7 @@ import kotlin.jvm.Throws
  */
 abstract class DocProcessor : Serializable {
 
-    private val name: String = this::class.simpleName ?: "DocProcessor"
+    protected val name: String = this::class.simpleName ?: "DocProcessor"
 
     /** Main logging access point. */
     val logger: KLogger = KotlinLogging.logger(name)
@@ -51,7 +51,8 @@ abstract class DocProcessor : Serializable {
         return try {
             process(parameters, documentablesByPath)
         } catch (e: Throwable) {
-            throw DocProcessorFailedException(name, e)
+            if (e is DocProcessorFailedException) throw e
+            else throw DocProcessorFailedException(name, cause = e)
         } finally {
             hasRun = true
         }
@@ -61,10 +62,11 @@ abstract class DocProcessor : Serializable {
 /**
  * Exception that is thrown when a [DocProcessor] fails.
  */
-class DocProcessorFailedException(
-    processorName: String,
+open class DocProcessorFailedException(
+    val processorName: String,
+    message: String = "Doc processor $processorName failed.",
     cause: Throwable? = null,
 ) : RuntimeException(
-    "Doc processor $processorName failed.",
+    message,
     cause,
 )

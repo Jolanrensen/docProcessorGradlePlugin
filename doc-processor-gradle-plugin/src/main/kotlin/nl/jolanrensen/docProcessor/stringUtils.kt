@@ -117,3 +117,16 @@ val IntRange.size get() = last - first + 1
 fun TextRange.toIntRange(): IntRange = startOffset until endOffset
 
 fun IntRange.toTextRange(): TextRange = TextRange(start, endInclusive + 1)
+
+fun String.getLineAndCharacterOffset(offset: Int): Pair<Int, Int> {
+    var line = 1
+    var character = 1
+    for (i in 0 until offset) {
+        if (this[i] == '\n') {
+            line++
+            character = 1
+        } else character++
+    }
+
+    return Pair(line, character)
+}

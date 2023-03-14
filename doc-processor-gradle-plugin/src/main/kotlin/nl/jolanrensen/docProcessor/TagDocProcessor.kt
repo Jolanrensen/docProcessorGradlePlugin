@@ -1,5 +1,7 @@
 package nl.jolanrensen.docProcessor
 
+import org.jetbrains.kotlin.idea.editor.fixers.start
+
 /**
  * Specific [DocProcessor] that processes just tags.
  *
@@ -239,11 +241,22 @@ abstract class TagDocProcessor : DocProcessor() {
                         "Tag content must start with '{@' and end with '}'"
                     }
 
-                    val newTagContent = processInlineTagWithContent(
-                        tagWithContent = tagContent,
-                        path = path,
-                        documentable = documentable,
-                    )
+                    val newTagContent = try {
+                        processInlineTagWithContent(
+                            tagWithContent = tagContent,
+                            path = path,
+                            documentable = documentable,
+                        )
+                    } catch (e: Throwable) {
+                        throw TagDocProcessorFailedException(
+                            processorName = name,
+                            documentable = documentable,
+                            currentDoc = text,
+                            rangeInCurrentDoc = range,
+                            currentTagContent = tagContent,
+                            cause = e,
+                        )
+                    }
                     text = text.replaceRange(range, newTagContent)
 
                     wasModified = tagContent != newTagContent
@@ -267,19 +280,30 @@ abstract class TagDocProcessor : DocProcessor() {
 
         // Then process the normal tags
         val processedDoc: DocContent = processedInlineTagsDoc
-            .splitDocContentPerBlock()
-            .map { split ->
+            .splitDocContentPerBlockWithRanges()
+            .map { (split, rangeDocContent) ->
                 val shouldProcess =
                     split.trimStart().startsWith("@") &&
                             split.getTagNameOrNull()
                                 ?.let(::tagIsSupported) == true
 
                 if (shouldProcess) {
-                    processBlockTagWithContent(
-                        tagWithContent = split,
-                        path = path,
-                        documentable = documentable,
-                    )
+                    try {
+                        processBlockTagWithContent(
+                            tagWithContent = split,
+                            path = path,
+                            documentable = documentable,
+                        )
+                    } catch (e: Throwable) {
+                        throw TagDocProcessorFailedException(
+                            processorName = name,
+                            documentable = documentable,
+                            currentDoc = processedInlineTagsDoc,
+                            rangeInCurrentDoc = rangeDocContent,
+                            currentTagContent = split,
+                            cause = e,
+                        )
+                    }
                 } else {
                     split
                 }
@@ -295,3 +319,36 @@ abstract class TagDocProcessor : DocProcessor() {
         return processedDoc
     }
 }
+
+/**
+ * This exception is thrown when a [TagDocProcessor] fails to process a tag.
+ * It contains the current state of the doc, the range of the tag that failed to process,
+ * and the content of the tag that failed to process.
+ */
+open class TagDocProcessorFailedException(
+    processorName: String,
+    documentable: DocumentableWrapper,
+    currentDoc: DocContent,
+    rangeInCurrentDoc: IntRange,
+    currentTagContent: DocContent,
+    cause: Throwable? = null,
+) : DocProcessorFailedException(
+    processorName = processorName,
+    cause = cause,
+    message = buildString {
+        val rangeInFile = documentable.docTextRange
+        val fileText = documentable.file.readText()
+        val (line, char) = fileText.getLineAndCharacterOffset(rangeInFile.start)
+
+        appendLine("Doc processor $processorName failed processing doc:")
+        appendLine("(${documentable.file.absolutePath}:$line:$char)")
+        appendLine("\u200E")
+        appendLine("Current state of doc:")
+        appendLine(currentDoc.toDoc())
+        appendLine("\u200E")
+        appendLine("Processing range in doc ($rangeInCurrentDoc):")
+        appendLine("--------------------------------------------------")
+        appendLine(currentTagContent)
+        appendLine("--------------------------------------------------")
+    },
+)

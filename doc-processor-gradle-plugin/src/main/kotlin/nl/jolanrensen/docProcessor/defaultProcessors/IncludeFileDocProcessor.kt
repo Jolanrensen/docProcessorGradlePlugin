@@ -54,10 +54,10 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         val targetFile = currentDir?.resolve(filePath)
 
         if (targetFile == null || !targetFile.exists())
-            throw FileNotFoundException("File $filePath (-> ${targetFile?.absolutePath}) does not exist. Called from $path.")
+            throw FileNotFoundException("File $filePath (-> ${targetFile?.absolutePath}) does not exist.")
 
         if (targetFile.isDirectory)
-            throw IllegalArgumentException("File $filePath (-> ${targetFile.absolutePath}) is a directory. Called from $path.")
+            throw IllegalArgumentException("File $filePath (-> ${targetFile.absolutePath}) is a directory.")
 
         val content = targetFile.readText()
 

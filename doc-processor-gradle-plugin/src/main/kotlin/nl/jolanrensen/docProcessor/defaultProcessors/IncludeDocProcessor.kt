@@ -142,7 +142,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                 documentables = filteredDocumentables,
             )
             val attemptedQueries = documentable.getAllFullPathsFromHereForTargetPath(includePath)
-                .joinToString("\n")
+                .joinToString("\n") { "|  $it" }
 
             val targetPath = documentable.queryDocumentablesForPath(
                 query = includePath,
@@ -152,21 +152,24 @@ class IncludeDocProcessor : TagDocProcessor() {
             error(
                 when {
                     targetDocumentableNoFilter == documentable ->
-                        "Self-reference detected. Called from \"$path\" in \"${documentable.file.absolutePath}\"."
+                        "Self-reference detected."
 
                     targetPath != null ->
-                        "Include path found, but no documentation found for: " +
-                                "\"$includePath\". Including documentation from outside the library or from type-aliases " +
-                                "is currently not supported.\nCalled from \"$path\" in \"${documentable.file.absolutePath}\".\n" +
-                                "Attempted queries: [\n$attemptedQueries]\n" +
-                                "Include line: \"$line\"\n" +
-                                "Full doc: \"${documentable.docContent}\""
+                        """
+                        |Include path found, but no documentation found for: "$includePath".
+                        |Including documentation from outside the library or from type-aliases is currently not supported.
+                        |Attempted queries: [
+                        $attemptedQueries
+                        |]
+                        """.trimMargin()
 
                     else ->
-                        "Include not found: \"$includePath\".\nCalled from \"$path\" in \"${documentable.file.absolutePath}\".\n" +
-                                "Attempted queries: [\n$attemptedQueries]\n" +
-                                "Include line: \"$line\"\n" +
-                                "Full doc: \"${documentable.docContent}\""
+                        """
+                        |Include not found: "$includePath".
+                        |Attempted queries: [
+                        $attemptedQueries
+                        |]
+                        """.trimMargin()
                 }
             )
         }

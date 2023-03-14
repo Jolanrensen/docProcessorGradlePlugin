@@ -66,7 +66,7 @@ class SampleDocProcessor : TagDocProcessor() {
         // query all documents for the sample path
         val targetDocumentable = queries.firstNotNullOfOrNull { query ->
             allDocumentables[query]?.firstOrNull()
-        } ?: throwError(samplePath, path, queries)
+        } ?: throwError(samplePath, queries)
 
         // get the source text of the target documentable, optionally trimming to between the
         // sampleStart and sampleEnd comments
@@ -74,7 +74,7 @@ class SampleDocProcessor : TagDocProcessor() {
             targetDocumentable = targetDocumentable,
             noComments = noComments,
         )?.getContentBetweenSampleComments()
-            ?: throwError(samplePath, path, queries)
+            ?: throwError(samplePath, queries)
 
         // convert the source text to the correct comment content for the current language
         val commentContent = convertSourceTextToCommentContent(
@@ -94,11 +94,13 @@ class SampleDocProcessor : TagDocProcessor() {
         } else commentContent
     }
 
-    private fun throwError(samplePath: String, path: String, queries: List<String>): Nothing =
+    private fun throwError(samplePath: String, queries: List<String>): Nothing =
         error(
-            "Sample not found: $samplePath. Called from $path. Attempted queries: [\n${
-                queries.joinToString("\n")
-            }]"
+            """
+            |Sample not found: $samplePath. 
+            |Attempted queries: [
+            ${queries.joinToString("\n") { "|  $it" }}
+            ]""".trimMargin()
         )
 
     /**

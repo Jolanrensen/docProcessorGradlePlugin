@@ -262,6 +262,26 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
     }
 }
 
+/**
+ * Split doc content in blocks of content and text belonging to tags, with the range of the block.
+ * The tag, if present, can be found with optional leading spaces in the first line of the block.
+ * You can get the name with [String.getTagNameOrNull].
+ * Splitting takes `{}`, `[]`, `()`, and triple backticks into account.
+ * Block "marks" are ignored if "\" escaped.
+ * Can be joint with '\n' to get the original content.
+ */
+fun DocContent.splitDocContentPerBlockWithRanges(): List<Pair<DocContent, IntRange>> {
+    val splitDocContents = this.splitDocContentPerBlock()
+    var i = 0
+
+    return buildList {
+        for (docContent in splitDocContents) {
+            add(Pair(docContent, i..i + docContent.length))
+            i += docContent.length + 1
+        }
+    }
+}
+
 /** Finds any inline tag with its depth, preferring the innermost one.
  * "{@}" marks are ignored if "\" escaped.
  */
