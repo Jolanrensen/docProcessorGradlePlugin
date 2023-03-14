@@ -64,8 +64,8 @@ abstract class DocProcessor : Serializable {
  */
 open class DocProcessorFailedException(
     val processorName: String,
-    message: String = "Doc processor $processorName failed.",
     cause: Throwable? = null,
+    message: String = "Doc processor $processorName failed: ${cause?.message}",
 ) : RuntimeException(
     message,
     cause,

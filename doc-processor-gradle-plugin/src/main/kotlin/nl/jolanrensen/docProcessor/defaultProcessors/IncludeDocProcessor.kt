@@ -156,7 +156,7 @@ class IncludeDocProcessor : TagDocProcessor() {
 
                     targetPath != null ->
                         """
-                        |Include path found, but no documentation found for: "$includePath".
+                        |Reference found, but no documentation found for: "$includePath".
                         |Including documentation from outside the library or from type-aliases is currently not supported.
                         |Attempted queries: [
                         $attemptedQueries
@@ -165,7 +165,7 @@ class IncludeDocProcessor : TagDocProcessor() {
 
                     else ->
                         """
-                        |Include not found: "$includePath".
+                        |Reference not found: "$includePath".
                         |Attempted queries: [
                         $attemptedQueries
                         |]

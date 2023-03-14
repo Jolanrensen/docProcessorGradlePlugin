@@ -97,7 +97,7 @@ class SampleDocProcessor : TagDocProcessor() {
     private fun throwError(samplePath: String, queries: List<String>): Nothing =
         error(
             """
-            |Sample not found: $samplePath. 
+            |Reference not found: $samplePath. 
             |Attempted queries: [
             ${queries.joinToString("\n") { "|  $it" }}
             ]""".trimMargin()

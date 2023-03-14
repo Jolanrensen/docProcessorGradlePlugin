@@ -343,12 +343,17 @@ open class TagDocProcessorFailedException(
         appendLine("Doc processor $processorName failed processing doc:")
         appendLine("(${documentable.file.absolutePath}:$line:$char)")
         appendLine("\u200E")
-        appendLine("Current state of doc:")
-        appendLine(currentDoc.toDoc())
-        appendLine("\u200E")
-        appendLine("Processing range in doc ($rangeInCurrentDoc):")
+        appendLine("Current state of the doc with the <a href=\"\">cause for the exception</a>:")
         appendLine("--------------------------------------------------")
-        appendLine(currentTagContent)
+        appendLine(
+            currentDoc
+                .replaceRange(
+                    range = rangeInCurrentDoc,
+                    replacement = "<a href=\"\">${currentDoc.substring(rangeInCurrentDoc)}</a>",
+                )
+                .toDoc()
+        )
         appendLine("--------------------------------------------------")
+        cause?.message?.let { appendLine(it) }
     },
 )
