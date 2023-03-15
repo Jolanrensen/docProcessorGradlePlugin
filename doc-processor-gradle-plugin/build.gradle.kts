@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_VARIABLE")
+
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -5,12 +7,12 @@ plugins {
     `java-gradle-plugin`
     java
     kotlin("jvm") version "1.8.10"
-    id("com.gradle.plugin-publish") version "1.0.0"
-    idea
+    id("com.gradle.plugin-publish") version "1.1.0"
+    signing
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "1.0-SNAPSHOT"
+version = "0.1.0"
 
 publishing {
     repositories {
@@ -45,26 +47,50 @@ dependencies {
 
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))
-    testImplementation("io.kotest:kotest-assertions-core:5.5.4")
+    testImplementation("io.kotest:kotest-assertions-core:5.5.5")
 }
 
 gradlePlugin {
+
+    website.set("https://github.com/Jolanrensen/docProcessorGradlePlugin")
+    vcsUrl.set("https://github.com/Jolanrensen/docProcessorGradlePlugin")
 
     // Define the plugin
     val docProcessor by plugins.creating {
         id = "nl.jolanrensen.docProcessor"
         displayName = "KDoc/Javadoc processor Gradle Plugin"
         description = "KDoc/Javadoc processor Gradle Plugin"
+        tags.set(
+            listOf(
+                "kotlin",
+                "java",
+                "documentation",
+                "library",
+                "preprocessor",
+                "plugins",
+                "documentation-tool",
+                "javadoc",
+                "documentation-generator",
+                "library-management",
+                "kdoc",
+                "javadocs",
+                "preprocessors",
+                "kdocs",
+                "tags",
+                "tag",
+                "tag-processor",
+            )
+        )
         implementationClass = "nl.jolanrensen.docProcessor.gradle.DocProcessorPlugin"
     }
 
     // Define the plugin for JitPack
-    val docProcessorJitpack by plugins.creating {
-        id = "com.github.jolanrensen.docProcessorGradlePlugin"
-        displayName = "KDoc/Javadoc processor Gradle Plugin"
-        description = "KDoc/Javadoc processor Gradle Plugin"
-        implementationClass = "nl.jolanrensen.docProcessor.gradle.DocProcessorPlugin"
-    }
+//    val docProcessorJitpack by plugins.creating {
+//        id = "com.github.jolanrensen.docProcessorGradlePlugin"
+//        displayName = "KDoc/Javadoc processor Gradle Plugin"
+//        description = "KDoc/Javadoc processor Gradle Plugin"
+//        implementationClass = "nl.jolanrensen.docProcessor.gradle.DocProcessorPlugin"
+//    }
 }
 
 // Add a source set and a task for a functional test suite
