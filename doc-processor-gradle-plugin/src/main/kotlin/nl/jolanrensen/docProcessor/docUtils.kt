@@ -7,6 +7,15 @@ import java.util.Comparator
  */
 typealias DocContent = String
 
+// used to keep track of the current blocks
+private const val CURLY_BRACES = '{'
+private const val SQUARE_BRACKETS = '['
+private const val PARENTHESES = '('
+private const val ANGULAR_BRACKETS = '<'
+private const val BACKTICKS = '`'
+private const val DOUBLE_QUOTES = '"'
+private const val SINGLE_QUOTES = '\''
+
 /**
  * Returns the actual content of the KDoc/Javadoc comment
  */
@@ -45,34 +54,32 @@ fun String.getDocContentOrNull(): DocContent? {
     return result
 }
 
-
 /**
  * Turns multi-line String into valid KDoc/Javadoc.
  */
-fun DocContent.toDoc(indent: Int = 0): String =
-    this
-        .split('\n')
-        .toMutableList()
-        .let {
-            it[0] = if (it[0].isEmpty()) "/**" else "/** ${it[0]}"
+fun DocContent.toDoc(indent: Int = 0): String = this
+    .split('\n')
+    .toMutableList()
+    .let {
+        it[0] = if (it[0].isEmpty()) "/**" else "/** ${it[0]}"
 
-            val lastIsBlank = it.last().isBlank()
+        val lastIsBlank = it.last().isBlank()
 
-            it[it.lastIndex] = it[it.lastIndex].trim() + " */"
+        it[it.lastIndex] = it[it.lastIndex].trim() + " */"
 
-            it.mapIndexed { index, s ->
-                buildString {
-                    if (index != 0) append("\n")
-                    append(" ".repeat(indent))
+        it.mapIndexed { index, s ->
+            buildString {
+                if (index != 0) append("\n")
+                append(" ".repeat(indent))
 
-                    if (!(index == 0 || index == it.lastIndex && lastIsBlank)) {
-                        append(" *")
-                        if (s.isNotEmpty()) append(" ")
-                    }
-                    append(s)
+                if (!(index == 0 || index == it.lastIndex && lastIsBlank)) {
+                    append(" *")
+                    if (s.isNotEmpty()) append(" ")
                 }
-            }.joinToString("")
-        }
+                append(s)
+            }
+        }.joinToString("")
+    }
 
 /**
  * Can retrieve the arguments of an inline- or block-tag.
@@ -143,7 +150,7 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
                 char == '"' -> if (!blocksIndicators.removeAllElementsFromLast(DOUBLE_QUOTES)) blocksIndicators += DOUBLE_QUOTES
                 char == '\'' -> if (blocksIndicators.removeAllElementsFromLast(SINGLE_QUOTES)) blocksIndicators += SINGLE_QUOTES
 
-                // TODO html tags
+                // TODO: issue #11: html tags
             }
             if (isDone() || !(currentBlock.isEmpty() && char.isWhitespace()))
                 currentBlock += char
@@ -254,7 +261,7 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
 
                     '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
 
-                    // TODO html tags
+                    // TODO: issue #11: html tags
                 }
             }
         }
@@ -435,12 +442,3 @@ fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {
     }
     return true
 }
-
-// used to keep track of the current blocks
-private const val CURLY_BRACES = '{'
-private const val SQUARE_BRACKETS = '['
-private const val PARENTHESES = '('
-private const val ANGULAR_BRACKETS = '<'
-private const val BACKTICKS = '`'
-private const val DOUBLE_QUOTES = '"'
-private const val SINGLE_QUOTES = '\''

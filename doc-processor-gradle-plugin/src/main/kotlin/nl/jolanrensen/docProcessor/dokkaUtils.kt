@@ -60,7 +60,7 @@ fun Documentable.isLinkableElement(): Boolean =
     this is DClasslike ||
             this is Callable ||
             this is DParameter ||
-            this is DTypeAlias // TODO will not be included in DocumentableWithSources since it has no source
+            this is DTypeAlias // TODO: issue #12: will not be included in DocumentableWithSources since it has no source
 
 sealed interface DocComment {
     fun hasTag(tag: JavadocTag): Boolean
@@ -210,7 +210,6 @@ fun PsiClass.allInterfaces(): Sequence<PsiClass> {
     }
 }
 
-
 /**
  * Workaround for failing [PsiMethod.findSuperMethods].
  * This might be resolved once ultra light classes are enabled for dokka
@@ -280,7 +279,7 @@ fun PsiNamedElement.toKdocComment(): KotlinDocComment? =
         null
     } else {
         (navigationElement as? KtElement)?.findKDoc {
-            // TODO This returns the wrong file if named the same and no comment was found!
+            // NOTE: This returns the wrong file if named the same and no comment was found!
             DescriptorToSourceUtils.descriptorToDeclaration(it)
         }?.run {
             KotlinDocComment(

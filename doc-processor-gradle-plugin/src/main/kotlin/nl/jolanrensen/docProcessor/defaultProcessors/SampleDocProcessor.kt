@@ -187,7 +187,6 @@ class SampleDocProcessor : TagDocProcessor() {
         path = path,
     )
 
-
     /**
      * How to process the `@sample tag` when it's a block tag.
      *

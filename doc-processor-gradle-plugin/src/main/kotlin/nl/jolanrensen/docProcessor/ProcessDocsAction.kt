@@ -115,13 +115,14 @@ abstract class ProcessDocsAction {
             it.invoke(
                 sourceSet = parameters.sources,
                 context = context,
-            )
-        }
+            )        }
 
         // collect the right documentables from the modules (only linkable elements with docs)
         val pathsWithoutSources = mutableSetOf<String>()
         val documentables = modules.flatMap {
             it.withDescendants().let {
+                // TODO: issue #12: support Type Aliases
+                // TODO: issue #13: support read-only docs
                 val (withSources, withoutSources) = it.partition { it is WithSources }
 
                 // paths without sources are likely generated files or external sources, such as dependencies

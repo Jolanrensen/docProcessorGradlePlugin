@@ -1,6 +1,7 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.*
+import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import org.jetbrains.kotlin.idea.editor.fixers.start
 
 /**
@@ -149,8 +150,8 @@ class IncludeArgDocProcessor : TagDocProcessor() {
 
                 var keys = listOf(originalKey)
 
-                // TODO?: Java {@link ReferenceLinks}
-                if (javaLinkRegex in originalKey) {
+                // TODO: issue #8: Expanding Java reference links
+                if (documentable.programmingLanguage == JAVA && javaLinkRegex in originalKey) {
                     logger.warn {
                         "Java {@link statements} are not replaced by their fully qualified path. " +
                                 "Make sure to use fully qualified paths in {@link statements} when " +

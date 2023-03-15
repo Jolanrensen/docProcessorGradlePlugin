@@ -188,7 +188,6 @@ class IncludeDocProcessor : TagDocProcessor() {
         }
 
         targetContent = when (documentable.programmingLanguage) {
-
             // if the content contains links to other elements, we need to expand the path
             // providing the original name or alias as new alias.
             KOTLIN -> targetContent.replaceKdocLinks { query ->
@@ -196,7 +195,6 @@ class IncludeDocProcessor : TagDocProcessor() {
                     query = query,
                     documentables = allDocumentables,
                     pathIsValid = { path, it ->
-
                         // ensure that the given path points to the same element in the destination place and
                         // that it's queryable
                         documentable.queryDocumentables(
@@ -208,7 +206,7 @@ class IncludeDocProcessor : TagDocProcessor() {
             }
 
             JAVA -> {
-                // TODO?: Java {@link ReferenceLinks}
+                // TODO: issue #8: Expanding Java reference links
                 if (javaLinkRegex in targetContent) {
                     logger.warn {
                         "Java {@link statements} are not replaced by their fully qualified path. " +

@@ -253,7 +253,6 @@ abstract class TagDocProcessor : DocProcessor() {
                             documentable = documentable,
                             currentDoc = text,
                             rangeInCurrentDoc = range,
-                            currentTagContent = tagContent,
                             cause = e,
                         )
                     }
@@ -300,7 +299,6 @@ abstract class TagDocProcessor : DocProcessor() {
                             documentable = documentable,
                             currentDoc = processedInlineTagsDoc,
                             rangeInCurrentDoc = rangeDocContent,
-                            currentTagContent = split,
                             cause = e,
                         )
                     }
@@ -330,7 +328,6 @@ open class TagDocProcessorFailedException(
     documentable: DocumentableWrapper,
     currentDoc: DocContent,
     rangeInCurrentDoc: IntRange,
-    currentTagContent: DocContent,
     cause: Throwable? = null,
 ) : DocProcessorFailedException(
     processorName = processorName,

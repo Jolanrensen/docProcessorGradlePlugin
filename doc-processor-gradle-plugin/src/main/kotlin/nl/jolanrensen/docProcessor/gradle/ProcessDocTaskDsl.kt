@@ -18,7 +18,6 @@ value class ProcessDocTaskDsl private constructor(public val task: ProcessDocTas
     /** Access the DSL of the original [task][ProcessDocTask]. */
     fun task(action: ProcessDocTask.() -> Unit): ProcessDocTask = task.apply(action)
 
-
     /** Source root folders for preprocessing. This needs to be set! */
     var sources: List<File>
         get() = task.sources.get()

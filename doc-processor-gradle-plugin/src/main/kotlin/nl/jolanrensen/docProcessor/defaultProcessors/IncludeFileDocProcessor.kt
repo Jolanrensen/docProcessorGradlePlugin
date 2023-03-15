@@ -21,7 +21,7 @@ const val INCLUDE_FILE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProce
  *
  * `@includeFile` keeps the content of the block below the includeFile statement intact.
  *
- * TODO include settings for filtering in the file, optional triple quotes, etc.
+ * TODO: issue #9: Additional settings
  */
 class IncludeFileDocProcessor : TagDocProcessor() {
 
@@ -32,7 +32,6 @@ class IncludeFileDocProcessor : TagDocProcessor() {
     private fun processContent(
         line: String,
         documentable: DocumentableWrapper,
-        path: String,
     ): String {
         val includeFileArguments = line.getTagArguments(
             tag = tag,
@@ -41,8 +40,7 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         val filePath = includeFileArguments.first()
             .trim()
 
-            // TODO figure out how to make file location clickable
-            // TODO both for Java and Kotlin
+            // TODO: issue #10: figure out how to make file location clickable both for Java and Kotlin
             .removePrefix("(")
             .removeSuffix(")")
             .trim()
@@ -91,7 +89,6 @@ class IncludeFileDocProcessor : TagDocProcessor() {
     ): String = processContent(
         line = tagWithContent,
         documentable = documentable,
-        path = path,
     )
 
     /**
@@ -108,6 +105,5 @@ class IncludeFileDocProcessor : TagDocProcessor() {
     ): String = processContent(
         line = tagWithContent,
         documentable = documentable,
-        path = path,
     )
 }
