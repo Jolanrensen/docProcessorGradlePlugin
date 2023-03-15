@@ -1,6 +1,6 @@
 [![](https://jitpack.io/v/Jolanrensen/docProcessorGradlePlugin.svg)](https://jitpack.io/#Jolanrensen/docProcessorGradlePlugin)
 
-# KDoc / JavaDoc Preprocessor Gradle Plugin (PREVIEW)
+# KDoc / JavaDoc Preprocessor Gradle Plugin (Alpha)
 
 This Gradle plugin allows you to preprocess your KDoc / JavaDoc comments with custom preprocessors.
 These preprocessors can be used to add custom tags to your KDoc / JavaDoc comments or change the entirety of the
