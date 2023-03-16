@@ -123,7 +123,6 @@ class IncludeDocProcessor : TagDocProcessor() {
     private fun processContent(
         line: String,
         documentable: DocumentableWrapper,
-        path: String,
     ): String {
         val includeArguments = line.getTagArguments(tag = tag, numberOfArguments = 2)
         val includePath = includeArguments.first().decodeCallableTarget()
@@ -238,7 +237,6 @@ class IncludeDocProcessor : TagDocProcessor() {
     ): String = processContent(
         line = tagWithContent,
         documentable = documentable,
-        path = path,
     )
 
     /**
@@ -255,6 +253,5 @@ class IncludeDocProcessor : TagDocProcessor() {
     ): String = processContent(
         line = tagWithContent,
         documentable = documentable,
-        path = path,
     )
 }

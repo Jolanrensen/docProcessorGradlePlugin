@@ -45,7 +45,6 @@ class SampleDocProcessor : TagDocProcessor() {
     private fun processContent(
         tagWithContent: String,
         documentable: DocumentableWrapper,
-        path: String,
     ): String {
         val noComments = tagWithContent.startsWith("{@$sampleNoComments") ||
                 tagWithContent.trimStart().startsWith("@$sampleNoComments ")
@@ -184,7 +183,6 @@ class SampleDocProcessor : TagDocProcessor() {
     ): String = processContent(
         tagWithContent = tagWithContent,
         documentable = documentable,
-        path = path,
     )
 
     /**
@@ -201,6 +199,5 @@ class SampleDocProcessor : TagDocProcessor() {
     ): String = processContent(
         tagWithContent = tagWithContent,
         documentable = documentable,
-        path = path,
     )
 }
