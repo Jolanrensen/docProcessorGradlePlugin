@@ -16,7 +16,7 @@ const val NO_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.NoDo
  */
 class NoDocProcessor : DocProcessor() {
     override fun process(
-        parameters: ProcessDocsAction.Parameters,
+        processLimit: Int,
         documentablesByPath: Map<String, List<DocumentableWrapper>>,
     ): Map<String, List<DocumentableWrapper>> =
         documentablesByPath

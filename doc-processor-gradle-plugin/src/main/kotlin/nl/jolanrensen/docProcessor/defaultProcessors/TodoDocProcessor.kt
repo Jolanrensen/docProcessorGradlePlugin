@@ -15,7 +15,7 @@ const val TODO_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.To
  */
 class TodoDocProcessor : DocProcessor() {
     override fun process(
-        parameters: ProcessDocsAction.Parameters,
+        processLimit: Int,
         documentablesByPath: Map<String, List<DocumentableWrapper>>
     ): Map<String, List<DocumentableWrapper>> =
         documentablesByPath.mapValues { (_, documentables) ->

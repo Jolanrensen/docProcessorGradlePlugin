@@ -96,16 +96,16 @@ abstract class TagDocProcessor : DocProcessor() {
      *
      * @param [i] The current iteration.
      * @param [anyModifications] `true` if any modifications were made, `false` otherwise.
-     * @param [parameters] The [ProcessDocsAction.Parameters] used to process the docs.
+     * @param [processLimit] The process limit from [ProcessDocsAction.Parameters].
      * @return `true` if recursion limit is reached, `false` otherwise.
      */
     @Throws(IllegalStateException::class)
     open fun shouldContinue(
         i: Int,
         anyModifications: Boolean,
-        parameters: ProcessDocsAction.Parameters,
+        processLimit: Int,
     ): Boolean {
-        val processLimitReached = i >= parameters.processLimit
+        val processLimitReached = i >= processLimit
 
         val hasSupportedTags = filteredDocumentables.any { it.value.any { it.hasSupportedTag } }
         val atLeastOneRun = i > 0
@@ -163,7 +163,7 @@ abstract class TagDocProcessor : DocProcessor() {
      * is possible. However, there is a limit to prevent infinite recursion ([ProcessDocsAction.Parameters.processLimit]).
      */
     override fun process(
-        parameters: ProcessDocsAction.Parameters,
+        processLimit: Int,
         documentablesByPath: Map<String, List<DocumentableWrapper>>,
     ): Map<String, List<DocumentableWrapper>> {
         // Convert to mutable
@@ -186,7 +186,7 @@ abstract class TagDocProcessor : DocProcessor() {
                         docContent = docContent,
                         path = path,
                         documentable = documentable,
-                        parameters = parameters,
+                        processLimit = processLimit,
                     )
 
                     val wasModified = docContent != processedDoc
@@ -206,7 +206,7 @@ abstract class TagDocProcessor : DocProcessor() {
             val shouldContinue = shouldContinue(
                 i = i++,
                 anyModifications = anyModifications,
-                parameters = parameters,
+                processLimit = processLimit,
             )
             if (!shouldContinue) break
         }
@@ -218,7 +218,7 @@ abstract class TagDocProcessor : DocProcessor() {
         docContent: DocContent,
         path: String,
         documentable: MutableDocumentableWrapper,
-        parameters: ProcessDocsAction.Parameters,
+        processLimit: Int,
     ): DocContent {
         // Process the inline tags first
         val processedInlineTagsDoc: DocContent = run {
@@ -269,7 +269,7 @@ abstract class TagDocProcessor : DocProcessor() {
                 val shouldContinue = shouldContinue(
                     i = i++,
                     anyModifications = wasModified,
-                    parameters = parameters,
+                    processLimit = processLimit,
                 )
                 if (!shouldContinue) break
             }

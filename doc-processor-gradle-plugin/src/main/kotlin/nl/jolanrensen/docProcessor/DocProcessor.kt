@@ -28,12 +28,12 @@ abstract class DocProcessor : Serializable {
      * Mark the docs that were modified with [isModified][DocumentableWrapper.isModified] and
      * don't forget to update [tags][DocumentableWrapper.tags] accordingly.
      *
-     * @param parameters The parameters that were passed to the [ProcessDocsAction].
+     * @param processLimit The process limit parameter that was passed to the [ProcessDocsAction].
      * @param documentablesByPath Documentables by path
      * @return modified docs by path
      */
     abstract fun process(
-        parameters: ProcessDocsAction.Parameters,
+        processLimit: Int,
         documentablesByPath: Map<String, List<DocumentableWrapper>>,
     ): Map<String, List<DocumentableWrapper>>
 
@@ -43,13 +43,13 @@ abstract class DocProcessor : Serializable {
     // ensuring each doc processor instance is only run once
     @Throws(DocProcessorFailedException::class)
     internal fun processSafely(
-        parameters: ProcessDocsAction.Parameters,
+        processLimit: Int,
         documentablesByPath: Map<String, List<DocumentableWrapper>>,
     ): Map<String, List<DocumentableWrapper>> {
         if (hasRun) error("This instance of ${this::class.qualifiedName} has already run and cannot be reused.")
 
         return try {
-            process(parameters, documentablesByPath)
+            process(processLimit, documentablesByPath)
         } catch (e: Throwable) {
             if (e is DocProcessorFailedException) throw e
             else throw DocProcessorFailedException(name, cause = e)

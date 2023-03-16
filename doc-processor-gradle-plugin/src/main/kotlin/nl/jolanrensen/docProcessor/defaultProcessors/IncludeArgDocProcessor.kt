@@ -60,9 +60,9 @@ class IncludeArgDocProcessor : TagDocProcessor() {
     override fun shouldContinue(
         i: Int,
         anyModifications: Boolean,
-        parameters: ProcessDocsAction.Parameters,
+        processLimit: Int,
     ): Boolean {
-        val processLimitReached = i >= parameters.processLimit
+        val processLimitReached = i >= processLimit
         if (processLimitReached)
             onProcessError()
 
@@ -89,7 +89,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
             return false
         }
 
-        return super.shouldContinue(i, anyModifications, parameters)
+        return super.shouldContinue(i, anyModifications, processLimit)
     }
 
     // @arg map for path -> arg name -> value

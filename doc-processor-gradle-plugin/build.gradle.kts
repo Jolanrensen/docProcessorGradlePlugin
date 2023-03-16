@@ -36,7 +36,7 @@ dependencies {
 
     // Dokka dependencies
     val dokkaVersion = "1.8.10"
-    compileOnly("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
+    compileOnlyApi("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
     api("org.jetbrains.dokka:dokka-base:$dokkaVersion")
     api("org.jetbrains.dokka:dokka-core:$dokkaVersion")
     api("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
