@@ -95,8 +95,7 @@ class IncludeDocProcessor : TagDocProcessor() {
      * have any documentation. This will save performance when looking up the target of the @include tag.
      */
     override fun <T : DocumentableWrapper> filterDocumentables(documentable: T): Boolean =
-        documentable.documentable.isLinkableElement() &&
-                documentable.sourceHasDocumentation
+        documentable.sourceHasDocumentation
 
     /**
      * Provides a helpful message when a circular reference is detected.

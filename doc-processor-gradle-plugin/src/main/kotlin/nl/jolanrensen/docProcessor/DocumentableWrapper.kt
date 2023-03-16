@@ -1,26 +1,22 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.PsiJavaFile
+import nl.jolanrensen.docProcessor.DocumentableWrapper.Companion
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
-import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import org.jetbrains.dokka.analysis.DescriptorDocumentableSource
 import org.jetbrains.dokka.analysis.PsiDocumentableSource
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
 import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.utilities.DokkaLogger
-import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.ImportPath
 import java.io.File
 
 /**
- * Wrapper around [documentable], [Dokka's Documentable][Documentable],
- * and [source], [Dokka's DocumentableSource][DocumentableSource], that adds easy access
+ * Wrapper around a [Dokka's Documentable][Documentable], that adds easy access
  * to several useful properties and functions.
  *
- * Instantiate it with [documentable], [source] and [logger] using
+ * Instantiate it with [documentable][Documentable], [source][DocumentableSource] and [logger][DokkaLogger] using
  * [DocumentableWrapper.createOrNull][Companion.createOrNull].
  *
  * [docContent], [tags], and [isModified] are designed te be changed and will be read when
@@ -29,13 +25,9 @@ import java.io.File
  *
  * All other properties are read-only and based upon the source-documentable.
  *
- * @property [documentable] The Dokka [Documentable]. Should be given.
- *   This represents the class, function, or another entity that potentially has some doc comment.
- * @property [source] The Dokka [DocumentableSource], either a [PsiDocumentableSource] for Java,
- *   or a [DescriptorDocumentableSource] for Kotlin. Usually provided by a [WithSources] in Dokka. Should be given.
- *   This represents the source of the [documentable] pointing to a language-specific AST/PSI.
- * @property [logger] [Dokka logger][DokkaLogger] that's needed for [findClosestDocComment]. Should be given.
- *
+ * @property [programmingLanguage] The [programming language][ProgrammingLanguage] of the [documentable].
+ * @property [imports] The imports of the file in which the [documentable] can be found.
+ * @property [rawSource] The raw source code of the [documentable]. May need to be trimmed.
  * @property [sourceHasDocumentation] Whether the original [documentable] has a doc comment or not.
  * @property [fullyQualifiedPath] The fully qualified path of the [documentable], its key if you will.
  * @property [fullyQualifiedExtensionPath] If the documentable is an extension function/property:
@@ -57,11 +49,10 @@ import java.io.File
  * @see [MutableDocumentableWrapper]
  */
 @Suppress("DataClassPrivateConstructor")
-open class DocumentableWrapper internal constructor(
-    val documentable: Documentable,
-    val source: DocumentableSource,
-    internal val logger: DokkaLogger,
-
+open class DocumentableWrapper(
+    val programmingLanguage: ProgrammingLanguage,
+    val imports: List<ImportPath>,
+    val rawSource: String,
     val sourceHasDocumentation: Boolean,
     val fullyQualifiedPath: String,
     val fullyQualifiedExtensionPath: String?,
@@ -75,6 +66,18 @@ open class DocumentableWrapper internal constructor(
 ) {
 
     companion object {
+
+        /**
+         * Creates a [DocumentableWrapper] if successful, or `null` if not.
+         * This is the preferred way to create a [DocumentableWrapper].
+         *
+         * @param [documentable] The Dokka [Documentable]. Should be given.
+         *   This represents the class, function, or another entity that potentially has some doc comment.
+         * @param [source] The Dokka [DocumentableSource], either a [PsiDocumentableSource] for Java,
+         *   or a [DescriptorDocumentableSource] for Kotlin. Usually provided by a [WithSources] in Dokka. Should be given.
+         *   This represents the source of the [documentable] pointing to a language-specific AST/PSI.
+         * @param [logger] [Dokka logger][DokkaLogger] that's needed for [findClosestDocComment]. Should be given.
+         */
         fun createOrNull(
             documentable: Documentable,
             source: DocumentableSource,
@@ -140,10 +143,14 @@ open class DocumentableWrapper internal constructor(
             val isModified = false
             val sourceHasDocumentation = docTextRange.toIntRange().size > 1
 
+            val imports: List<ImportPath> = source.getImports()
+
+            val rawSource = source.psi?.text ?: return null
+
             return DocumentableWrapper(
-                documentable = documentable,
-                source = source,
-                logger = logger,
+                rawSource = rawSource,
+                programmingLanguage = source.programmingLanguage,
+                imports = imports,
                 sourceHasDocumentation = sourceHasDocumentation,
                 fullyQualifiedPath = path,
                 fullyQualifiedExtensionPath = extensionPath,
@@ -157,69 +164,21 @@ open class DocumentableWrapper internal constructor(
         }
     }
 
-    val programmingLanguage: ProgrammingLanguage =
-        when (source) {
-            is PsiDocumentableSource -> JAVA
-            is DescriptorDocumentableSource -> KOTLIN
-            else -> error("Unknown source type: ${source::class.simpleName}")
-        }
-
     /** Query file for doc text range. */
     fun queryFileForDocTextRange(): String = docTextRange.substring(file.readText())
 
     /**
      * Returns all possible paths using [targetPath] and the imports in this file.
      */
-    private fun getPathsUsingImports(targetPath: String): List<String> = when (programmingLanguage) {
-        JAVA -> {
-            val file = source.psi
-                ?.containingFile as? PsiJavaFile
+    private fun getPathsUsingImports(targetPath: String): List<String> = buildList {
+        for (import in imports) {
+            val qualifiedName = import.pathStr
+            val identifier = import.importedName?.identifier
 
-            val implicitImports = file?.implicitlyImportedPackages?.toList().orEmpty()
-            val writtenImports = file
-                ?.importList
-                ?.allImportStatements
-                ?.toList().orEmpty()
-
-            buildList {
-                for (import in implicitImports) {
-                    this += "$import.$targetPath"
-                }
-
-                for (import in writtenImports) {
-                    val qualifiedName = import.importReference?.qualifiedName ?: continue
-                    val identifier = import.importReference?.referenceName ?: continue
-
-                    if (import.isOnDemand) {
-                        this += "$qualifiedName.$targetPath"
-                    } else {
-                        this += targetPath.replaceFirst(identifier, qualifiedName)
-                    }
-                }
-            }
-        }
-
-        KOTLIN -> {
-            val writtenImports = source.psi
-                ?.containingFile
-                .let { it as? KtFile }
-                ?.importDirectives
-                ?.mapNotNull { it.importPath }
-                ?: emptyList()
-
-            val allImports = writtenImports + ImportPath(FqName("kotlin"), true)
-
-            buildList {
-                for (import in allImports) {
-                    val qualifiedName = import.pathStr
-                    val identifier = import.importedName?.identifier
-
-                    if (import.hasStar) {
-                        this += qualifiedName.removeSuffix("*") + targetPath
-                    } else if (targetPath.startsWith(identifier!!)) {
-                        this += targetPath.replaceFirst(identifier, qualifiedName)
-                    }
-                }
+            if (import.hasStar) {
+                this += qualifiedName.removeSuffix("*") + targetPath
+            } else if (targetPath.startsWith(identifier!!)) {
+                this += targetPath.replaceFirst(identifier, qualifiedName)
             }
         }
     }
@@ -314,9 +273,9 @@ open class DocumentableWrapper internal constructor(
         isModified: Boolean = this.isModified,
     ): DocumentableWrapper =
         DocumentableWrapper(
-            documentable = documentable,
-            source = source,
-            logger = logger,
+            programmingLanguage = programmingLanguage,
+            imports = imports,
+            rawSource = rawSource,
             sourceHasDocumentation = sourceHasDocumentation,
             fullyQualifiedPath = fullyQualifiedPath,
             fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,

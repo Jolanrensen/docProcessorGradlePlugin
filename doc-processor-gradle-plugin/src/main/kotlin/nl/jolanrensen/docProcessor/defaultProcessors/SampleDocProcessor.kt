@@ -8,7 +8,6 @@ import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.docRegex
 import nl.jolanrensen.docProcessor.getTagArguments
-import nl.jolanrensen.docProcessor.psi
 import org.apache.commons.lang.StringEscapeUtils
 
 /**
@@ -69,11 +68,10 @@ class SampleDocProcessor : TagDocProcessor() {
 
         // get the source text of the target documentable, optionally trimming to between the
         // sampleStart and sampleEnd comments
-        val targetSourceText = getTargetSourceTextOrNull(
+        val targetSourceText = getTargetSourceText(
             targetDocumentable = targetDocumentable,
             noComments = noComments,
-        )?.getContentBetweenSampleComments()
-            ?: throwError(samplePath, queries)
+        ).getContentBetweenSampleComments()
 
         // convert the source text to the correct comment content for the current language
         val commentContent = convertSourceTextToCommentContent(
@@ -107,17 +105,15 @@ class SampleDocProcessor : TagDocProcessor() {
      * removing docs at the start with [noComments].
      * Returns `null` if the source text cannot be found.
      */
-    private fun getTargetSourceTextOrNull(
+    private fun getTargetSourceText(
         targetDocumentable: DocumentableWrapper,
         noComments: Boolean,
-    ): String? {
+    ): String {
         val indent = " ".repeat(targetDocumentable.docIndent)
-        val rawQueriedSource = targetDocumentable.source.psi
-            ?.text
-            ?.let {
-                if (noComments) it.replace(docRegex) { "" }
-                else it
-            } ?: return null
+        val rawQueriedSource = targetDocumentable.rawSource.let {
+            if (noComments) it.replace(docRegex) { "" }
+            else it
+        }
         return (indent + rawQueriedSource).trimIndent()
     }
 

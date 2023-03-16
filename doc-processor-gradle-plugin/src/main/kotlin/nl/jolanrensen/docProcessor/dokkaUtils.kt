@@ -9,12 +9,7 @@ package nl.jolanrensen.docProcessor
  */
 
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiDocCommentOwner
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiJavaCodeReferenceElement
-import com.intellij.psi.PsiMethod
-import com.intellij.psi.PsiNamedElement
+import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.JavaDocElementType
 import com.intellij.psi.javadoc.PsiDocComment
 import com.intellij.psi.javadoc.PsiDocTag
@@ -44,6 +39,7 @@ import org.jetbrains.kotlin.kdoc.psi.impl.KDocTag
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.kotlin.resolve.ImportPath
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
@@ -334,3 +330,57 @@ val TypeReference.path: String
 
 val ImportPath.hasStar: Boolean
     get() = isAllUnder
+
+val DocumentableSource.programmingLanguage: ProgrammingLanguage
+    get() = when (this) {
+        is PsiDocumentableSource -> ProgrammingLanguage.JAVA
+        is DescriptorDocumentableSource -> ProgrammingLanguage.KOTLIN
+        else -> error("Unknown source type: ${this::class.simpleName}")
+    }
+
+/**
+ * Collects the imports from this [DocumentableSource] as [ImportPath]s, irrespective of the programming language.
+ */
+fun DocumentableSource.getImports(): List<ImportPath> = buildList {
+    when (programmingLanguage) {
+        ProgrammingLanguage.JAVA -> {
+            val psiFile = psi?.containingFile as? PsiJavaFile
+
+            val implicitImports = psiFile?.implicitlyImportedPackages?.toList().orEmpty()
+            val writtenImports = psiFile
+                ?.importList
+                ?.allImportStatements
+                ?.toList().orEmpty()
+
+            for (import in implicitImports) {
+                this += ImportPath(
+                    fqName = FqName(import),
+                    isAllUnder = true,
+                )
+            }
+
+            for (import in writtenImports) {
+                val qualifiedName = import.importReference?.qualifiedName ?: continue
+                this += ImportPath(
+                    fqName = FqName(qualifiedName),
+                    isAllUnder = import.isOnDemand,
+                )
+            }
+        }
+
+        ProgrammingLanguage.KOTLIN -> {
+            val writtenImports = psi
+                ?.containingFile
+                .let { it as? KtFile }
+                ?.importDirectives
+                ?.mapNotNull { it.importPath }
+                ?: emptyList()
+
+            this += writtenImports
+            this += ImportPath(
+                fqName = FqName("kotlin"),
+                isAllUnder = true,
+            )
+        }
+    }
+}

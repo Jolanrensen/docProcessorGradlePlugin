@@ -1,9 +1,7 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
-import org.jetbrains.dokka.model.Documentable
-import org.jetbrains.dokka.model.DocumentableSource
-import org.jetbrains.dokka.utilities.DokkaLogger
+import org.jetbrains.kotlin.resolve.ImportPath
 import java.io.File
 
 /**
@@ -11,11 +9,10 @@ import java.io.File
  *
  * @see DocumentableWrapper
  */
-open class MutableDocumentableWrapper internal constructor(
-    documentable: Documentable,
-    source: DocumentableSource,
-    logger: DokkaLogger,
-
+open class MutableDocumentableWrapper(
+    programmingLanguage: ProgrammingLanguage,
+    imports: List<ImportPath>,
+    rawSource: String,
     sourceHasDocumentation: Boolean,
     fullyQualifiedPath: String,
     fullyQualifiedExtensionPath: String?,
@@ -27,9 +24,9 @@ open class MutableDocumentableWrapper internal constructor(
     override var tags: Set<String>,
     override var isModified: Boolean,
 ) : DocumentableWrapper(
-    documentable = documentable,
-    source = source,
-    logger = logger,
+    programmingLanguage = programmingLanguage,
+    imports = imports,
+    rawSource = rawSource,
     sourceHasDocumentation = sourceHasDocumentation,
     fullyQualifiedPath = fullyQualifiedPath,
     fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
@@ -45,9 +42,9 @@ open class MutableDocumentableWrapper internal constructor(
 fun DocumentableWrapper.asMutable(): MutableDocumentableWrapper =
     if (this is MutableDocumentableWrapper) this
     else MutableDocumentableWrapper(
-        documentable = documentable,
-        source = source,
-        logger = logger,
+        programmingLanguage = programmingLanguage,
+        imports = imports,
+        rawSource = rawSource,
         sourceHasDocumentation = sourceHasDocumentation,
         fullyQualifiedPath = fullyQualifiedPath,
         fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,

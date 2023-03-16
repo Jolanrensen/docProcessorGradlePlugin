@@ -343,12 +343,14 @@ open class TagDocProcessorFailedException(
         appendLine("Current state of the doc with the <a href=\"\">cause for the exception</a>:")
         appendLine("--------------------------------------------------")
         appendLine(
-            currentDoc
-                .replaceRange(
+            try {
+                currentDoc.replaceRange(
                     range = rangeInCurrentDoc,
                     replacement = "<a href=\"\">${currentDoc.substring(rangeInCurrentDoc)}</a>",
                 )
-                .toDoc()
+            } catch (e: Throwable) {
+                currentDoc
+            }.toDoc()
         )
         appendLine("--------------------------------------------------")
         cause?.message?.let { appendLine(it) }

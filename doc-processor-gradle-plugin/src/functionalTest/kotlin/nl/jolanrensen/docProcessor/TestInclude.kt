@@ -42,7 +42,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /**
              * Hello World!
-             * Hello World!
+             * Hello World! 
              */
             fun helloWorld2() {}
             """.trimIndent()
@@ -362,7 +362,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /**
              * Hello World!
-             * Hello World!
+             * Hello World! 
              */
             fun helloWorld(a: Int) {}
             """.trimIndent()
@@ -409,7 +409,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
                 /**
                  * Hello World!
-                 * Hello World!
+                 * Hello World! 
                  */
                 public void helloWorld(int a) {}
             }
