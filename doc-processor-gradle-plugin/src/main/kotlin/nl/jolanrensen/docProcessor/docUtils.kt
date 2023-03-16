@@ -109,17 +109,6 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
 
         fun isDone(): Boolean = size >= numberOfArguments - 1
 
-        fun String.trimArgumentStart(): String = when {
-
-            // if this string consists of only one character and is not a space or tab,
-            // keep it as is (such as a \n)
-            length == 1 && this !in listOf(" ", "\t") -> this
-
-            // Else, remove the first \n (if it exists) and trim the start of spaces and tabs
-            else -> removePrefix("\n").trimStart(' ', '\t')
-
-        }
-
         var escapeNext = false
         for (char in content) {
             when {
@@ -130,7 +119,7 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
                 isDone() -> Unit
 
                 char.isWhitespace() && blocksIndicators.isEmpty() -> {
-                    if (currentBlock.isNotBlank()) add(currentBlock.trimArgumentStart())
+                    if (currentBlock.isNotBlank()) add(currentBlock)
                     currentBlock = ""
                 }
 
@@ -156,9 +145,21 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
                 currentBlock += char
         }
 
-        add(currentBlock.trimArgumentStart())
+        add(currentBlock)
     }
-    return arguments
+
+    val trimmedArguments = arguments.mapIndexed { i, it ->
+        when (i) {
+            arguments.lastIndex -> // last argument will be kept as is, removing one "splitting" space if it starts with one
+                if (it.startsWith(" ") || it.startsWith("\t")) it.drop(1)
+                else it
+
+            else -> // other arguments will be trimmed. A newline counts as a space
+                it.removePrefix("\n").trimStart(' ', '\t')
+        }
+    }
+
+    return trimmedArguments
 }
 
 /**

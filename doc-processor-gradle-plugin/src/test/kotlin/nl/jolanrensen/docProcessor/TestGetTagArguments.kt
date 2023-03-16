@@ -57,18 +57,26 @@ class TestGetTagArguments {
         val tagContent = "@tag simple  content\nwith\n  newlines   \n \n"
 
         tagContent.getTagArguments("tag", 1) shouldBe listOf("simple  content\nwith\n  newlines   \n \n")
-        tagContent.getTagArguments("tag", 2) shouldBe listOf("simple", "content\nwith\n  newlines   \n \n")
-        tagContent.getTagArguments("tag", 3) shouldBe listOf("simple", "content", "with\n  newlines   \n \n")
-        tagContent.getTagArguments("tag", 4) shouldBe listOf("simple", "content", "with", "newlines   \n \n")
-        tagContent.getTagArguments("tag", 5) shouldBe listOf("simple", "content", "with", "newlines", "\n \n")
+        tagContent.getTagArguments("tag", 2) shouldBe listOf("simple", " content\nwith\n  newlines   \n \n")
+        tagContent.getTagArguments("tag", 3) shouldBe listOf("simple", "content", "\nwith\n  newlines   \n \n")
+        tagContent.getTagArguments("tag", 4) shouldBe listOf("simple", "content", "with", "\n  newlines   \n \n")
+        tagContent.getTagArguments("tag", 5) shouldBe listOf("simple", "content", "with", "newlines", "  \n \n")
     }
 
     @Test
-    fun `Newline right after first argument`() {
+    fun `Newline right after first argument inline`() {
         val tagContent = "@tag {@link com.example.plugin.JavaMain.Main2.TestB}\n"
 
         tagContent.getTagArguments("tag", 1) shouldBe listOf("{@link com.example.plugin.JavaMain.Main2.TestB}\n")
         tagContent.getTagArguments("tag", 2) shouldBe listOf("{@link com.example.plugin.JavaMain.Main2.TestB}", "\n")
+    }
+
+    @Test
+    fun `Newline right after first argument block`() {
+        val tagContent = "@tag [Test]\nHello"
+
+        tagContent.getTagArguments("tag", 1) shouldBe listOf("[Test]\nHello")
+        tagContent.getTagArguments("tag", 2) shouldBe listOf("[Test]", "\nHello")
     }
 
     @Test
