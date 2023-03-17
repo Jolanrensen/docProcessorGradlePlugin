@@ -333,7 +333,7 @@ open class TagDocProcessorFailedException(
     processorName = processorName,
     cause = cause,
     message = buildString {
-        val rangeInFile = documentable.docTextRange
+        val rangeInFile = documentable.docFileTextRange
         val fileText = documentable.file.readText()
         val (line, char) = fileText.getLineAndCharacterOffset(rangeInFile.start)
 

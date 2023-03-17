@@ -17,7 +17,7 @@ import java.io.File
  * to several useful properties and functions.
  *
  * Instantiate it with [documentable][Documentable], [source][DocumentableSource] and [logger][DokkaLogger] using
- * [DocumentableWrapper.createOrNull][Companion.createOrNull].
+ * [DocumentableWrapper.createFromDokkaOrNull][Companion.createFromDokkaOrNull].
  *
  * [docContent], [tags], and [isModified] are designed te be changed and will be read when
  * writing modified docs to files.
@@ -25,15 +25,15 @@ import java.io.File
  *
  * All other properties are read-only and based upon the source-documentable.
  *
- * @property [programmingLanguage] The [programming language][ProgrammingLanguage] of the [documentable].
- * @property [imports] The imports of the file in which the [documentable] can be found.
- * @property [rawSource] The raw source code of the [documentable]. May need to be trimmed.
- * @property [sourceHasDocumentation] Whether the original [documentable] has a doc comment or not.
- * @property [fullyQualifiedPath] The fully qualified path of the [documentable], its key if you will.
+ * @property [programmingLanguage] The [programming language][ProgrammingLanguage] of the documentable.
+ * @property [imports] The imports of the file in which the documentable can be found.
+ * @property [rawSource] The raw source code of the documentable, including documentation. May need to be trimmed.
+ * @property [sourceHasDocumentation] Whether the original documentable has a doc comment or not.
+ * @property [fullyQualifiedPath] The fully qualified path of the documentable, its key if you will.
  * @property [fullyQualifiedExtensionPath] If the documentable is an extension function/property:
- *   "(The path of the receiver).(name of the [documentable])".
- * @property [file] The file in which the [documentable] can be found.
- * @property [docTextRange] The text range of the [file] where the original comment can be found.
+ *   "(The path of the receiver).(name of the documentable)".
+ * @property [file] The file in which the documentable can be found.
+ * @property [docFileTextRange] The text range of the [file] where the original comment can be found.
  *   This is the range from `/**` to `*/`. If there is no comment, the range is empty. `null` if the [doc comment][DocComment]
  *   could not be found (e.g. because the PSI/AST of the file is not found).
  * @property [docIndent] The amount of spaces the comment is indented with. `null` if the [doc comment][DocComment]
@@ -57,13 +57,38 @@ open class DocumentableWrapper(
     val fullyQualifiedPath: String,
     val fullyQualifiedExtensionPath: String?,
     val file: File,
-    val docTextRange: TextRange,
+    val docFileTextRange: TextRange,
     val docIndent: Int,
 
     open val docContent: DocContent,
     open val tags: Set<String>,
     open val isModified: Boolean,
 ) {
+
+    constructor(
+        docContent: DocContent,
+        programmingLanguage: ProgrammingLanguage,
+        imports: List<ImportPath>,
+        rawSource: String,
+        fullyQualifiedPath: String,
+        fullyQualifiedExtensionPath: String?,
+        file: File,
+        docFileTextRange: TextRange,
+        docIndent: Int,
+    ) : this(
+        programmingLanguage = programmingLanguage,
+        imports = imports,
+        rawSource = rawSource,
+        sourceHasDocumentation = docContent.isNotEmpty() && docFileTextRange.toIntRange().size > 1,
+        fullyQualifiedPath = fullyQualifiedPath,
+        fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+        file = file,
+        docFileTextRange = docFileTextRange,
+        docIndent = docIndent,
+        docContent = docContent,
+        tags = docContent.findTagNamesInDocContent().toSet(),
+        isModified = false,
+    )
 
     companion object {
 
@@ -78,7 +103,7 @@ open class DocumentableWrapper(
          *   This represents the source of the [documentable] pointing to a language-specific AST/PSI.
          * @param [logger] [Dokka logger][DokkaLogger] that's needed for [findClosestDocComment]. Should be given.
          */
-        fun createOrNull(
+        fun createFromDokkaOrNull(
             documentable: Documentable,
             source: DocumentableSource,
             logger: DokkaLogger,
@@ -98,7 +123,7 @@ open class DocumentableWrapper(
 
             val fileText: String = file.readText()
 
-            val docTextRange = docComment?.textRange?.let { ogRange ->
+            val docFileTextRange = docComment?.textRange?.let { ogRange ->
                 // docComment.textRange is the range of the comment in the file, but depending on the language,
                 // it might not exactly match the range of the comment from /** to */. Let's correct that.
                 val query = ogRange.substring(fileText)
@@ -131,41 +156,35 @@ open class DocumentableWrapper(
             }
 
             // calculate the indent of the doc comment by looking at how many spaces are on the first line before /**
-            val docIndent = (docTextRange.startOffset -
-                    fileText
-                        .lastIndexOfNot('\n', docTextRange.startOffset)
+            val docIndent = (docFileTextRange.startOffset -
+                    fileText.lastIndexOfNot('\n', docFileTextRange.startOffset)
                     ).coerceAtLeast(0)
 
             // grab just the contents of the doc without the *-stuff
-            val docContent = docTextRange.substring(fileText).getDocContentOrNull()
+            val docContent = docFileTextRange.substring(fileText).getDocContentOrNull() ?: ""
 
-            val tags = docContent?.findTagNamesInDocContent() ?: emptyList()
-            val isModified = false
-            val sourceHasDocumentation = docTextRange.toIntRange().size > 1
-
+            // Collect the imports from the file
             val imports: List<ImportPath> = source.getImports()
 
+            // Get the raw source of the documentable
             val rawSource = source.psi?.text ?: return null
 
             return DocumentableWrapper(
-                rawSource = rawSource,
+                docContent = docContent,
                 programmingLanguage = source.programmingLanguage,
                 imports = imports,
-                sourceHasDocumentation = sourceHasDocumentation,
+                rawSource = rawSource,
                 fullyQualifiedPath = path,
                 fullyQualifiedExtensionPath = extensionPath,
                 file = file,
-                docTextRange = docTextRange,
+                docFileTextRange = docFileTextRange,
                 docIndent = docIndent,
-                docContent = docContent ?: "",
-                tags = tags.toSet(),
-                isModified = isModified,
             )
         }
     }
 
     /** Query file for doc text range. */
-    fun queryFileForDocTextRange(): String = docTextRange.substring(file.readText())
+    fun queryFileForDocTextRange(): String = docFileTextRange.substring(file.readText())
 
     /**
      * Returns all possible paths using [targetPath] and the imports in this file.
@@ -267,7 +286,7 @@ open class DocumentableWrapper(
     }
 
     /** Returns a copy of this [DocumentableWrapper] with the given parameters. */
-    fun copy(
+    open fun copy(
         docContent: DocContent = this.docContent,
         tags: Set<String> = this.tags,
         isModified: Boolean = this.isModified,
@@ -280,7 +299,7 @@ open class DocumentableWrapper(
             fullyQualifiedPath = fullyQualifiedPath,
             fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
             file = file,
-            docTextRange = docTextRange,
+            docFileTextRange = docFileTextRange,
             docIndent = docIndent,
             docContent = docContent,
             tags = tags,

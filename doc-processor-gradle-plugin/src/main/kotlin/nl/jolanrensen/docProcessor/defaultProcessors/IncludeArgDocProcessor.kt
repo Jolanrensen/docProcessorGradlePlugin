@@ -73,7 +73,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         if (atLeastOneRun && !anyModifications) {
             val fileTexts = argsNotFound.keys.associateWith { it.file.readText() }
             for ((documentable, args) in argsNotFound) {
-                val (line, char) = fileTexts[documentable]!!.getLineAndCharacterOffset(documentable.docTextRange.start)
+                val (line, char) = fileTexts[documentable]!!.getLineAndCharacterOffset(documentable.docFileTextRange.start)
 
                 if (args.isNotEmpty()) {
                     logger.warn {

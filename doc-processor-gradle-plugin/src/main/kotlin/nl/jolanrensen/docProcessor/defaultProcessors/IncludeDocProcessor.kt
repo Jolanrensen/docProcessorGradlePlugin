@@ -8,7 +8,6 @@ import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.getDocContentOrNull
 import nl.jolanrensen.docProcessor.getTagArguments
-import nl.jolanrensen.docProcessor.isLinkableElement
 import nl.jolanrensen.docProcessor.javaLinkRegex
 import nl.jolanrensen.docProcessor.removeEscapeCharacters
 import nl.jolanrensen.docProcessor.replaceKdocLinks

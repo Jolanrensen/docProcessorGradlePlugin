@@ -132,7 +132,7 @@ abstract class ProcessDocsAction {
                 withSources.mapNotNull {
                     val source = (it as WithSources).sources[parameters.sources]!!
 
-                    DocumentableWrapper.createOrNull(
+                    DocumentableWrapper.createFromDokkaOrNull(
                         documentable = it,
                         source = source,
                         logger = logger,
@@ -213,7 +213,7 @@ abstract class ProcessDocsAction {
                 val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 
                 val modificationsByRange = modifications
-                    .groupBy { it.docTextRange }
+                    .groupBy { it.docFileTextRange }
                     .mapValues { it.value.first() }
                     .toSortedMap(compareBy { it.startOffset })
                     .map { (docTextRange, documentable) ->
