@@ -1,4 +1,4 @@
-[![](https://jitpack.io/v/Jolanrensen/docProcessorGradlePlugin.svg)](https://jitpack.io/#Jolanrensen/docProcessorGradlePlugin)
+[![Maven metadata URL](https://img.shields.io/maven-metadata/v?label=Gradle%20Plugin&metadataUrl=https%3A%2F%2Fplugins.gradle.org%2Fm2%2Fnl%2Fjolanrensen%2FdocProcessor%2Fnl.jolanrensen.docProcessor.gradle.plugin%2Fmaven-metadata.xml)](https://plugins.gradle.org/plugin/nl.jolanrensen.docProcessor)
 
 # KDoc / JavaDoc Preprocessor Gradle Plugin (Alpha)
 
@@ -40,6 +40,21 @@ The sky is the limit :).
 
 ## How to get it
 
+### From Gradle Plugins
+
+In your project's `settings.gradle.kts` or `build.gradle` add:
+
+```kts
+pluginManagement {
+    repositories {
+        ..
+        gradlePluginPortal()
+    }
+}
+```
+
+In `build.gradle.kts` or `build.gradle` add `id("nl.jolanrensen.docProcessor") version "{ VERSION }"` to `plugins { .. }`.
+
 ### From sources
 
 Clone the project and run `./gradlew publishToMavenLocal` in the source folder.
@@ -49,66 +64,13 @@ In your project's `settings.gradle.kts` or `settings.gradle` add:
 ```kts
 pluginManagement {
     repositories {
+        ..
         mavenLocal()
     }
 }
 ```
 
-In `build.gradle.kts` or `build.gradle` add `id("nl.jolanrensen.docProcessor") version "1.0-SNAPSHOT"` to `plugins { .. }`.
-
-### From JitPack
-
-In your project's `settings.gradle.kts` add:
-
-```kts
-pluginManagement {
-    repositories {
-        ..
-        maven(url = "https://jitpack.io")
-    }
-
-    resolutionStrategy {
-        eachPlugin {
-            requested.apply {
-                val jitpackPlugins = listOf(
-                  "com.github.jolanrensen.docProcessorGradlePlugin",
-                )
-                if ("$id" in jitpackPlugins) {
-                    val (_, _, user, name) = "$id".split(".", limit = 4)
-                    useModule("com.github.$user:$name:$version")
-                }
-            }
-        }
-    }
-}
-```
-
-Alternatively, if you use `settings.gradle`:
-
-```groovy
-pluginManagement {
-    repositories {
-        ..
-        maven { url = "https://jitpack.io" }
-    }
-
-    resolutionStrategy {
-        eachPlugin {
-            requested.with {
-                def jitpackPlugins = [
-                  "com.github.jolanrensen.docProcessorGradlePlugin",
-                ]
-                if ("$id" in jitpackPlugins) {
-                    def (_0, _1, user, name) = "$id".split(".", limit = 4)
-                    useModule("com.github.$user:$name:$version")
-                }
-            }
-        }
-    }
-}
-```
-
-In `build.gradle.kts` or `build.gradle` add `id("com.github.jolanrensen.docProcessorGradlePlugin") version "v0.0.1"` to `plugins { .. }`.
+In `build.gradle.kts` or `build.gradle` add `id("nl.jolanrensen.docProcessor") version "{ VERSION }"` to `plugins { .. }`.
 
 ## How to use
 
@@ -125,16 +87,7 @@ import org.gradle.jvm.tasks.Jar
 ..
 
 plugins {
-    // When taking the plugin from sources
-    id("nl.jolanrensen.docProcessor") version "1.0-SNAPSHOT"
-
-    // When taking the plugin from JitPack
-    id("com.github.jolanrensen.docProcessorGradlePlugin") version "v0.X.Y"
-    ..
-}
-
-repositories {
-    mavenLocal()
+    id("nl.jolanrensen.docProcessor") version "{ VERSION }"
     ..
 }
 
@@ -217,16 +170,7 @@ import org.gradle.jvm.tasks.Jar
 ..
 
 plugins {
-    // When taking the plugin from sources
-    id "nl.jolanrensen.docProcessor" version "1.0-SNAPSHOT"
-
-    // When taking the plugin from JitPack
-    id "com.github.jolanrensen.docProcessorGradlePlugin" version "v0.X.Y"
-    ..
-}
-
-repositories {
-    mavenLocal()
+    id "nl.jolanrensen.docProcessor" version "{ VERSION }"
     ..
 }
 

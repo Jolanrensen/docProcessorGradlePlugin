@@ -12,7 +12,7 @@ plugins {
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "0.1.0"
+version = "0.1.1"
 
 publishing {
     repositories {
@@ -83,14 +83,6 @@ gradlePlugin {
         )
         implementationClass = "nl.jolanrensen.docProcessor.gradle.DocProcessorPlugin"
     }
-
-    // Define the plugin for JitPack
-//    val docProcessorJitpack by plugins.creating {
-//        id = "com.github.jolanrensen.docProcessorGradlePlugin"
-//        displayName = "KDoc/Javadoc processor Gradle Plugin"
-//        description = "KDoc/Javadoc processor Gradle Plugin"
-//        implementationClass = "nl.jolanrensen.docProcessor.gradle.DocProcessorPlugin"
-//    }
 }
 
 // Add a source set and a task for a functional test suite

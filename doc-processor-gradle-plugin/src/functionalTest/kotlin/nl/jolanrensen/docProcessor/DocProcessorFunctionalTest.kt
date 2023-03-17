@@ -33,7 +33,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
 
         plugins {  
             kotlin("jvm") version "1.8.10"
-            id("nl.jolanrensen.docProcessor") version "0.1.0"
+            id("nl.jolanrensen.docProcessor") version "0.1.1"
         }
         
         val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
