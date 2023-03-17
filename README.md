@@ -426,6 +426,19 @@ You can create your plugin for the Gradle plugin with your own processors by eit
 abstract `TagDocProcessor` class or
 implementing the `DocProcessor` interface, depending on how much control you need over the docs.
 
+Make sure to depend on the sources by adding the following to your `build.gradle.kts` or `build.gradle` file:
+```kts
+repositories {
+    ..
+    gradlePluginPortal()
+}
+
+dependencies {
+    ..
+    implementation("nl.jolanrensen.docProcessor:doc-processor-gradle-plugin:{ VERSION }")
+}
+```
+
 Let's create a small example processor:
 
 ```kotlin
@@ -476,7 +489,7 @@ class ExampleDocProcessor : TagDocProcessor() {
 }
 ```
 
-For the processor to be detectable we need to add it to the
+For the processor to be detectable, we need to add it to the
 `src/main/resources/META-INF/services/nl.jolanrensen.docProcessor.DocProcessor` file:
 
 ```
