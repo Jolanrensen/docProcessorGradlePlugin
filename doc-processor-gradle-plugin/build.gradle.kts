@@ -12,7 +12,7 @@ plugins {
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "0.1.1"
+version = "0.1.2-SNAPSHOT"
 
 publishing {
     repositories {
@@ -36,7 +36,8 @@ dependencies {
 
     // Dokka dependencies
     val dokkaVersion = "1.8.10"
-    compileOnlyApi("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
+    compileOnly("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
+    testCompileOnly("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
     api("org.jetbrains.dokka:dokka-base:$dokkaVersion")
     api("org.jetbrains.dokka:dokka-core:$dokkaVersion")
     api("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")

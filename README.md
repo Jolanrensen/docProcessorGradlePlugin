@@ -435,7 +435,7 @@ repositories {
 
 dependencies {
     ..
-    implementation("nl.jolanrensen.docProcessor:doc-processor-gradle-plugin:{ VERSION }")
+    compileOnly("nl.jolanrensen.docProcessor:doc-processor-gradle-plugin:{ VERSION }")
 }
 ```
 

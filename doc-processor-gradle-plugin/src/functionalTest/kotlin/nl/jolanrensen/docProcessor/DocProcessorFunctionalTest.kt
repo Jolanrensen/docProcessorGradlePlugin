@@ -11,6 +11,8 @@ import java.io.IOException
 
 abstract class DocProcessorFunctionalTest(name: String) {
 
+    protected val version = "0.1.2-SNAPSHOT"
+
     init {
         println("NOTE!! make sure you have the plugin installed in your local maven repo")
     }
@@ -27,46 +29,40 @@ abstract class DocProcessorFunctionalTest(name: String) {
     """.trimIndent()
 
     @Language("kts")
-    private fun getBuildFileContent(processors: List<String>): String = """
+    private fun getBuildFileContent(processors: List<String>, plugins: List<String>): String = """
         import nl.jolanrensen.docProcessor.gradle.*
         import nl.jolanrensen.docProcessor.defaultProcessors.*
 
         plugins {  
             kotlin("jvm") version "1.8.10"
-            id("nl.jolanrensen.docProcessor") version "0.1.1"
+            id("nl.jolanrensen.docProcessor") version "$version"
+        }
+        
+        repositories {
+            mavenLocal()
         }
         
         val kotlinMainSources = kotlin.sourceSets.main.get().kotlin.sourceDirectories
         
         val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
+            
+            dependencies {
+                ${if (plugins.isEmpty()) "" else """
+                    ${plugins.joinToString("\n") { "plugin(\"$it\")" }}
+                """.trimIndent()}
+            }
+            
             processors = listOf(${processors.joinToString()})
         }
         
         tasks.compileKotlin { dependsOn(processKdocMain) }
     """.trimIndent()
 
-    val projectDirectory = File("build/$name")
-    val outputDirectory = File(projectDirectory, "build/docProcessor/processKdocMain")
+    private val projectDirectory = File("build/$name")
+    private val outputDirectory = File(projectDirectory, "build/docProcessor/processKdocMain")
 
     enum class FileLanguage {
         JAVA, KOTLIN
-    }
-
-    fun createUniqueFileName(
-        directory: File,
-        language: FileLanguage,
-    ): String {
-        val fileExtension = when (language) {
-            FileLanguage.JAVA -> "java"
-            FileLanguage.KOTLIN -> "kt"
-        }
-
-        var i = 0
-        while (true) {
-            val fileName = "Test$i.$fileExtension"
-            if (!File(directory, fileName).exists()) return fileName
-            i++
-        }
     }
 
     sealed interface Additional {
@@ -104,9 +100,10 @@ abstract class DocProcessorFunctionalTest(name: String) {
         fileName: String = "Test",
         language: FileLanguage = FileLanguage.KOTLIN,
         processors: List<String>,
+        plugins: List<String> = emptyList(),
         additionals: List<Additional> = emptyList(),
     ): String {
-        initializeProjectFiles(processors)
+        initializeProjectFiles(processors = processors, plugins = plugins)
         writeAdditionalFiles(additionals)
 
         // Get source- and destination directories based on the package name
@@ -128,7 +125,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
     /**
      * Clears the project directory and creates the build files.
      */
-    private fun initializeProjectFiles(processors: List<String>) {
+    private fun initializeProjectFiles(processors: List<String>, plugins: List<String> = emptyList()) {
         // Set up the test build
         projectDirectory.deleteRecursively()
         projectDirectory.mkdirs()
@@ -137,7 +134,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
             .write(settingsFile)
 
         File(projectDirectory, "build.gradle.kts")
-            .write(getBuildFileContent(processors))
+            .write(getBuildFileContent(processors, plugins))
     }
 
     /**
@@ -197,7 +194,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
      * Writes the given [string] to this file.
      */
     @Throws(IOException::class, SecurityException::class)
-    private fun File.write(string: String) {
+    protected fun File.write(string: String) {
         if (!parentFile.exists()) {
             val result = parentFile.mkdirs()
             if (!result) {
