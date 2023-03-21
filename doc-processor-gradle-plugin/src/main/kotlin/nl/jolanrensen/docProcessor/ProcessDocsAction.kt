@@ -213,7 +213,7 @@ abstract class ProcessDocsAction {
                 val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 
                 val modificationsByRange = modifications
-                    .groupBy { it.docFileTextRange }
+                    .groupBy { it.docFileTextRange.toTextRange() }
                     .mapValues { it.value.first() }
                     .toSortedMap(compareBy { it.startOffset })
                     .map { (docTextRange, documentable) ->

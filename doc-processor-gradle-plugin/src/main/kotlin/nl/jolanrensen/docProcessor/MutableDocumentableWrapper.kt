@@ -1,6 +1,5 @@
 package nl.jolanrensen.docProcessor
 
-import com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.resolve.ImportPath
 import java.io.File
 
@@ -17,7 +16,7 @@ open class MutableDocumentableWrapper(
     fullyQualifiedPath: String,
     fullyQualifiedExtensionPath: String?,
     file: File,
-    docFileTextRange: TextRange,
+    docFileTextRange: IntRange,
     docIndent: Int,
 
     override var docContent: DocContent,

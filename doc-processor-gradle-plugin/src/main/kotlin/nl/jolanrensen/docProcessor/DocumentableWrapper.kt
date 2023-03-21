@@ -57,7 +57,7 @@ open class DocumentableWrapper(
     val fullyQualifiedPath: String,
     val fullyQualifiedExtensionPath: String?,
     val file: File,
-    val docFileTextRange: TextRange,
+    val docFileTextRange: IntRange,
     val docIndent: Int,
 
     open val docContent: DocContent,
@@ -73,13 +73,13 @@ open class DocumentableWrapper(
         fullyQualifiedPath: String,
         fullyQualifiedExtensionPath: String?,
         file: File,
-        docFileTextRange: TextRange,
+        docFileTextRange: IntRange,
         docIndent: Int,
     ) : this(
         programmingLanguage = programmingLanguage,
         imports = imports,
         rawSource = rawSource,
-        sourceHasDocumentation = docContent.isNotEmpty() && docFileTextRange.toIntRange().size > 1,
+        sourceHasDocumentation = docContent.isNotEmpty() && docFileTextRange.size > 1,
         fullyQualifiedPath = fullyQualifiedPath,
         fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
         file = file,
@@ -177,14 +177,14 @@ open class DocumentableWrapper(
                 fullyQualifiedPath = path,
                 fullyQualifiedExtensionPath = extensionPath,
                 file = file,
-                docFileTextRange = docFileTextRange,
+                docFileTextRange = docFileTextRange.toIntRange(),
                 docIndent = docIndent,
             )
         }
     }
 
     /** Query file for doc text range. */
-    fun queryFileForDocTextRange(): String = docFileTextRange.substring(file.readText())
+    fun queryFileForDocTextRange(): String = docFileTextRange.toTextRange().substring(file.readText())
 
     /**
      * Returns all possible paths using [targetPath] and the imports in this file.
