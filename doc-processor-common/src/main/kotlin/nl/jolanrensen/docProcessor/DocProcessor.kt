@@ -42,7 +42,7 @@ abstract class DocProcessor : Serializable {
 
     // ensuring each doc processor instance is only run once
     @Throws(DocProcessorFailedException::class)
-    internal fun processSafely(
+    fun processSafely(
         processLimit: Int,
         documentablesByPath: Map<String, List<DocumentableWrapper>>,
     ): Map<String, List<DocumentableWrapper>> {

@@ -1,18 +1,20 @@
 @file:Suppress("UNUSED_VARIABLE")
 
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
     `java-gradle-plugin`
     java
-    kotlin("jvm") version "1.8.10"
+    kotlin("jvm")
     id("com.gradle.plugin-publish") version "1.1.0"
     signing
+    id("com.github.johnrengelman.shadow")
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "0.1.2-SNAPSHOT"
+version = "0.2.0-SNAPSHOT"
 
 publishing {
     repositories {
@@ -30,6 +32,8 @@ repositories {
 }
 
 dependencies {
+    api(project(":doc-processor-common"))
+
     // Gradle plugin dependencies
     implementation(gradleApi())
     implementation(gradleKotlinDsl())
@@ -44,7 +48,7 @@ dependencies {
     api("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
     // logging
-    api("io.github.microutils:kotlin-logging:1.5.9")
+    api("io.github.microutils:kotlin-logging:3.0.5")
 
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))
@@ -52,7 +56,6 @@ dependencies {
 }
 
 gradlePlugin {
-
     website.set("https://github.com/Jolanrensen/docProcessorGradlePlugin")
     vcsUrl.set("https://github.com/Jolanrensen/docProcessorGradlePlugin")
 
@@ -112,4 +115,9 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(8))
     }
+}
+
+tasks.withType(ShadowJar::class) {
+    isZip64 = true
+    archiveClassifier.set("")
 }

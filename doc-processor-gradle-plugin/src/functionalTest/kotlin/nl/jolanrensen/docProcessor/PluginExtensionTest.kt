@@ -40,7 +40,8 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
         }
         
         dependencies {
-            compileOnly("nl.jolanrensen.docProcessor:doc-processor-gradle-plugin:$version")
+//            compileOnly("nl.jolanrensen.docProcessor:doc-processor-gradle-plugin:$version")
+            implementation("nl.jolanrensen.docProcessor:doc-processor-common:$version")
         }
     """.trimIndent()
 

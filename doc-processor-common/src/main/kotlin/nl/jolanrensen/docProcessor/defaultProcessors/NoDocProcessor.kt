@@ -2,7 +2,6 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocProcessor
 import nl.jolanrensen.docProcessor.DocumentableWrapper
-import nl.jolanrensen.docProcessor.ProcessDocsAction
 
 
 /**

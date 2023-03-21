@@ -1,7 +1,5 @@
 package nl.jolanrensen.docProcessor
 
-import org.jetbrains.kotlin.idea.editor.fixers.start
-
 /**
  * Specific [DocProcessor] that processes just tags.
  *

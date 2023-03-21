@@ -1,8 +1,6 @@
 package nl.jolanrensen.docProcessor
 
-import com.intellij.openapi.util.TextRange
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
-import org.jetbrains.kotlin.resolve.ImportPath
 import java.io.File
 import java.io.IOException
 
@@ -31,11 +29,11 @@ abstract class DocProcessorTest(name: String) {
         documentation: String,
         documentableSourceNoDoc: String,
         fullyQualifiedPath: String,
-        docFileTextRange: TextRange,
+        docFileTextRange: IntRange,
         fullyQualifiedExtensionPath: String? = null,
         docIndent: Int = 0,
         fileName: String = "Test",
-        imports: List<ImportPath> = emptyList(),
+        imports: List<SimpleImportPath> = emptyList(),
         packageName: String = "com.example.plugin",
         language: ProgrammingLanguage = KOTLIN,
     ): DocumentableWrapper = DocumentableWrapper(
@@ -54,8 +52,8 @@ abstract class DocProcessorTest(name: String) {
         docIndent = docIndent,
     )
 
-    fun String.textRangeOf(text: String): TextRange = indexOf(text).let { start ->
-        TextRange(start, start + text.length)
+    fun String.textRangeOf(text: String): IntRange = indexOf(text).let { start ->
+        start until (start + text.length)
     }
 
     @kotlin.jvm.Throws(IOException::class)

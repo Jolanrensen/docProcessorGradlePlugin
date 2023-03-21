@@ -8,7 +8,7 @@ import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.docRegex
 import nl.jolanrensen.docProcessor.getTagArguments
-import org.apache.commons.lang.StringEscapeUtils
+import org.apache.commons.text.StringEscapeUtils
 
 /**
  * @see SampleDocProcessor
@@ -146,7 +146,7 @@ class SampleDocProcessor : TagDocProcessor() {
             JAVA -> {
                 appendLine("<pre>")
                 appendLine(
-                    StringEscapeUtils.escapeHtml(sampleSourceText)
+                    StringEscapeUtils.escapeHtml4(sampleSourceText)
                         .replace("@", "&#64;")
                         .replace("*/", "&#42;&#47;")
                 )

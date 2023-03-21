@@ -40,6 +40,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.renderer.render
 import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.kotlin.resolve.ImportPath
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
@@ -384,3 +385,9 @@ fun DocumentableSource.getImports(): List<ImportPath> = buildList {
         }
     }
 }
+
+fun ImportPath.toSimpleImportPath(): SimpleImportPath = SimpleImportPath(
+    fqName = fqName.toUnsafe().render(),
+    isAllUnder = isAllUnder,
+    alias = alias?.asString(),
+)

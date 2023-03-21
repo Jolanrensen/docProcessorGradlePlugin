@@ -5,7 +5,7 @@ import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.getTagArguments
-import org.apache.commons.lang.StringEscapeUtils
+import org.apache.commons.text.StringEscapeUtils
 import java.io.File
 import java.io.FileNotFoundException
 
@@ -60,7 +60,7 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         val content = targetFile.readText()
 
         return when (documentable.programmingLanguage) {
-            JAVA -> StringEscapeUtils.escapeHtml(content)
+            JAVA -> StringEscapeUtils.escapeHtml4(content)
                 .replace("@", "&#64;")
                 .replace("*/", "&#42;&#47;")
 

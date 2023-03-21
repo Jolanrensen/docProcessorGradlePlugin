@@ -1,7 +1,5 @@
 package nl.jolanrensen.docProcessor
 
-import com.intellij.openapi.util.TextRange
-
 /**
  * Last index of not [char] moving from startIndex down to 0.
  * Returns 0 if char is not found (since last index looked at is 0).
@@ -113,10 +111,6 @@ fun String.indexOfLastOrNullWhile(char: Char, startIndex: Int = lastIndex, while
 }
 
 val IntRange.size get() = last - first + 1
-
-fun TextRange.toIntRange(): IntRange = startOffset until endOffset
-
-fun IntRange.toTextRange(): TextRange = TextRange(start, endInclusive + 1)
 
 fun String.getLineAndCharacterOffset(offset: Int): Pair<Int, Int> {
     var line = 1

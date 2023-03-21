@@ -12,7 +12,7 @@ import nl.jolanrensen.docProcessor.javaLinkRegex
 import nl.jolanrensen.docProcessor.removeEscapeCharacters
 import nl.jolanrensen.docProcessor.replaceKdocLinks
 import nl.jolanrensen.docProcessor.toDoc
-import org.apache.commons.lang.StringEscapeUtils
+import org.apache.commons.text.StringEscapeUtils
 
 /**
  * @see IncludeDocProcessor
@@ -213,7 +213,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                 }
 
                 // Escape HTML characters in Java docs
-                StringEscapeUtils.escapeHtml(targetContent)
+                StringEscapeUtils.escapeHtml4(targetContent)
                     .replace("@", "&#64;")
                     .replace("*/", "&#42;&#47;")
             }

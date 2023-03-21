@@ -1,6 +1,5 @@
 package nl.jolanrensen.docProcessor
 
-import org.jetbrains.kotlin.resolve.ImportPath
 import java.io.File
 
 /**
@@ -10,7 +9,7 @@ import java.io.File
  */
 open class MutableDocumentableWrapper(
     programmingLanguage: ProgrammingLanguage,
-    imports: List<ImportPath>,
+    imports: List<SimpleImportPath>,
     rawSource: String,
     sourceHasDocumentation: Boolean,
     fullyQualifiedPath: String,
