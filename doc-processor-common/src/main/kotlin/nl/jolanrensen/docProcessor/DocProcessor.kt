@@ -3,6 +3,7 @@ package nl.jolanrensen.docProcessor
 import mu.KLogger
 import mu.KotlinLogging
 import java.io.Serializable
+import java.util.*
 import kotlin.jvm.Throws
 
 /**
@@ -70,3 +71,17 @@ open class DocProcessorFailedException(
     message,
     cause,
 )
+
+fun findProcessors(fullyQualifiedNames: List<String>): List<DocProcessor> {
+    val availableProcessors: Set<DocProcessor> = ServiceLoader.load(DocProcessor::class.java).toSet()
+
+    val filteredProcessors = fullyQualifiedNames
+        .mapNotNull { name ->
+            availableProcessors.find { it::class.qualifiedName == name }
+        }.map {
+            // create a new instance of the processor, so it can safely be used multiple times
+            it::class.java.newInstance()
+        }
+
+    return filteredProcessors
+}

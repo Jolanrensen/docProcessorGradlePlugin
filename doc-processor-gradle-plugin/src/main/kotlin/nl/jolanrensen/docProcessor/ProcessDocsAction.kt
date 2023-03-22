@@ -50,7 +50,7 @@ abstract class ProcessDocsAction {
         log.info { "Found ${sourceDocs.size} source docs: $sourceDocs" }
 
         // Find all processors
-        val processors = findProcessors()
+        val processors = findProcessors(parameters.processors)
 
         if (processors.isEmpty())
             log.warn { "No processors found" }
@@ -115,7 +115,8 @@ abstract class ProcessDocsAction {
             it.invoke(
                 sourceSet = parameters.sources,
                 context = context,
-            )        }
+            )
+        }
 
         // collect the right documentables from the modules (only linkable elements with docs)
         val pathsWithoutSources = mutableSetOf<String>()
@@ -158,21 +159,6 @@ abstract class ProcessDocsAction {
         }
 
         return documentablesPerPath
-    }
-
-    private fun findProcessors(): List<DocProcessor> {
-        val availableProcessors: Set<DocProcessor> = ServiceLoader.load(DocProcessor::class.java).toSet()
-
-        val filteredProcessors = parameters
-            .processors
-            .mapNotNull { name ->
-                availableProcessors.find { it::class.qualifiedName == name }
-            }.map {
-                // create a new instance of the processor, so it can safely be used multiple times
-                it::class.java.newInstance()
-            }
-
-        return filteredProcessors
     }
 
     private fun getModifiedDocumentablesPerFile(

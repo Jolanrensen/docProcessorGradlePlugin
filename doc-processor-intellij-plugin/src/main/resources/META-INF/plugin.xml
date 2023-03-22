@@ -1,0 +1,38 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>nl.jolanrensen.docProcessor</id>
+    <name>KDoc/JavaDoc Processor</name>
+    <vendor>Jolan Rensen</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.kotlin</depends>
+    <depends>com.intellij.java</depends>
+
+    <resource-bundle>messages.MessageBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow
+                factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"
+                id="MyToolWindow"/>
+        <documentationProvider
+                implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
+                id="DocProcessor"
+                order="first"/>
+        <lang.documentationProvider
+                language="kotlin"
+                implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
+                id="DocProcessor"
+                order="first"/>
+        <lang.documentationProvider
+                language="JAVA"
+                implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
+                id="DocProcessorJava"
+                order="first"/>
+
+    </extensions>
+
+    <applicationListeners>
+        <listener class="nl.jolanrensen.docProcessor.listeners.DocProcessorFrameStateListener"
+                  topic="com.intellij.ide.FrameStateListener"/>
+    </applicationListeners>
+</idea-plugin>
