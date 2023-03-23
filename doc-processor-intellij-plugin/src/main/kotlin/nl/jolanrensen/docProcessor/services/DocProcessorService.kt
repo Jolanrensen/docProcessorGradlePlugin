@@ -14,11 +14,11 @@ import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil.processElements
 import com.intellij.psi.util.elementType
 import nl.jolanrensen.docProcessor.MessageBundle
+import nl.jolanrensen.docProcessor.IntellijDocProcessor
 import nl.jolanrensen.docProcessor.listeners.DocProcessorFileListener
 import nl.jolanrensen.docProcessor.toDoc
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
 import org.jetbrains.kotlin.idea.core.copied
-import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.idea.extensions.gradle.getTopLevelBuildScriptPsiFile
 import org.jetbrains.kotlin.idea.kdoc.KDocElementFactory
@@ -34,31 +34,7 @@ class DocProcessorService(private val project: Project) {
         fun getInstance(project: Project): DocProcessorService = project.service()
     }
 
-    private fun processFiles(psiFiles: List<PsiFile>) {
-        println("processFiles: $psiFiles")
-
-        val customDoc = KDocElementFactory(project).createKDocFromText(
-            """
-            Hello World!
-            This is a custom doc comment.
-            With working rendering!
-            @param test This is a test param
-            @sample main
-            """.trimIndent().toDoc()
-        )
-
-        psiFiles.forEach { psiFile ->
-            processElements(psiFile) {
-
-                // TODO
-                // replace all comments in the file copy with our custom comment
-                (it as? KtDeclaration)
-                    ?.docComment
-                    ?.replace(customDoc)
-                true
-            }
-        }
-    }
+    private val intellijDocProcessor = IntellijDocProcessor(project)
 
     private fun PsiElement.getIndexInParent(): Int = parent.children.indexOf(this)
 
@@ -83,7 +59,7 @@ class DocProcessorService(private val project: Project) {
     private val modifiedFilesByPath: Map<String, PsiFile>
         get() = CachedValuesManager.getProjectPsiDependentCache(project.getTopLevelBuildScriptPsiFile()!!) {
             val psiList = indexProject()
-            processFiles(psiList)
+            intellijDocProcessor.processFiles(psiList)
             psiList.associateBy { it.originalFile.virtualFile.path }
         }
 
