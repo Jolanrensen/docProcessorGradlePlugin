@@ -20,18 +20,14 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
     private val kotlin = KotlinDocumentationProvider()
 
     private val serviceInstances: MutableMap<Project, DocProcessorService> = mutableMapOf()
-    private fun getService(project: Project) = serviceInstances
-        .getOrPut(project) { DocProcessorService.getInstance(project) }
+    private fun getService(project: Project) =
+        serviceInstances.getOrPut(project) { DocProcessorService.getInstance(project) }
 
-    override fun getQuickNavigateInfo(element: PsiElement?, originalElement: PsiElement?): String? {
-        println("getQuickNavigateInfo $element, $originalElement")
-        return kotlin.getQuickNavigateInfo(element, originalElement)
-    }
+    override fun getQuickNavigateInfo(element: PsiElement?, originalElement: PsiElement?): String? =
+        kotlin.getQuickNavigateInfo(element, originalElement)
 
-    override fun getUrlFor(element: PsiElement?, originalElement: PsiElement?): List<String>? {
-        println("getUrlFor $element, $originalElement")
-        return kotlin.getUrlFor(element, originalElement)
-    }
+    override fun getUrlFor(element: PsiElement?, originalElement: PsiElement?): List<String>? =
+        kotlin.getUrlFor(element, originalElement)
 
     override fun collectDocComments(file: PsiFile, sink: Consumer<in PsiDocCommentBase>) {
         if (file !is KtFile) return
@@ -47,87 +43,61 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
     }
 
     override fun generateDoc(element: PsiElement, originalElement: PsiElement?): String? {
-        println("generateDoc $element, ${element.text}, $originalElement")
         val modifiedElement = getService(element.project).getModifiedElement(element)
         return kotlin.generateDoc(modifiedElement ?: element, originalElement)
     }
 
-    override fun generateHoverDoc(element: PsiElement, originalElement: PsiElement?): String? {
-        println("generateHoverDoc $element, $originalElement")
-        return super.generateDoc(element, originalElement)
-    }
+    override fun generateHoverDoc(element: PsiElement, originalElement: PsiElement?): String? =
+        super.generateDoc(element, originalElement)
 
     @Nls
-    override fun generateRenderedDoc(comment: PsiDocCommentBase): String? {
-        println("generateRenderedDoc $comment")
-        return kotlin.generateRenderedDoc(comment)
-    }
+    override fun generateRenderedDoc(comment: PsiDocCommentBase): String? = kotlin.generateRenderedDoc(comment)
 
-    override fun findDocComment(file: PsiFile, range: TextRange): PsiDocCommentBase? {
-        println("findDocComment $file, $range")
-        return kotlin.findDocComment(file, range)
-    }
+    override fun findDocComment(file: PsiFile, range: TextRange): PsiDocCommentBase? =
+        kotlin.findDocComment(file, range)
 
     override fun getDocumentationElementForLookupItem(
         psiManager: PsiManager,
         `object`: Any?,
         element: PsiElement?,
-    ): PsiElement? {
-        println("getDocumentationElementForLookupItem $`object`, $element")
-        return kotlin.getDocumentationElementForLookupItem(psiManager, `object`, element)
-    }
+    ): PsiElement? = kotlin.getDocumentationElementForLookupItem(psiManager, `object`, element)
 
     override fun getDocumentationElementForLink(
         psiManager: PsiManager,
         link: String,
         context: PsiElement?,
-    ): PsiElement? {
-        println("getDocumentationElementForLink $link, $context")
-        return kotlin.getDocumentationElementForLink(psiManager, link, context)
-    }
+    ): PsiElement? = kotlin.getDocumentationElementForLink(psiManager, link, context)
 
     @Deprecated("Deprecated in Java")
     override fun getCustomDocumentationElement(
         editor: Editor,
         file: PsiFile,
         contextElement: PsiElement?
-    ): PsiElement? {
-        println("getCustomDocumentationElement DEPR $contextElement, ${contextElement?.text}")
-        return kotlin.getCustomDocumentationElement(editor, file, contextElement)
-    }
+    ): PsiElement? = kotlin.getCustomDocumentationElement(editor, file, contextElement)
 
     override fun getCustomDocumentationElement(
         editor: Editor,
         file: PsiFile,
         contextElement: PsiElement?,
         targetOffset: Int
-    ): PsiElement? {
-        println("getCustomDocumentationElement $contextElement")
-        return getCustomDocumentationElement(
-            /* editor = */ editor,
-            /* file = */ file,
-            /* contextElement = */ contextElement,
+    ): PsiElement? =
+        getCustomDocumentationElement(
+            editor = editor,
+            file = file,
+            contextElement = contextElement,
         )
-    }
 
-    override fun getLocalImageForElement(element: PsiElement, imageSpec: String): Image? {
-        println("getLocalImageForElement $element, $imageSpec")
-        return kotlin.getLocalImageForElement(element, imageSpec)
-    }
+    override fun getLocalImageForElement(element: PsiElement, imageSpec: String): Image? =
+        kotlin.getLocalImageForElement(element, imageSpec)
 
     @Deprecated("Deprecated in Java")
-    override fun hasDocumentationFor(element: PsiElement?, originalElement: PsiElement?): Boolean {
-        println("hasDocumentationFor $element, $originalElement")
-        return CompositeDocumentationProvider.hasUrlsFor(this, element, originalElement)
-    }
+    override fun hasDocumentationFor(element: PsiElement?, originalElement: PsiElement?): Boolean =
+        CompositeDocumentationProvider.hasUrlsFor(this, element, originalElement)
 
-    override fun canPromptToConfigureDocumentation(element: PsiElement?): Boolean {
-        println("canPromptToConfigureDocumentation $element")
-        return kotlin.canPromptToConfigureDocumentation(element)
-    }
+    override fun canPromptToConfigureDocumentation(element: PsiElement?): Boolean =
+        kotlin.canPromptToConfigureDocumentation(element)
 
-    override fun promptToConfigureDocumentation(element: PsiElement?) {
-        println("promptToConfigureDocumentation $element")
+    override fun promptToConfigureDocumentation(element: PsiElement?): Unit =
         kotlin.promptToConfigureDocumentation(element)
-    }
+
 }

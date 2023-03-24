@@ -1,28 +1,37 @@
 package nl.jolanrensen.docProcessor
 
+import com.intellij.lang.java.JavaLanguage
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocCommentOwner
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil.processElements
+import com.jetbrains.rd.framework.util.withContext
+import kotlinx.coroutines.*
 import nl.jolanrensen.docProcessor.defaultProcessors.*
+import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
 import org.jetbrains.kotlin.idea.kdoc.KDocElementFactory
 import org.jetbrains.kotlin.psi.KtDeclaration
-import org.jetbrains.kotlin.psi.psiUtil.isExtensionDeclaration
 import java.io.File
 import java.util.*
+import java.util.concurrent.ConcurrentMap
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTime
+import kotlin.time.measureTimedValue
 
 class IntellijDocProcessor(private val project: Project, private val processLimit: Int = 10_000) {
 
+    @OptIn(ExperimentalTime::class)
     fun processFiles(psiFiles: List<PsiFile>) {
-        println("processFiles: $psiFiles")
+        println("IntellijDocProcessor processFiles running!")
 
-        val psiToDocumentableWrapper = mutableMapOf<PsiElement, UUID>()
-        val sourceDocs: Map<String, List<DocumentableWrapper>> =
-            getDocumentableWrappers(psiFiles) { wrapper, psiElement ->
-                psiToDocumentableWrapper[psiElement] = wrapper.identifier
+        val (sourceDocs, psiToDocumentableWrapper) =
+            measureTimedValue {
+                getDocumentableWrappersWithUuidMap(psiFiles)
+            }.let {
+                println("getDocumentableWrappersWithUuidMap took ${it.duration} (${it.value.second.size} documentables)")
+                it.value
             }
 
         // Find all processors
@@ -39,100 +48,97 @@ class IntellijDocProcessor(private val project: Project, private val processLimi
         )
 
         // Run all processors
-        val modifiedDocumentables =
+        val (modifiedDocumentables, time) = measureTimedValue {
             processors.fold(sourceDocs) { acc, processor ->
                 processor.processSafely(processLimit = processLimit, documentablesByPath = acc)
             }
+        }
+        println("Running all processors took $time")
 
         // filter to only include the modified documentables
         val modifiedDocumentablesPerFile = getModifiedDocumentablesPerFile(modifiedDocumentables)
 
-        for (psiFile in psiFiles) {
-            val file = File(psiFile.originalFile.virtualFile.path)
-            val modified = modifiedDocumentablesPerFile[file]
-                ?.associateBy { it.identifier }
-                ?: continue
+        measureTime {
+            for (psiFile in psiFiles) {
+                val file = File(psiFile.originalFile.virtualFile.path)
+                val modified = modifiedDocumentablesPerFile[file]
+                    ?.associateBy { it.identifier }
+                    ?: continue
 
-            processElements(psiFile) { psiElement ->
-                if (psiElement !is KtDeclaration && psiElement !is PsiDocCommentOwner)
-                    return@processElements true
+                processElements(psiFile) { psiElement ->
+                    if (psiElement !is KtDeclaration && psiElement !is PsiDocCommentOwner)
+                        return@processElements true
 
-                psiToDocumentableWrapper[psiElement]
-                    ?.let { modified[it] }
-                    ?.let { modifiedDocumentable ->
-                        if (modifiedDocumentable.docContent.isEmpty()) {
-                            psiElement.docComment?.delete()
-                            return@let
+                    psiToDocumentableWrapper[psiElement.hashCode()]
+                        ?.let { modified[it] }
+                        ?.let { modifiedDocumentable ->
+                            if (modifiedDocumentable.docContent.isEmpty()) {
+                                psiElement.docComment?.delete()
+                                return@let
+                            }
+
+                            val newComment = when (modifiedDocumentable.programmingLanguage) {
+                                ProgrammingLanguage.KOTLIN -> KDocElementFactory(project)
+                                    .createKDocFromText(
+                                        modifiedDocumentable.docContent.toDoc()
+                                    )
+
+                                ProgrammingLanguage.JAVA -> PsiElementFactory.getInstance(project)
+                                    .createDocCommentFromText(
+                                        modifiedDocumentable.docContent.toDoc()
+                                    )
+                            }
+
+                            if (psiElement.docComment != null) {
+                                psiElement.docComment?.replace(newComment)
+                            } else {
+                                psiElement.addBefore(newComment, psiElement.firstChild)
+                            }
                         }
-
-                        val newComment = when (modifiedDocumentable.programmingLanguage) {
-                            ProgrammingLanguage.KOTLIN -> KDocElementFactory(project)
-                                .createKDocFromText(
-                                    modifiedDocumentable.docContent.toDoc()
-                                )
-
-                            ProgrammingLanguage.JAVA -> PsiElementFactory.getInstance(project)
-                                .createDocCommentFromText(
-                                    modifiedDocumentable.docContent.toDoc()
-                                )
-                        }
-
-                        if (psiElement.docComment != null) {
-                            psiElement.docComment?.replace(newComment)
-                        } else {
-                            psiElement.addBefore(newComment, psiElement.firstChild)
-                        }
-                    }
-                true
+                    true
+                }
             }
+        }.also {
+            println("Updating psi took $it")
         }
+        println("IntellijDocProcessor processFiles done!")
     }
 
-    private fun getDocumentableWrappers(
+    private fun getDocumentableWrappersWithUuidMap(
         psiFiles: List<PsiFile>,
-        reportDocumentable: (DocumentableWrapper, PsiElement) -> Unit
-    ): Map<String, List<DocumentableWrapper>> {
-        val allPaths = mutableSetOf<String>()
-        val documentables = psiFiles.flatMap {
-            val documentables = mutableListOf<PsiElement>()
-            processElements(it) {
-                if (it is KtDeclaration || it is PsiDocCommentOwner) {
-                    documentables.add(it)
-                } else {
-                    it.getKotlinFqName()?.let { fqName ->
-                        allPaths.add(fqName.asString())
+    ): Pair<Map<String, List<DocumentableWrapper>>, Map<Int, UUID>> {
+        val uuidMap = Collections.synchronizedMap(mutableMapOf<Int, UUID>())
+        val documentablesPerPath = Collections.synchronizedMap(mutableMapOf<String, MutableList<DocumentableWrapper>>())
+
+        for (file in psiFiles) {
+            val klass = when (file.language) {
+                is KotlinLanguage -> KtDeclaration::class.java
+                is JavaLanguage -> PsiDocCommentOwner::class.java
+                else -> continue
+            }
+            processElements(file, klass) { psiElement ->
+                val wrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
+                if (wrapper != null) {
+                    uuidMap[psiElement.hashCode()] = wrapper.identifier
+
+                    documentablesPerPath.getOrPut(wrapper.fullyQualifiedPath) { mutableListOf() }
+                        .add(wrapper)
+
+                    if (wrapper.fullyQualifiedExtensionPath != null) {
+                        documentablesPerPath.getOrPut(wrapper.fullyQualifiedExtensionPath!!) { mutableListOf() }
+                            .add(wrapper)
                     }
-                    if (it.isExtensionDeclaration()) {
-                        // TODO
-                        println("TODO: extension declaration")
+                } else {
+                    psiElement.getKotlinFqName()?.asString()?.let { fqName ->
+                        documentablesPerPath.getOrPut(fqName) { mutableListOf() }
                     }
                 }
+
                 true
             }
-
-            documentables.mapNotNull { documentable ->
-                DocumentableWrapper.createFromIntellijOrNull(documentable)
-                    ?.also { reportDocumentable(it, documentable) }
-            }
         }
 
-        // collect the documentables with sources per path
-        val documentablesPerPath: MutableMap<String, List<DocumentableWrapper>> = documentables
-            .flatMap { doc ->
-                listOfNotNull(doc.fullyQualifiedPath, doc.fullyQualifiedExtensionPath).map { it to doc }
-            }
-            .groupBy { it.first }
-            .mapValues { it.value.map { it.second } }
-            .toMutableMap()
-
-        // add the paths for documentables without sources to the map
-        for (path in allPaths) {
-            if (path !in documentablesPerPath) {
-                documentablesPerPath[path] = emptyList()
-            }
-        }
-
-        return documentablesPerPath
+        return Pair(documentablesPerPath, uuidMap)
     }
 
     private fun getModifiedDocumentablesPerFile(

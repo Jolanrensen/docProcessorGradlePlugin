@@ -32,9 +32,9 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
 
     val file = File(documentable.containingFile.originalFile.virtualFile.path)
 
-    if (!file.exists()) {
-        return null
-    }
+//    if (!file.exists()) {
+//        return null
+//    }
 
     val fileText: String = documentable.containingFile.originalFile.text
 
@@ -73,9 +73,13 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
     }
 
     // calculate the indent of the doc comment by looking at how many spaces are on the first line before /**
-    val docIndent = (docFileTextRange.startOffset -
-            fileText.lastIndexOfNot('\n', docFileTextRange.startOffset)
-            ).coerceAtLeast(0)
+    val docIndent = try {
+        (docFileTextRange.startOffset -
+                fileText.lastIndexOfNot('\n', docFileTextRange.startOffset)
+                ).coerceAtLeast(0)
+    } catch (_: Throwable) {
+        0
+    }
 
     // grab just the contents of the doc without the *-stuff
     val docContent = docFileTextRange.substring(fileText).getDocContentOrNull() ?: ""
