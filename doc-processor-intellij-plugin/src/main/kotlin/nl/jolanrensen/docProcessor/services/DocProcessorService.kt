@@ -32,9 +32,49 @@ class DocProcessorService(private val project: Project) {
 
     companion object {
         fun getInstance(project: Project): DocProcessorService = project.service()
-    }
 
-    private val intellijDocProcessor = IntellijDocProcessor(project)
+        fun getModifiedFilesByPath(project: Project): Map<String, PsiFile> =
+            CachedValuesManager.getProjectPsiDependentCache(project.getTopLevelBuildScriptPsiFile()!!) {
+                val psiList = indexProject(project)
+                IntellijDocProcessor(project).processFiles(psiList)
+                psiList.associateBy { it.originalFile.virtualFile.path }
+            }
+
+        private fun indexProject(project: Project): List<PsiFile> {
+            println("Indexing project: ${project.name} started")
+
+            val docProcessorFileListener = DocProcessorFileListener(project).also {
+                project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, it)
+            }
+
+            val result = mutableListOf<PsiFile>()
+            var successful = false
+            while (!successful) {
+                result.clear()
+                val startPsiValue = docProcessorFileListener.getChangeCount()
+                successful = ProjectFileIndex.SERVICE.getInstance(project).iterateContent(
+                    /* processor = */
+                    {
+                        if (docProcessorFileListener.getChangeCount() != startPsiValue) {
+                            thisLogger().info("Indexing project: ${project.name} cancelled")
+                            false
+                        } else {
+                            it.toPsiFile(project)?.let { psiFile ->
+                                result += psiFile.copied()
+                            }
+                            true
+                        }
+                    },
+                    /* filter = */
+                    {
+                        (it.isKotlinFileType() || it.isJavaFileType()) && it.exists()
+                    },
+                )
+            }
+
+            return result
+        }
+    }
 
     private fun PsiElement.getIndexInParent(): Int = parent.children.indexOf(this)
 
@@ -54,58 +94,19 @@ class DocProcessorService(private val project: Project) {
         return result
     }
 
-    fun getModifiedFile(file: PsiFile): PsiFile? = file.originalFile.virtualFile?.path?.let(modifiedFilesByPath::get)
-
-    private val modifiedFilesByPath: Map<String, PsiFile>
-        get() = CachedValuesManager.getProjectPsiDependentCache(project.getTopLevelBuildScriptPsiFile()!!) {
-            val psiList = indexProject()
-            intellijDocProcessor.processFiles(psiList)
-            psiList.associateBy { it.originalFile.virtualFile.path }
-        }
-
-    private val docProcessorFileListener = DocProcessorFileListener(project).also {
-        project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, it)
+    private fun getModifiedFile(file: PsiFile): PsiFile? = file.originalFile.virtualFile?.path?.let {
+        getModifiedFilesByPath(project)[it]
     }
+
 
     init {
         thisLogger().setLevel(LogLevel.INFO) // TEMP
         thisLogger().info(MessageBundle.message("projectService", project.name))
-        println("initial psiIndex: $modifiedFilesByPath")
     }
 
     private fun getModificationCount(): Long = PsiModificationTracker.SERVICE.getInstance(project).modificationCount
-    private fun getFileModificationCount(): Long = docProcessorFileListener.getChangeCount()
 
-    private fun indexProject(): List<PsiFile> {
-        println("Indexing project: ${project.name} started")
 
-        val result = mutableListOf<PsiFile>()
-        var successful = false
-        while (!successful) {
-            result.clear()
-            val startPsiValue = getFileModificationCount()
-            successful = ProjectFileIndex.SERVICE.getInstance(project).iterateContent(
-                /* processor = */
-                {
-                    if (getFileModificationCount() != startPsiValue) {
-                        thisLogger().info("Indexing project: ${project.name} cancelled")
-                        false
-                    } else {
-                        it.toPsiFile(project)?.let { psiFile ->
-                            result += psiFile.copied()
-                        }
-                        true
-                    }
-                },
-                /* filter = */
-                {
-                    (it.isKotlinFileType() || it.isJavaFileType()) && it.exists()
-                },
-            )
-        }
-
-        return result
-    }
 
     fun getRandomNumber() = (1..100).random()
 }

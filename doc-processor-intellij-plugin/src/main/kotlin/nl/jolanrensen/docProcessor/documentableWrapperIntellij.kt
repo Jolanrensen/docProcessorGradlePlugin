@@ -28,7 +28,7 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
         return null
     }
 
-    val fileText: String = file.readText()
+    val fileText: String = documentable.containingFile.originalFile.text
 
     val docComment = documentable.docComment
 

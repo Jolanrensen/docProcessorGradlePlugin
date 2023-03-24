@@ -4,6 +4,7 @@ plugins {
     id("java")
     kotlin("jvm")
     id("org.jetbrains.intellij") version "1.13.2"
+    id("com.github.johnrengelman.shadow")
 }
 
 group = "nl.jolanrensen.docProcessor"
@@ -34,23 +35,6 @@ intellij {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(project(":doc-processor-common"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.6.4")
-
-//    val dokkaVersion = "1.8.10"
-//    implementation("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
-
-//    implementation("org.jetbrains.kotlin:kotlin-compiler:1.8.10")
-//    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.8.10")
-
-//    val kotlinPluginVersion = "222-1.8.10-release-430-IJ4167.29"
-//    implementation("org.jetbrains.kotlin:common:$kotlinPluginVersion")
-//    implementation("org.jetbrains.kotlin:idea:$kotlinPluginVersion")
-//    implementation("org.jetbrains.kotlin:core:$kotlinPluginVersion")
-//    implementation("org.jetbrains.kotlin:native:$kotlinPluginVersion")
-
-//    val ideaVersion = "213.6777.52"
-//    implementation("com.jetbrains.intellij.idea:intellij-core:$ideaVersion")
-//    implementation("com.jetbrains.intellij.idea:jps-standalone:$ideaVersion")
 
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))

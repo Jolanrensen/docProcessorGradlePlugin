@@ -26,6 +26,7 @@ class IntellijDocProcessor(private val project: Project, private val processLimi
             }
 
         // Find all processors
+        Thread.currentThread().contextClassLoader = this.javaClass.classLoader
         val processors = findProcessors(
             listOf(
                 // TODO make customizable
