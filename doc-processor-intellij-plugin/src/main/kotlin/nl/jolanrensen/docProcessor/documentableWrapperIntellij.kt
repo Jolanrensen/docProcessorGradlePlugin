@@ -3,7 +3,10 @@ package nl.jolanrensen.docProcessor
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.descriptors.CallableDescriptor
+import org.jetbrains.kotlin.idea.base.utils.fqname.fqName
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
+import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.psiUtil.isExtensionDeclaration
 import java.io.File
@@ -17,9 +20,14 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
 
     val path = documentable.getKotlinFqName()?.asString() ?: return null
     val extensionPath: String? = if (documentable.isExtensionDeclaration()) {
-        // TODO
-        println("TODO: extension declaration")
-        null
+        (documentable as? KtDeclaration)
+            ?.descriptor
+            ?.let { it as CallableDescriptor }
+            ?.extensionReceiverParameter
+            ?.type
+            ?.fqName
+            ?.asString()
+            ?.let { "$it.${documentable.name}" }
     } else null
 
     val file = File(documentable.containingFile.originalFile.virtualFile.path)

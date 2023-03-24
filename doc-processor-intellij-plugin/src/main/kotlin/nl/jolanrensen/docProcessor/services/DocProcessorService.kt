@@ -10,21 +10,17 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil.processElements
 import com.intellij.psi.util.elementType
-import nl.jolanrensen.docProcessor.MessageBundle
 import nl.jolanrensen.docProcessor.IntellijDocProcessor
+import nl.jolanrensen.docProcessor.MessageBundle
 import nl.jolanrensen.docProcessor.listeners.DocProcessorFileListener
-import nl.jolanrensen.docProcessor.toDoc
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
 import org.jetbrains.kotlin.idea.core.copied
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.idea.extensions.gradle.getTopLevelBuildScriptPsiFile
-import org.jetbrains.kotlin.idea.kdoc.KDocElementFactory
 import org.jetbrains.kotlin.idea.util.isJavaFileType
 import org.jetbrains.kotlin.idea.util.isKotlinFileType
-import org.jetbrains.kotlin.psi.KtDeclaration
 import java.util.*
 
 @Service(Service.Level.PROJECT)
@@ -33,7 +29,7 @@ class DocProcessorService(private val project: Project) {
     companion object {
         fun getInstance(project: Project): DocProcessorService = project.service()
 
-        fun getModifiedFilesByPath(project: Project): Map<String, PsiFile> =
+        private fun getModifiedFilesByPath(project: Project): Map<String, PsiFile> =
             CachedValuesManager.getProjectPsiDependentCache(project.getTopLevelBuildScriptPsiFile()!!) {
                 val psiList = indexProject(project)
                 IntellijDocProcessor(project).processFiles(psiList)
@@ -98,15 +94,10 @@ class DocProcessorService(private val project: Project) {
         getModifiedFilesByPath(project)[it]
     }
 
-
     init {
         thisLogger().setLevel(LogLevel.INFO) // TEMP
         thisLogger().info(MessageBundle.message("projectService", project.name))
     }
-
-    private fun getModificationCount(): Long = PsiModificationTracker.SERVICE.getInstance(project).modificationCount
-
-
 
     fun getRandomNumber() = (1..100).random()
 }

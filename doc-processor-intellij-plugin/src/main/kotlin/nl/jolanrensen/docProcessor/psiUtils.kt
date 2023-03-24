@@ -28,7 +28,7 @@ val PsiElement.programmingLanguage: ProgrammingLanguage
 
 fun PsiElement.getImports(): List<ImportPath> = buildList {
     when (this@getImports.language) {
-        is KotlinLanguage -> {
+        is JavaLanguage -> {
             val psiFile = containingFile as? PsiJavaFile
 
             val implicitImports = psiFile?.implicitlyImportedPackages?.toList().orEmpty()
@@ -53,7 +53,7 @@ fun PsiElement.getImports(): List<ImportPath> = buildList {
             }
         }
 
-        is JavaLanguage -> {
+        is KotlinLanguage -> {
             val writtenImports = containingFile
                 .let { it as? KtFile }
                 ?.importDirectives
@@ -61,10 +61,24 @@ fun PsiElement.getImports(): List<ImportPath> = buildList {
                 ?: emptyList()
 
             this += writtenImports
-            this += ImportPath(
-                fqName = FqName("kotlin"),
-                isAllUnder = true,
+
+            val implicitImports = listOf(
+                "kotlin",
+                "kotlin.annotation",
+                "kotlin.collections",
+                "kotlin.comparisons",
+                "kotlin.io",
+                "kotlin.ranges",
+                "kotlin.sequences",
+                "kotlin.text",
+                "kotlin.math",
             )
+
+            for (import in implicitImports)
+                this += ImportPath(
+                    fqName = FqName(import),
+                    isAllUnder = true,
+                )
         }
     }
 }
