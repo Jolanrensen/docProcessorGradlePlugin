@@ -3,6 +3,7 @@
     <id>nl.jolanrensen.docProcessor</id>
     <name>KDoc/JavaDoc Processor</name>
     <vendor>Jolan Rensen</vendor>
+    <description>WIP IntelliJ plugin counterpart for KDoc / JavaDoc Preprocessor Gradle Plugin.</description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.kotlin</depends>

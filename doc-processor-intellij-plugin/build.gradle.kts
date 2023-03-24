@@ -23,7 +23,7 @@ repositories {
 }
 
 intellij {
-    version.set("2022.1.1")
+    version.set("2022.3.3")
     type.set("IC")
     pluginName.set("DocProcessor")
     plugins.addAll(
@@ -45,11 +45,11 @@ tasks.getByName<Test>("test") {
     useJUnitPlatform()
 }
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "17"
 }
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(11))
+        languageVersion.set(JavaLanguageVersion.of(17))
     }
 }

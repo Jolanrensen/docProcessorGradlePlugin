@@ -14,8 +14,8 @@ import com.intellij.psi.util.elementType
 import nl.jolanrensen.docProcessor.IntellijDocProcessor
 import nl.jolanrensen.docProcessor.MessageBundle
 import nl.jolanrensen.docProcessor.listeners.DocProcessorFileListener
+import org.jetbrains.kotlin.idea.base.psi.copied
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
-import org.jetbrains.kotlin.idea.core.copied
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.idea.util.isJavaFileType
 import org.jetbrains.kotlin.idea.util.isKotlinFileType
