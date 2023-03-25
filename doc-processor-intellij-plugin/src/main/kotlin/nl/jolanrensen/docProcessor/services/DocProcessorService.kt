@@ -15,12 +15,16 @@ import nl.jolanrensen.docProcessor.IntellijDocProcessor
 import nl.jolanrensen.docProcessor.MessageBundle
 import nl.jolanrensen.docProcessor.listeners.DocProcessorFileListener
 import org.jetbrains.kotlin.idea.base.psi.copied
+import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
+import org.jetbrains.kotlin.idea.util.getValue
 import org.jetbrains.kotlin.idea.util.isJavaFileType
 import org.jetbrains.kotlin.idea.util.isKotlinFileType
+import org.jetbrains.kotlin.idea.util.psiModificationTrackerBasedCachedValue
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
 @Service(Service.Level.PROJECT)
@@ -31,28 +35,15 @@ class DocProcessorService(private val project: Project) {
     }
 
     // make sure to listen to file changes
-    private val docProcessorFileListener = DocProcessorFileListener(project).also {
-        project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, it)
-    }
-
-    private var modifiedFilesByPathCache: Map<String, PsiFile> = emptyMap()
-    private var contentChangeCount: Long = Long.MIN_VALUE
-
-    private val lock = ReentrantLock()
-
-//    @Synchronized
-    private fun getModifiedFilesByPath(): Map<String, PsiFile> { // TODO improve stability
-        return lock.withLock {
-            val currentContentChangeCount = docProcessorFileListener.getContentChangeCount()
-            if (currentContentChangeCount != contentChangeCount) {
-                contentChangeCount = currentContentChangeCount
-                val psiList = indexProject()
-                IntellijDocProcessor(project).processFiles(psiList)
-                modifiedFilesByPathCache = psiList.associateBy { it.originalFile.virtualFile.path }
-            }
-
-            modifiedFilesByPathCache
+    private val docProcessorFileListener = DocProcessorFileListener(project)
+        .also {
+            project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, it)
         }
+
+    private val modifiedFilesByPath by psiModificationTrackerBasedCachedValue(project) {
+        val psiList = indexProject()
+        IntellijDocProcessor(project).processFiles(psiList)
+        psiList.associateBy { it.originalFile.virtualFile.path }
     }
 
     private fun indexProject(): List<PsiFile> {
@@ -63,7 +54,7 @@ class DocProcessorService(private val project: Project) {
         while (!successful) {
             result.clear()
             val startPsiValue = docProcessorFileListener.getFileChangeCount()
-            successful = ProjectFileIndex.SERVICE.getInstance(project).iterateContent(
+            successful = ProjectFileIndex.getInstance(project).iterateContent(
                 /* processor = */
                 {
                     if (docProcessorFileListener.getFileChangeCount() != startPsiValue) {
@@ -88,15 +79,16 @@ class DocProcessorService(private val project: Project) {
         return result
     }
 
-    private fun PsiElement.getIndexInParent(): Int = parent.children.indexOf(this)
+    private val PsiElement.indexInParent: Int
+        get() = parent.children.indexOf(this)
 
     fun getModifiedElement(element: PsiElement): PsiElement? {
         val modifiedFile = getModifiedFile(element.containingFile) ?: return null
         var result: PsiElement? = null
         processElements(modifiedFile) {
             if (it.elementType == element.elementType &&
-                it.getKotlinFqName() == element.getKotlinFqName() &&
-                it.getIndexInParent() == element.getIndexInParent()
+                it.kotlinFqName == element.kotlinFqName &&
+                it.indexInParent == element.indexInParent
             ) {
                 result = it
                 false
@@ -107,7 +99,7 @@ class DocProcessorService(private val project: Project) {
     }
 
     private fun getModifiedFile(file: PsiFile?): PsiFile? = file?.originalFile?.virtualFile?.path?.let {
-        getModifiedFilesByPath()[it]
+        modifiedFilesByPath[it]
     }
 
     init {

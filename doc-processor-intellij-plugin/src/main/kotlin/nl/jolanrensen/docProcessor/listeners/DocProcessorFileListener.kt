@@ -7,10 +7,13 @@ import com.intellij.openapi.vfs.newvfs.events.*
 import org.jetbrains.kotlin.idea.util.isJavaFileType
 import org.jetbrains.kotlin.idea.util.isKotlinFileType
 
-class DocProcessorFileListener(private val project: Project) : BulkFileListener {
+class DocProcessorFileListener(private val project: Project, private val onContentChanged: () -> Unit = {}) :
+    BulkFileListener {
 
-
+    @Volatile
     private var fileChangeCounter: Long = 0L
+
+    @Volatile
     private var contentChangeCounter: Long = 0L
 
     fun getFileChangeCount(): Long = fileChangeCounter
@@ -29,6 +32,7 @@ class DocProcessorFileListener(private val project: Project) : BulkFileListener 
                             fileIndex.isInContent(file)
                         ) {
                             fileChangeCounter += 1L
+                            onContentChanged()
                             println("file change detected: ${file.path}")
                         }
                     }
@@ -36,6 +40,7 @@ class DocProcessorFileListener(private val project: Project) : BulkFileListener 
 
                 is VFileDeleteEvent -> {
                     fileChangeCounter += 1L
+                    onContentChanged()
                     println("file deleted detected: ${event.path}")
                 }
 
@@ -44,6 +49,7 @@ class DocProcessorFileListener(private val project: Project) : BulkFileListener 
                         fileIndex.isInContent(event.file)
                     ) {
                         contentChangeCounter += 1L
+                        onContentChanged()
                         println("content change detected: ${event.file.path}")
                     }
 
