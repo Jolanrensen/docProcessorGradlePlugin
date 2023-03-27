@@ -13,7 +13,7 @@ import java.io.File
  *
  * [docContent], [tags], and [isModified] are designed te be changed and will be read when
  * writing modified docs to files.
- * Modify either in immutable fashion using [copy], or in mutable fashion using [asMutable].
+ * Modify either in immutable fashion using [copy], or in mutable fashion using [toMutable].
  *
  * All other properties are read-only and based upon the source-documentable.
  *
@@ -32,11 +32,11 @@ import java.io.File
  *   could not be found (e.g. because the PSI/AST of the file is not found).
  *
  * @property [docContent] Just the contents of the comment, without the `*`-stuff. Can be modified with [copy] or via
- *   [asMutable].
+ *   [toMutable].
  * @property [tags] List of tag names present in this documentable. Can be modified with [copy] or via
- *   [asMutable]. Must be updated manually if [docContent] is modified.
+ *   [toMutable]. Must be updated manually if [docContent] is modified.
  * @property [isModified] Whether the [docContent] was modified. Can be modified with [copy] or via
- *   [asMutable]. Must be updated manually if [docContent] is modified.
+ *   [toMutable]. Must be updated manually if [docContent] is modified.
  *
  * @see [MutableDocumentableWrapper]
  */

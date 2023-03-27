@@ -47,8 +47,6 @@ abstract class ProcessDocsAction {
         // analyse the sources with dokka to get the documentables
         val sourceDocs = analyseSourcesWithDokka()
 
-        log.info { "Found ${sourceDocs.size} source docs: $sourceDocs" }
-
         // Find all processors
         val processors = findProcessors()
 
@@ -62,7 +60,8 @@ abstract class ProcessDocsAction {
             processors.fold(sourceDocs) { acc, processor ->
                 log.lifecycle { "Running processor: ${processor::class.qualifiedName}" }
                 processor.processSafely(processLimit = parameters.processLimit, documentablesByPath = acc)
-            }
+            }.asMap()
+                ?: error("Something went wrong while processing the documentables")
 
         // filter to only include the modified documentables
         val modifiedDocumentablesPerFile = getModifiedDocumentablesPerFile(modifiedDocumentables)
@@ -75,7 +74,7 @@ abstract class ProcessDocsAction {
         copyAndModifySources(modifiedDocumentablesPerFile)
     }
 
-    private fun analyseSourcesWithDokka(): Map<String, List<DocumentableWrapper>> {
+    private fun analyseSourcesWithDokka(): DocumentablesByPath {
         // initialize dokka with the sources
         val configuration = DokkaConfigurationImpl(
             sourceSets = listOf(parameters.sources),
@@ -157,7 +156,9 @@ abstract class ProcessDocsAction {
             }
         }
 
-        return documentablesPerPath
+        log.info { "Found ${documentablesPerPath.size} source docs: $documentablesPerPath" }
+
+        return DocumentablesByPath.of(documentablesPerPath)
     }
 
     private fun findProcessors(): List<DocProcessor> {

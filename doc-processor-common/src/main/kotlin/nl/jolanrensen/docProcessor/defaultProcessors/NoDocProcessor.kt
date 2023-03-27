@@ -2,6 +2,8 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocProcessor
 import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.DocumentablesByPath
+import nl.jolanrensen.docProcessor.toDocumentablesByPath
 
 
 /**
@@ -16,16 +18,15 @@ const val NO_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.NoDo
 class NoDocProcessor : DocProcessor() {
     override fun process(
         processLimit: Int,
-        documentablesByPath: Map<String, List<DocumentableWrapper>>,
-    ): Map<String, List<DocumentableWrapper>> =
-        documentablesByPath
-            .mapValues { (_, documentables) ->
-            documentables.map {
+        documentablesByPath: DocumentablesByPath,
+    ): DocumentablesByPath =
+        documentablesByPath.map { (path, documentables) ->
+            path to documentables.map {
                 it.copy(
                     tags = emptySet(),
                     docContent = "",
                     isModified = true,
                 )
             }
-        }
+        }.toDocumentablesByPath()
 }

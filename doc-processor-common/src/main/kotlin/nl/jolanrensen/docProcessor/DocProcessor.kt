@@ -3,6 +3,7 @@ package nl.jolanrensen.docProcessor
 import mu.KLogger
 import mu.KotlinLogging
 import java.io.Serializable
+import java.util.Collections.emptyIterator
 import kotlin.jvm.Throws
 
 /**
@@ -34,8 +35,8 @@ abstract class DocProcessor : Serializable {
      */
     abstract fun process(
         processLimit: Int,
-        documentablesByPath: Map<String, List<DocumentableWrapper>>,
-    ): Map<String, List<DocumentableWrapper>>
+        documentablesByPath: DocumentablesByPath,
+    ): DocumentablesByPath
 
     // ensuring each doc processor instance is only run once
     private var hasRun = false
@@ -44,8 +45,8 @@ abstract class DocProcessor : Serializable {
     @Throws(DocProcessorFailedException::class)
     fun processSafely(
         processLimit: Int,
-        documentablesByPath: Map<String, List<DocumentableWrapper>>,
-    ): Map<String, List<DocumentableWrapper>> {
+        documentablesByPath: DocumentablesByPath,
+    ): DocumentablesByPath {
         if (hasRun) error("This instance of ${this::class.qualifiedName} has already run and cannot be reused.")
 
         return try {
@@ -58,6 +59,8 @@ abstract class DocProcessor : Serializable {
         }
     }
 }
+
+
 
 /**
  * Exception that is thrown when a [DocProcessor] fails.

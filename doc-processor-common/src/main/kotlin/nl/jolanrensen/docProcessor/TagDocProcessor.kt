@@ -28,28 +28,25 @@ abstract class TagDocProcessor : DocProcessor() {
         get() = tags.any(::tagIsSupported)
 
     /** All documentables in the source set. */
-    val allDocumentables: Map<String, List<DocumentableWrapper>>
+    val allDocumentables: DocumentablesByPath
         get() = allMutableDocumentables
 
     /**
      * Filtered documentables by [filterDocumentables].
      * The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
      */
-    val filteredDocumentables: Map<String, List<DocumentableWrapper>>
+    val filteredDocumentables: DocumentablesByPath
         get() = filteredMutableDocumentable
 
     /** All (mutable) documentables in the source set. */
-    private lateinit var allMutableDocumentables: Map<String, List<MutableDocumentableWrapper>>
+    private lateinit var allMutableDocumentables: MutableDocumentablesByPath
 
     /**
      * Filtered (mutable) documentables by [filterDocumentables].
      * The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
      */
-    private val filteredMutableDocumentable: Map<String, List<MutableDocumentableWrapper>> by lazy {
-        allMutableDocumentables
-            .mapValues { (_, documentables) ->
-                documentables.filter(::filterDocumentables)
-            }.filterValues { it.isNotEmpty() }
+    private val filteredMutableDocumentable: MutableDocumentablesByPath by lazy {
+        allMutableDocumentables.withFilter(::filterDocumentables)
     }
 
     /**
@@ -64,7 +61,7 @@ abstract class TagDocProcessor : DocProcessor() {
             if (documentables.all { it is MutableDocumentableWrapper }) {
                 documentables as List<MutableDocumentableWrapper>
             } else {
-                documentables.map { it.asMutable() }
+                documentables.map { it.toMutable() }
             }
         }
 
@@ -105,7 +102,7 @@ abstract class TagDocProcessor : DocProcessor() {
     ): Boolean {
         val processLimitReached = i >= processLimit
 
-        val hasSupportedTags = filteredDocumentables.any { it.value.any { it.hasSupportedTag } }
+        val hasSupportedTags = filteredDocumentables.asIterable().any { it.value.any { it.hasSupportedTag } }
         val atLeastOneRun = i > 0
         val tagsArePresentButNoModifications = hasSupportedTags && !anyModifications && atLeastOneRun
 
@@ -162,8 +159,8 @@ abstract class TagDocProcessor : DocProcessor() {
      */
     override fun process(
         processLimit: Int,
-        documentablesByPath: Map<String, List<DocumentableWrapper>>,
-    ): Map<String, List<DocumentableWrapper>> {
+        documentablesByPath: DocumentablesByPath,
+    ): DocumentablesByPath {
         // Convert to mutable
         allMutableDocumentables = documentablesByPath.toMutable()
 

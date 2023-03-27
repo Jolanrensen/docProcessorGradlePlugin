@@ -37,7 +37,7 @@ open class MutableDocumentableWrapper(
 )
 
 /** Cast or convert current [DocumentableWrapper] to [MutableDocumentableWrapper]. */
-fun DocumentableWrapper.asMutable(): MutableDocumentableWrapper =
+fun DocumentableWrapper.toMutable(): MutableDocumentableWrapper =
     if (this is MutableDocumentableWrapper) this
     else MutableDocumentableWrapper(
         programmingLanguage = programmingLanguage,
