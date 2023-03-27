@@ -1,5 +1,6 @@
 package nl.jolanrensen.docProcessor
 
+import nl.jolanrensen.docProcessor.ReferenceState.*
 import java.util.Comparator
 
 /**
@@ -368,16 +369,13 @@ fun DocContent.findTagNamesInDocContent(): List<String> =
 /** Is able to find an entire JavaDoc/KDoc comment including the starting indent. */
 val docRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
 
-// Regex to match [Aliased][ReferenceLinks].
-val aliasedLinkRegex = Regex("""(\[[^\[\]]*]\[)([^\[\]]*)(])""")
-
-// Regex to match [ReferenceLinks].
-val singleLinkRegex = Regex("""((^|[^]])\[)([^\[\]]*)(]$|][^\[])""")
-
-// Regex to match [ReferenceLinks] [with space] since this breaks singleLinkRegex.
-val doubleSingleLinkRegex = Regex("""((^|[^]])\[)([^\[\]]*)(][^\[]\[)([^\[\]]*)(]$|][^\[])""")
-
 val javaLinkRegex = Regex("""\{@link.*}""")
+
+private enum class ReferenceState {
+    NONE,
+    INSIDE_REFERENCE,
+    INSIDE_ALIASED_REFERENCE,
+}
 
 /**
  * Replace KDoc links in doc content with the result of [process].
@@ -385,50 +383,90 @@ val javaLinkRegex = Regex("""\{@link.*}""")
  * Replaces all `[Aliased][ReferenceLinks]` with `[Aliased][ProcessedPath]`
  * and all `[ReferenceLinks]` with `[ReferenceLinks][ProcessedPath]`.
  */
-fun DocContent.replaceKdocLinks(process: (String) -> String): DocContent = this
-    .replace(aliasedLinkRegex) { // replace all [Aliased][ReferenceLinks] with [Aliased][ProcessedPath]
-        it.groupValues.let {
-            buildString {
-                append(it[1])
-                append(
-                    process(it[2])
-                )
-                append(it[3])
-            }
-        }
-    }
-    .replace(doubleSingleLinkRegex) { // replace all [ReferenceLinks] [with space] with [ReferenceLinks][ProcessedPath] [with space][ProcessedPath]
-        it.groupValues.let {
-            buildString {
-                append(it[1])
-                append(it[3])
-                append("][")
-                append(
-                    process(it[3])
-                )
-                append(it[4])
-                append(it[5])
-                append("][")
-                append(
-                    process(it[5])
-                )
-                append(it[6])
-            }
-        }
-    }
-    .replace(singleLinkRegex) { // replace all [ReferenceLinks] with [ReferenceLinks][ProcessedPath]
-        it.groupValues.let {
-            buildString {
-                append(it[0].dropLastWhile { it != ']' })
-                append("[")
-                append(
-                    process(it[3])
-                )
-                append(it[4])
-            }
-        }
-    }
+fun DocContent.replaceKdocLinks(process: (String) -> String): DocContent {
+    val kdoc = this
+    var escapeNext = false
+    var insideCodeBlock = false
+    var referenceState = NONE
 
+    return buildString {
+        var currentBlock = ""
+
+        fun appendCurrentBlock() {
+            append(currentBlock)
+            currentBlock = ""
+        }
+
+        for ((i, char) in kdoc.withIndex()) {
+            fun nextChar(): Char? = kdoc.getOrNull(i + 1)
+            fun previousChar(): Char? = kdoc.getOrNull(i - 1)
+
+            if (escapeNext) {
+                escapeNext = false
+            } else {
+                when (char) {
+                    '\\' -> escapeNext = true
+
+                    '`' -> insideCodeBlock = !insideCodeBlock
+
+                    '[' -> if (!insideCodeBlock) {
+                        referenceState = if (previousChar() == ']')
+                            INSIDE_ALIASED_REFERENCE
+                        else
+                            INSIDE_REFERENCE
+                        appendCurrentBlock()
+                    }
+
+                    ']' -> if (!insideCodeBlock && nextChar() !in listOf('[', '(')) {
+                        currentBlock = processReference(
+                            referenceState = referenceState,
+                            currentBlock = currentBlock,
+                            process = process,
+                        )
+                        appendCurrentBlock()
+                        referenceState = NONE
+                    }
+                }
+            }
+            currentBlock += char
+        }
+        appendCurrentBlock()
+    }
+}
+
+private fun StringBuilder.processReference(
+    referenceState: ReferenceState,
+    currentBlock: String,
+    process: (String) -> String,
+): String {
+    var currentReferenceBlock = currentBlock
+    when (referenceState) {
+        INSIDE_REFERENCE -> {
+            val originalRef = currentReferenceBlock.removePrefix("[")
+            if (originalRef.startsWith('`') && originalRef.endsWith('`') || ' ' !in originalRef) {
+                val processedRef = process(originalRef)
+                if (processedRef == originalRef) {
+                    append("[$originalRef")
+                } else {
+                    append("[$originalRef][$processedRef")
+                }
+                currentReferenceBlock = ""
+            }
+        }
+
+        INSIDE_ALIASED_REFERENCE -> {
+            val originalRef = currentReferenceBlock.removePrefix("[")
+            if (originalRef.startsWith('`') && originalRef.endsWith('`') || ' ' !in originalRef) {
+                val processedRef = process(originalRef)
+                append("[$processedRef")
+                currentReferenceBlock = ""
+            }
+        }
+
+        NONE -> Unit
+    }
+    return currentReferenceBlock
+}
 
 /**
  * Finds removes the last occurrence of [element] from the list and, if found, all elements after it.
