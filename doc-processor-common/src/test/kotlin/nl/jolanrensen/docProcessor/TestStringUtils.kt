@@ -41,18 +41,27 @@ class TestStringUtils {
     @Test
     fun `Replace all link regexes`() {
         val someText = """
-            [Hello] [World]!
+            [H[ello] [World]!
             This is [text][text].
-            It has many lines.
+            It has many lines [NewPath] [Not processed] [Also\].
             I hope you [like][it] [right?]""".trimIndent()
 
         val res = someText.replaceKdocLinks { "NewPath" }
 
         res shouldBe """
-            [Hello][NewPath] [World][NewPath]!
+            [H[ello][NewPath] [World][NewPath]!
             This is [text][NewPath].
-            It has many lines.
+            It has many lines [NewPath] [Not processed] [Also\].
             I hope you [like][NewPath] [right?][NewPath]""".trimIndent()
+    }
+
+    @Test
+    fun `Replace KDoc links difficult`() {
+        val someText = """`MyType::myColumn`[`[`][ColumnsContainer.get]`MyOtherType::myOtherColumn`[`]`][ColumnsContainer.get]"""
+
+        val res = someText.replaceKdocLinks { "NewPath" }
+
+        res shouldBe """`MyType::myColumn`[`[`][NewPath]`MyOtherType::myOtherColumn`[`]`][NewPath]"""
     }
 
     @Test
