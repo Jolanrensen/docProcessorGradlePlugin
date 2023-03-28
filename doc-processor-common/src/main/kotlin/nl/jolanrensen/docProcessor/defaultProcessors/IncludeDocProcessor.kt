@@ -175,15 +175,6 @@ class IncludeDocProcessor : TagDocProcessor() {
             .removePrefix("\n")
             .removeSuffix("\n")
 
-        if (extraContent.isNotEmpty()) {
-            targetContent = buildString {
-                append(targetContent)
-                if (!extraContent.first().isWhitespace())
-                    append(" ")
-                append(extraContent)
-            }
-        }
-
         targetContent = when (documentable.programmingLanguage) {
             // if the content contains links to other elements, we need to expand the path
             // providing the original name or alias as new alias.
@@ -216,6 +207,15 @@ class IncludeDocProcessor : TagDocProcessor() {
                 StringEscapeUtils.escapeHtml4(targetContent)
                     .replace("@", "&#64;")
                     .replace("*/", "&#42;&#47;")
+            }
+        }
+
+        if (extraContent.isNotEmpty()) {
+            targetContent = buildString {
+                append(targetContent)
+                if (!extraContent.first().isWhitespace())
+                    append(" ")
+                append(extraContent)
             }
         }
 
