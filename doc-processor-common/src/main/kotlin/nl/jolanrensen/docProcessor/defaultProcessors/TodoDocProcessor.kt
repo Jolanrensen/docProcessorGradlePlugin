@@ -19,7 +19,7 @@ class TodoDocProcessor : DocProcessor() {
         processLimit: Int,
         documentablesByPath: DocumentablesByPath,
     ): DocumentablesByPath =
-        documentablesByPath.map { (path, documentables) ->
+        documentablesByPath.documentablesToProcess.map { (path, documentables) ->
             path to documentables.map {
                 if (it.docContent.isBlank() || !it.sourceHasDocumentation) {
                     it.copy(

@@ -60,8 +60,7 @@ abstract class ProcessDocsAction {
             processors.fold(sourceDocs) { acc, processor ->
                 log.lifecycle { "Running processor: ${processor::class.qualifiedName}" }
                 processor.processSafely(processLimit = parameters.processLimit, documentablesByPath = acc)
-            }.asMap()
-                ?: error("Something went wrong while processing the documentables")
+            }.documentablesToProcess
 
         // filter to only include the modified documentables
         val modifiedDocumentablesPerFile = getModifiedDocumentablesPerFile(modifiedDocumentables)

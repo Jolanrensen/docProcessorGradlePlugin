@@ -20,7 +20,7 @@ class NoDocProcessor : DocProcessor() {
         processLimit: Int,
         documentablesByPath: DocumentablesByPath,
     ): DocumentablesByPath =
-        documentablesByPath.map { (path, documentables) ->
+        documentablesByPath.documentablesToProcess.map { (path, documentables) ->
             path to documentables.map {
                 it.copy(
                     tags = emptySet(),

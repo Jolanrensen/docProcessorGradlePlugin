@@ -46,24 +46,8 @@ abstract class TagDocProcessor : DocProcessor() {
      * The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
      */
     private val filteredMutableDocumentable: MutableDocumentablesByPath by lazy {
-        allMutableDocumentables.withFilter(::filterDocumentables)
+        allMutableDocumentables.withQueryFilter(::filterDocumentables)
     }
-
-    /**
-     * Converts a [Map]<[String], [List]<[DocumentableWrapper]>> to
-     * [Map]<[String], [List]<[MutableDocumentableWrapper]>>.
-     *
-     * The [MutableDocumentableWrapper] is a copy of the original [DocumentableWrapper].
-     */
-    @Suppress("UNCHECKED_CAST")
-    private fun Map<String, List<DocumentableWrapper>>.toMutable(): Map<String, List<MutableDocumentableWrapper>> =
-        mapValues { (_, documentables) ->
-            if (documentables.all { it is MutableDocumentableWrapper }) {
-                documentables as List<MutableDocumentableWrapper>
-            } else {
-                documentables.map { it.toMutable() }
-            }
-        }
 
     /**
      * Optionally, you can filter the [DocumentableWrapper]s that will appear in
@@ -169,7 +153,7 @@ abstract class TagDocProcessor : DocProcessor() {
         var i = 0
         while (true) {
             val filteredDocumentablesWithTag = filteredMutableDocumentable
-                .filter { it.value.any { it.hasSupportedTag } }
+                .queryFilter { it.value.any { it.hasSupportedTag } }
 
             var anyModifications = false
             for ((path, documentables) in filteredDocumentablesWithTag) {

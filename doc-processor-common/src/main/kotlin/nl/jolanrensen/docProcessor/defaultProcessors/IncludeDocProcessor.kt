@@ -101,7 +101,7 @@ class IncludeDocProcessor : TagDocProcessor() {
      */
     override fun onProcessError(): Nothing {
         val circularRefs = filteredDocumentables
-            .filter { it.value.any { it.hasSupportedTag } }
+            .queryFilter { it.value.any { it.hasSupportedTag } }
             .entries
             .joinToString("\n\n") { (path, documentables) ->
                 buildString {
