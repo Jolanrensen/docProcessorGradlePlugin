@@ -14,7 +14,7 @@ plugins {
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "0.1.5-SNAPSHOT"
+version = "0.1.6-SNAPSHOT"
 
 publishing {
     repositories {
@@ -35,17 +35,17 @@ dependencies {
     api(project(":doc-processor-common"))
 
     // Gradle plugin dependencies
-    implementation(gradleApi())
-    implementation(gradleKotlinDsl())
+    shadow(gradleApi())
+    shadow(gradleKotlinDsl())
 
     // Dokka dependencies
     val dokkaVersion = "1.8.10"
     compileOnly("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
     testCompileOnly("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
-    api("org.jetbrains.dokka:dokka-base:$dokkaVersion")
-    api("org.jetbrains.dokka:dokka-core:$dokkaVersion")
-    api("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
-    api("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
+    implementation("org.jetbrains.dokka:dokka-base:$dokkaVersion")
+    implementation("org.jetbrains.dokka:dokka-core:$dokkaVersion")
+    implementation("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
+    implementation("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
     // logging
     api("io.github.microutils:kotlin-logging:3.0.5")
@@ -53,6 +53,20 @@ dependencies {
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-assertions-core:5.5.5")
+}
+
+tasks.withType(ShadowJar::class) {
+    isZip64 = true
+    archiveClassifier.set("")
+
+    dependencies {
+//        exclude(dependency("org.jetbrains.dokka:dokka-analysis:"))
+//        exclude {
+//            it.moduleGroup == "org.jetbrains.kotlin"
+//        }
+//        include(project(":doc-processor-common"))
+//        include { it.moduleGroup in listOf("org.jetbrains.dokka", "io.github.microutils") }
+    }
 }
 
 gradlePlugin {
@@ -115,9 +129,4 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(8))
     }
-}
-
-tasks.withType(ShadowJar::class) {
-    isZip64 = true
-    archiveClassifier.set("")
 }
