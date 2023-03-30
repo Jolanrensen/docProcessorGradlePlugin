@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     java
     kotlin("jvm")
-    id("com.vanniktech.maven.publish") version "0.20.0"
+//    id("com.vanniktech.maven.publish") version "0.20.0"
 }
 
 group = "nl.jolanrensen.docProcessor"

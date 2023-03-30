@@ -40,12 +40,11 @@ dependencies {
 
     // Dokka dependencies
     val dokkaVersion = "1.8.10"
-    compileOnly("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
-    testCompileOnly("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
-    implementation("org.jetbrains.dokka:dokka-base:$dokkaVersion")
-    implementation("org.jetbrains.dokka:dokka-core:$dokkaVersion")
-    implementation("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
-    implementation("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
+    shadow("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
+    shadow("org.jetbrains.dokka:dokka-base:$dokkaVersion")
+    shadow("org.jetbrains.dokka:dokka-core:$dokkaVersion")
+    shadow("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
+    shadow("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
     // logging
     api("io.github.microutils:kotlin-logging:3.0.5")
@@ -58,21 +57,11 @@ dependencies {
 tasks.withType(ShadowJar::class) {
     isZip64 = true
     archiveClassifier.set("")
-
-    dependencies {
-//        exclude(dependency("org.jetbrains.dokka:dokka-analysis:"))
-//        exclude {
-//            it.moduleGroup == "org.jetbrains.kotlin"
-//        }
-//        include(project(":doc-processor-common"))
-//        include { it.moduleGroup in listOf("org.jetbrains.dokka", "io.github.microutils") }
-    }
 }
 
 gradlePlugin {
     website.set("https://github.com/Jolanrensen/docProcessorGradlePlugin")
     vcsUrl.set("https://github.com/Jolanrensen/docProcessorGradlePlugin")
-
     // Define the plugin
     val docProcessor by plugins.creating {
         id = "nl.jolanrensen.docProcessor"

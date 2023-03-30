@@ -98,7 +98,7 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
 
         GradleRunner.create()
             .forwardOutput()
-            .withArguments("publishToMavenLocal")
+            .withArguments("clean", "publishToMavenLocal")
             .withProjectDir(projectDirectory)
             .withDebug(true)
             .build()
