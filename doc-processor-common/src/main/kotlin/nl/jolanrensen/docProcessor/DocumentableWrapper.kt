@@ -42,7 +42,6 @@ import java.util.*
  *
  * @see [MutableDocumentableWrapper]
  */
-@Suppress("DataClassPrivateConstructor")
 open class DocumentableWrapper(
     val programmingLanguage: ProgrammingLanguage,
     val imports: List<SimpleImportPath>,

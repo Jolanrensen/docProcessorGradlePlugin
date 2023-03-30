@@ -36,6 +36,8 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
     }
 
     val fileText: String = file.readText()
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
 
     val docFileTextRange = docComment?.textRange?.let { ogRange ->
         // docComment.textRange is the range of the comment in the file, but depending on the language,
