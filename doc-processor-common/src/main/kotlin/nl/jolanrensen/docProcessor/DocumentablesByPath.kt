@@ -73,8 +73,7 @@ internal open class DocumentablesByPathFromMap(
             documentables.filter(queryFilter)
         }
 
-    override fun query(path: String): List<DocumentableWrapper> =
-        docsToQuery[path] ?: emptyList()
+    override fun query(path: String): List<DocumentableWrapper>? = docsToQuery[path]
 
     @Suppress("UNCHECKED_CAST")
     override fun toMutable(): MutableDocumentablesByPath =
@@ -115,8 +114,7 @@ internal class MutableDocumentablesByPathFromMap(
             documentables.filter(documentablesToProcessFilter)
         }
 
-    override fun query(path: String): List<MutableDocumentableWrapper> =
-        docsToQuery[path] ?: emptyList()
+    override fun query(path: String): List<MutableDocumentableWrapper>? = docsToQuery[path]
 
     override fun toMutable(): MutableDocumentablesByPath = this
 
@@ -137,7 +135,7 @@ internal class MutableDocumentablesByPathFromMap(
 
 internal open class DocumentablesByPathWithCache(
     private val unfilteredDocsToProcess: Map<String, List<DocumentableWrapper>>,
-    private val query: (String) -> List<DocumentableWrapper>,
+    private val query: (String) -> List<DocumentableWrapper>?,
     private val queryAll: () -> Map<String, List<DocumentableWrapper>>,
     override val queryFilter: DocumentableWrapperFilter = { true },
     override val documentablesToProcessFilter: DocumentableWrapperFilter = { true },
@@ -151,15 +149,17 @@ internal open class DocumentablesByPathWithCache(
 
     private val queryCache: MutableMap<String, List<DocumentableWrapper>> = mutableMapOf()
 
-    override fun query(path: String): List<DocumentableWrapper> =
+    override fun query(path: String): List<DocumentableWrapper>? =
         queryCache.getOrPut(path) {
-            (unfilteredDocsToProcess[path] ?: query(path)).filter(queryFilter)
+            (unfilteredDocsToProcess[path] ?: query(path))
+                ?.filter(queryFilter)
+                ?: return@query null
         }
 
     @Suppress("UNCHECKED_CAST")
     override fun toMutable(): MutableDocumentablesByPath = MutableDocumentablesByPathWithCache(
         unfilteredDocsToProcess = unfilteredDocsToProcess.toMutable(),
-        query = { query(it).map { it.toMutable() } },
+        query = { query(it)?.map { it.toMutable() } },
         queryAll = { queryAll().toMutable() },
         queryFilter = queryFilter,
         documentablesToProcessFilter = documentablesToProcessFilter,
@@ -186,7 +186,7 @@ internal open class DocumentablesByPathWithCache(
 
 internal class MutableDocumentablesByPathWithCache(
     private val unfilteredDocsToProcess: Map<String, List<MutableDocumentableWrapper>>,
-    private val query: (String) -> List<MutableDocumentableWrapper>,
+    private val query: (String) -> List<MutableDocumentableWrapper>?,
     private val queryAll: () -> Map<String, List<MutableDocumentableWrapper>>,
     override val queryFilter: DocumentableWrapperFilter = { true },
     override val documentablesToProcessFilter: DocumentableWrapperFilter = { true },
@@ -200,9 +200,11 @@ internal class MutableDocumentablesByPathWithCache(
 
     private val queryCache: MutableMap<String, List<MutableDocumentableWrapper>> = mutableMapOf()
 
-    override fun query(path: String): List<MutableDocumentableWrapper> =
+    override fun query(path: String): List<MutableDocumentableWrapper>? =
         queryCache.getOrPut(path) {
-            (unfilteredDocsToProcess[path] ?: query(path)).filter(queryFilter)
+            (unfilteredDocsToProcess[path] ?: query(path))
+                ?.filter(queryFilter)
+                ?: return@query null
         }
 
     override fun toMutable(): MutableDocumentablesByPath = this
