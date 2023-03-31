@@ -14,7 +14,7 @@ import java.util.*
  *
  * [docContent], [tags], and [isModified] are designed te be changed and will be read when
  * writing modified docs to files.
- * Modify either in immutable fashion using [copy], or in mutable fashion using [asMutable].
+ * Modify either in immutable fashion using [copy], or in mutable fashion using [toMutable].
  *
  * All other properties are read-only and based upon the source-documentable.
  *
@@ -34,11 +34,11 @@ import java.util.*
  * @property [identifier] A unique identifier for this documentable, will survive [copy] and [asMutable].
  *
  * @property [docContent] Just the contents of the comment, without the `*`-stuff. Can be modified with [copy] or via
- *   [asMutable].
+ *   [toMutable].
  * @property [tags] List of tag names present in this documentable. Can be modified with [copy] or via
- *   [asMutable]. Must be updated manually if [docContent] is modified.
+ *   [toMutable]. Must be updated manually if [docContent] is modified.
  * @property [isModified] Whether the [docContent] was modified. Can be modified with [copy] or via
- *   [asMutable]. Must be updated manually if [docContent] is modified.
+ *   [toMutable]. Must be updated manually if [docContent] is modified.
  *
  * @see [MutableDocumentableWrapper]
  */
@@ -143,7 +143,7 @@ open class DocumentableWrapper(
      */
     fun queryDocumentables(
         query: String,
-        documentables: Map<String, List<DocumentableWrapper>>,
+        documentables: DocumentablesByPath,
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): DocumentableWrapper? {
         val queries = getAllFullPathsFromHereForTargetPath(query).toMutableList()
@@ -169,7 +169,7 @@ open class DocumentableWrapper(
      */
     fun queryDocumentablesForPath(
         query: String,
-        documentables: Map<String, List<DocumentableWrapper>>,
+        documentables: DocumentablesByPath,
         pathIsValid: (String, DocumentableWrapper) -> Boolean = { _, _ -> true },
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): String? {
@@ -185,7 +185,9 @@ open class DocumentableWrapper(
         // if there is no doc for the query, then we just return the first matching path
         val queries = getAllFullPathsFromHereForTargetPath(query)
 
-        return queries.firstOrNull { it in documentables }
+        return queries.firstOrNull {
+            documentables[it] != null
+        }
     }
 
     /** Returns a copy of this [DocumentableWrapper] with the given parameters. */

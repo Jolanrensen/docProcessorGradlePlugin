@@ -87,7 +87,7 @@ abstract class DocProcessorTest(name: String) {
 
         // Run all processors
         val modifiedDocumentables = processors.fold(
-            initial = documentablesPerPath as Map<String, List<DocumentableWrapper>>,
+            initial = documentablesPerPath.toDocumentablesByPath(),
         ) { acc, processor ->
             println("Running processor: ${processor::class.qualifiedName}")
             processor.processSafely(processLimit = processLimit, documentablesByPath = acc)
