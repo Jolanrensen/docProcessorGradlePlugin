@@ -50,7 +50,7 @@ abstract class DocProcessor : Serializable {
         if (hasRun) error("This instance of ${this::class.qualifiedName} has already run and cannot be reused.")
 
         return try {
-            process(processLimit, documentablesByPath)
+            process(processLimit, documentablesByPath).withoutFilters()
         } catch (e: Throwable) {
             if (e is DocProcessorFailedException) throw e
             else throw DocProcessorFailedException(name, cause = e)

@@ -1,17 +1,8 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import nl.jolanrensen.docProcessor.DocContent
-import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.*
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
-import nl.jolanrensen.docProcessor.TagDocProcessor
-import nl.jolanrensen.docProcessor.decodeCallableTarget
-import nl.jolanrensen.docProcessor.getDocContentOrNull
-import nl.jolanrensen.docProcessor.getTagArguments
-import nl.jolanrensen.docProcessor.javaLinkRegex
-import nl.jolanrensen.docProcessor.removeEscapeCharacters
-import nl.jolanrensen.docProcessor.replaceKdocLinks
-import nl.jolanrensen.docProcessor.toDoc
 import org.apache.commons.text.StringEscapeUtils
 
 /**
@@ -93,15 +84,27 @@ class IncludeDocProcessor : TagDocProcessor() {
      * Filter documentables to only include linkable elements (classes, functions, properties, etc) and
      * have any documentation. This will save performance when looking up the target of the @include tag.
      */
-    override fun <T : DocumentableWrapper> filterDocumentables(documentable: T): Boolean =
+    override fun <T : DocumentableWrapper> filterDocumentablesToProcess(documentable: T): Boolean =
         documentable.sourceHasDocumentation
+
+    /**
+     * Filter documentables to only include linkable elements (classes, functions, properties, etc) and
+     * have any documentation. This will save performance when looking up the target of the @include tag.
+     */
+    override fun <T : DocumentableWrapper> filterDocumentablesToQuery(documentable: T): Boolean =
+        documentable.sourceHasDocumentation
+
+    private val unfilteredDocumentablesByPath by lazy {
+        documentablesByPath.withoutFilters()
+    }
 
     /**
      * Provides a helpful message when a circular reference is detected.
      */
     override fun onProcessError(): Nothing {
-        val circularRefs = filteredDocumentables
-            .queryFilter { it.value.any { it.hasSupportedTag } }
+        val circularRefs = documentablesByPath
+            .documentablesToProcess
+            .filter { it.value.any { it.hasSupportedTag } }
             .entries
             .joinToString("\n\n") { (path, documentables) ->
                 buildString {
@@ -130,20 +133,20 @@ class IncludeDocProcessor : TagDocProcessor() {
         // query the filtered documentables for the @include paths
         val targetDocumentable = documentable.queryDocumentables(
             query = includePath,
-            documentables = filteredDocumentables,
+            documentables = documentablesByPath,
         ) { it != documentable }
 
         if (targetDocumentable == null) {
             val targetDocumentableNoFilter = documentable.queryDocumentables(
                 query = includePath,
-                documentables = filteredDocumentables,
+                documentables = documentablesByPath,
             )
             val attemptedQueries = documentable.getAllFullPathsFromHereForTargetPath(includePath)
                 .joinToString("\n") { "|  $it" }
 
             val targetPath = documentable.queryDocumentablesForPath(
                 query = includePath,
-                documentables = allDocumentables,
+                documentables = unfilteredDocumentablesByPath,
             )
 
             error(
@@ -181,13 +184,13 @@ class IncludeDocProcessor : TagDocProcessor() {
             KOTLIN -> targetContent.replaceKdocLinks { query ->
                 targetDocumentable.queryDocumentablesForPath(
                     query = query,
-                    documentables = allDocumentables,
+                    documentables = unfilteredDocumentablesByPath,
                     pathIsValid = { path, it ->
                         // ensure that the given path points to the same element in the destination place and
                         // that it's queryable
                         documentable.queryDocumentables(
                             query = path,
-                            documentables = allDocumentables,
+                            documentables = unfilteredDocumentablesByPath,
                         ) == it
                     },
                 ) ?: query

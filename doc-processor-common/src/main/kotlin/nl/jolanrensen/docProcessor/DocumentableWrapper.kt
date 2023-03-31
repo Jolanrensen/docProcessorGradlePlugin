@@ -140,7 +140,7 @@ open class DocumentableWrapper(
      */
     fun queryDocumentables(
         query: String,
-        documentables: Map<String, List<DocumentableWrapper>>,
+        documentables: DocumentablesByPath,
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): DocumentableWrapper? {
         val queries = getAllFullPathsFromHereForTargetPath(query).toMutableList()
@@ -166,7 +166,7 @@ open class DocumentableWrapper(
      */
     fun queryDocumentablesForPath(
         query: String,
-        documentables: Map<String, List<DocumentableWrapper>>,
+        documentables: DocumentablesByPath,
         pathIsValid: (String, DocumentableWrapper) -> Boolean = { _, _ -> true },
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): String? {
@@ -182,7 +182,9 @@ open class DocumentableWrapper(
         // if there is no doc for the query, then we just return the first matching path
         val queries = getAllFullPathsFromHereForTargetPath(query)
 
-        return queries.firstOrNull { it in documentables }
+        return queries.firstOrNull {
+            documentables[it] != null
+        }
     }
 
     /** Returns a copy of this [DocumentableWrapper] with the given parameters. */

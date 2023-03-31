@@ -27,27 +27,15 @@ abstract class TagDocProcessor : DocProcessor() {
     val DocumentableWrapper.hasSupportedTag
         get() = tags.any(::tagIsSupported)
 
-    /** All documentables in the source set. */
-    val allDocumentables: DocumentablesByPath
-        get() = allMutableDocumentables
+
+    private lateinit var mutableDocumentablesByPath: MutableDocumentablesByPath
 
     /**
-     * Filtered documentables by [filterDocumentables].
-     * The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
+     * Allows you to access the documentables to be processed as well as to gain
+     * the ability to query for any documentable in the source.
      */
-    val filteredDocumentables: DocumentablesByPath
-        get() = filteredMutableDocumentable
-
-    /** All (mutable) documentables in the source set. */
-    private lateinit var allMutableDocumentables: MutableDocumentablesByPath
-
-    /**
-     * Filtered (mutable) documentables by [filterDocumentables].
-     * The [DocumentableWrapper]s in this map are the same objects as in [allDocumentables], just a subset.
-     */
-    private val filteredMutableDocumentable: MutableDocumentablesByPath by lazy {
-        allMutableDocumentables.withQueryFilter(::filterDocumentables)
-    }
+    val documentablesByPath: DocumentablesByPath
+        get() = mutableDocumentablesByPath
 
     /**
      * Optionally, you can filter the [DocumentableWrapper]s that will appear in
@@ -57,7 +45,9 @@ abstract class TagDocProcessor : DocProcessor() {
      * This filter will also be applied to all the docs that are processed. Normally, all docs with
      * a supported tag will be processed. If you want to filter them more strictly, override this method too.
      */
-    open fun <T : DocumentableWrapper> filterDocumentables(documentable: T): Boolean = true
+    open fun <T : DocumentableWrapper> filterDocumentablesToProcess(documentable: T): Boolean = true
+
+    open fun <T : DocumentableWrapper> filterDocumentablesToQuery(documentable: T): Boolean = true
 
     /**
      * Provide a meaningful error message when the given process limit is reached.
@@ -86,7 +76,9 @@ abstract class TagDocProcessor : DocProcessor() {
     ): Boolean {
         val processLimitReached = i >= processLimit
 
-        val hasSupportedTags = filteredDocumentables.asIterable().any { it.value.any { it.hasSupportedTag } }
+        val hasSupportedTags = mutableDocumentablesByPath
+            .documentablesToProcess
+            .any { it.value.any { it.hasSupportedTag } }
         val atLeastOneRun = i > 0
         val tagsArePresentButNoModifications = hasSupportedTags && !anyModifications && atLeastOneRun
 
@@ -146,14 +138,18 @@ abstract class TagDocProcessor : DocProcessor() {
         documentablesByPath: DocumentablesByPath,
     ): DocumentablesByPath {
         // Convert to mutable
-        allMutableDocumentables = documentablesByPath.toMutable()
+        mutableDocumentablesByPath = documentablesByPath
+            .toMutable()
+            .withQueryFilter(::filterDocumentablesToQuery)
+            .withDocsToProcessFilter(::filterDocumentablesToProcess)
 
         // Main recursion loop that will continue until all supported tags are replaced
         // or the process limit is reached.
         var i = 0
         while (true) {
-            val filteredDocumentablesWithTag = filteredMutableDocumentable
-                .queryFilter { it.value.any { it.hasSupportedTag } }
+            val filteredDocumentablesWithTag = mutableDocumentablesByPath
+                .documentablesToProcess
+                .filter { it.value.any { it.hasSupportedTag } }
 
             var anyModifications = false
             for ((path, documentables) in filteredDocumentablesWithTag) {
@@ -190,7 +186,7 @@ abstract class TagDocProcessor : DocProcessor() {
             if (!shouldContinue) break
         }
 
-        return allDocumentables
+        return mutableDocumentablesByPath
     }
 
     private fun processTagsInContent(
