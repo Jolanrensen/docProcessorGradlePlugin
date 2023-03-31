@@ -40,8 +40,8 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
         }
         
         dependencies {
-//            compileOnly("nl.jolanrensen.docProcessor:doc-processor-gradle-plugin:$version")
-            implementation("nl.jolanrensen.docProcessor:doc-processor-common:$version")
+            compileOnly("nl.jolanrensen.docProcessor:doc-processor-gradle-plugin:$version")
+//            implementation("nl.jolanrensen.docProcessor:doc-processor-common:$version")
         }
     """.trimIndent()
 
@@ -98,7 +98,7 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
 
         GradleRunner.create()
             .forwardOutput()
-            .withArguments("publishToMavenLocal")
+            .withArguments("clean", "publishToMavenLocal")
             .withProjectDir(projectDirectory)
             .withDebug(true)
             .build()

@@ -3,11 +3,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     java
     kotlin("jvm")
-    id("com.vanniktech.maven.publish") version "0.20.0"
+//    id("com.vanniktech.maven.publish") version "0.20.0"
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "0.1.3-SNAPSHOT"
+version = "0.1.7-SNAPSHOT"
 
 repositories {
     mavenCentral()

@@ -115,10 +115,11 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     private fun Project.maybeCreateRuntimeConfiguration(): Configuration =
         project.configurations.maybeCreate("kotlinKdocIncludePluginRuntime") {
             isCanBeConsumed = true
-            dependencies.add(project.dependencies.create("org.jetbrains.kotlin:kotlin-compiler:1.7.20"))
-            dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-analysis:1.7.20")) // compileOnly in base plugin
-            dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:1.7.20"))
-            dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:1.7.20"))
+            val kotlinVersion = "1.8.10"
+            dependencies.add(project.dependencies.create("org.jetbrains.kotlin:kotlin-compiler:$kotlinVersion"))
+            dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-analysis:$kotlinVersion")) // compileOnly in base plugin
+            dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:$kotlinVersion"))
+            dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:$kotlinVersion"))
         }
 
     private fun <T : Any> NamedDomainObjectContainer<T>.maybeCreate(name: String, configuration: T.() -> Unit): T =
@@ -188,7 +189,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         // redirect System.err to ERROR logs
         logging.captureStandardError(LogLevel.ERROR)
 
-        log.lifecycle { "Hello from plugin 'nl.jolanrensen.docProcessor'" }
+        log.lifecycle { "Doc Processor is running!" }
 
         val sourceRoots = sources.get()
         val target = target.get()

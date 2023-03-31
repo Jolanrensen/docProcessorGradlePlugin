@@ -113,7 +113,8 @@ abstract class ProcessDocsAction {
             it.invoke(
                 sourceSet = parameters.sources,
                 context = context,
-            )        }
+            )
+        }
 
         // collect the right documentables from the modules (only linkable elements with docs)
         val pathsWithoutSources = mutableSetOf<String>()
@@ -128,7 +129,8 @@ abstract class ProcessDocsAction {
                 pathsWithoutSources += withoutSources.mapNotNull { it.dri.fullyQualifiedExtensionPath }
 
                 withSources.mapNotNull {
-                    val source = (it as WithSources).sources[parameters.sources]!!
+                    val source = (it as WithSources).sources[parameters.sources]
+                        ?: return@mapNotNull null
 
                     DocumentableWrapper.createFromDokkaOrNull(
                         documentable = it,
@@ -206,6 +208,8 @@ abstract class ProcessDocsAction {
 
                 val fileContent = try {
                     file.readText()
+                        .replace("\r\n", "\n")
+                        .replace("\r", "\n")
                 } catch (e: Exception) {
                     throw IOException("Could not read source file $file", e)
                 }
