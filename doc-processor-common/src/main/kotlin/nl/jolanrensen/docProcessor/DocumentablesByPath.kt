@@ -57,7 +57,7 @@ interface MutableDocumentablesByPath : DocumentablesByPath {
 
 // region implementations
 
-internal open class DocumentablesByPathFromMap(
+open class DocumentablesByPathFromMap(
     private val allDocs: Map<String, List<DocumentableWrapper>>,
     override val queryFilter: DocumentableWrapperFilter = { true },
     override val documentablesToProcessFilter: DocumentableWrapperFilter = { true },
@@ -98,7 +98,7 @@ internal open class DocumentablesByPathFromMap(
         )
 }
 
-internal class MutableDocumentablesByPathFromMap(
+class MutableDocumentablesByPathFromMap(
     private val allDocs: Map<String, List<MutableDocumentableWrapper>>,
     override val queryFilter: DocumentableWrapperFilter = { true },
     override val documentablesToProcessFilter: DocumentableWrapperFilter = { true },
@@ -133,10 +133,9 @@ internal class MutableDocumentablesByPathFromMap(
         )
 }
 
-internal open class DocumentablesByPathWithCache(
+open class DocumentablesByPathWithCache(
     private val unfilteredDocsToProcess: Map<String, List<DocumentableWrapper>>,
     private val query: (String) -> List<DocumentableWrapper>?,
-    private val queryAll: () -> Map<String, List<DocumentableWrapper>>,
     override val queryFilter: DocumentableWrapperFilter = { true },
     override val documentablesToProcessFilter: DocumentableWrapperFilter = { true },
 ) : DocumentablesByPath {
@@ -151,7 +150,7 @@ internal open class DocumentablesByPathWithCache(
 
     override fun query(path: String): List<DocumentableWrapper>? =
         queryCache.getOrPut(path) {
-            (unfilteredDocsToProcess[path] ?: query(path))
+            (unfilteredDocsToProcess[path] ?: query.invoke(path))
                 ?.filter(queryFilter)
                 ?: return@query null
         }
@@ -160,7 +159,6 @@ internal open class DocumentablesByPathWithCache(
     override fun toMutable(): MutableDocumentablesByPath = MutableDocumentablesByPathWithCache(
         unfilteredDocsToProcess = unfilteredDocsToProcess.toMutable(),
         query = { query(it)?.map { it.toMutable() } },
-        queryAll = { queryAll().toMutable() },
         queryFilter = queryFilter,
         documentablesToProcessFilter = documentablesToProcessFilter,
     )
@@ -169,7 +167,6 @@ internal open class DocumentablesByPathWithCache(
         DocumentablesByPathWithCache(
             unfilteredDocsToProcess = unfilteredDocsToProcess,
             query = query,
-            queryAll = queryAll,
             queryFilter = queryFilter,
             documentablesToProcessFilter = documentablesToProcessFilter,
         )
@@ -178,16 +175,14 @@ internal open class DocumentablesByPathWithCache(
         DocumentablesByPathWithCache(
             unfilteredDocsToProcess = unfilteredDocsToProcess,
             query = query,
-            queryAll = queryAll,
             queryFilter = queryFilter,
             documentablesToProcessFilter = docsToProcessFilter,
         )
 }
 
-internal class MutableDocumentablesByPathWithCache(
+class MutableDocumentablesByPathWithCache(
     private val unfilteredDocsToProcess: Map<String, List<MutableDocumentableWrapper>>,
     private val query: (String) -> List<MutableDocumentableWrapper>?,
-    private val queryAll: () -> Map<String, List<MutableDocumentableWrapper>>,
     override val queryFilter: DocumentableWrapperFilter = { true },
     override val documentablesToProcessFilter: DocumentableWrapperFilter = { true },
 ) : MutableDocumentablesByPath {
@@ -202,7 +197,7 @@ internal class MutableDocumentablesByPathWithCache(
 
     override fun query(path: String): List<MutableDocumentableWrapper>? =
         queryCache.getOrPut(path) {
-            (unfilteredDocsToProcess[path] ?: query(path))
+            (unfilteredDocsToProcess[path] ?: query.invoke(path))
                 ?.filter(queryFilter)
                 ?: return@query null
         }
@@ -213,7 +208,6 @@ internal class MutableDocumentablesByPathWithCache(
         MutableDocumentablesByPathWithCache(
             unfilteredDocsToProcess = unfilteredDocsToProcess,
             query = query,
-            queryAll = queryAll,
             queryFilter = queryFilter,
             documentablesToProcessFilter = documentablesToProcessFilter,
         )
@@ -222,7 +216,6 @@ internal class MutableDocumentablesByPathWithCache(
         MutableDocumentablesByPathWithCache(
             unfilteredDocsToProcess = unfilteredDocsToProcess,
             query = query,
-            queryAll = queryAll,
             queryFilter = queryFilter,
             documentablesToProcessFilter = docsToProcessFilter,
         )

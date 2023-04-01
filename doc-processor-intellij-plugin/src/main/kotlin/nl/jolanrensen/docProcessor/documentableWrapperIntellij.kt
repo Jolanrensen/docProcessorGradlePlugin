@@ -4,6 +4,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
+import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
 import org.jetbrains.kotlin.idea.base.utils.fqname.fqName
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
 import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
@@ -18,7 +19,7 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
         "Documentable must be a KtDeclaration or PsiDocCommentOwner, but was ${documentable::class.simpleName}"
     }
 
-    val path = documentable.getKotlinFqName()?.asString() ?: return null
+    val path = documentable.kotlinFqName?.asString() ?: return null
     val extensionPath: String? = if (documentable.isExtensionDeclaration()) {
         (documentable as? KtDeclaration)
             ?.descriptor

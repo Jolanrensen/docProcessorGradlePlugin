@@ -34,29 +34,12 @@ class IntellijDocProcessor(private val project: Project, private val processLimi
                 it.value
             }
 
-        // Find all processors
-        Thread.currentThread().contextClassLoader = this.javaClass.classLoader
-        val processors = findProcessors(
-            listOf(
-                // TODO make customizable
-                INCLUDE_DOC_PROCESSOR,
-                INCLUDE_FILE_DOC_PROCESSOR,
-                INCLUDE_ARG_DOC_PROCESSOR,
-                COMMENT_DOC_PROCESSOR,
-                SAMPLE_DOC_PROCESSOR,
-            )
-        )
+        val sourceDocsByPath = sourceDocs.toDocumentablesByPath()
 
-        // Run all processors
-        val (modifiedDocumentables, time) = measureTimedValue {
-            processors.fold(sourceDocs) { acc, processor ->
-                processor.processSafely(processLimit = processLimit, documentablesByPath = acc)
-            }
-        }
-        println("Running all processors took $time")
+        val modifiedDocumentables = processDocumentablesByPath(sourceDocsByPath)
 
         measureTime {
-            for (doc in modifiedDocumentables.flatMap { it.value.filter { it.isModified } }) {
+            for (doc in modifiedDocumentables.documentablesToProcess.flatMap { it.value.filter { it.isModified } }) {
                 val psiElement = docWrapperToPsi[doc.identifier] ?: continue
 
                 if (doc.docContent.isEmpty()) {
@@ -88,7 +71,33 @@ class IntellijDocProcessor(private val project: Project, private val processLimi
         println("IntellijDocProcessor processFiles done!")
     }
 
-    private fun getDocumentableWrappersWithUuidMap(
+    @OptIn(ExperimentalTime::class)
+    fun processDocumentablesByPath(sourceDocsByPath: DocumentablesByPath): DocumentablesByPath {
+        // Find all processors
+        Thread.currentThread().contextClassLoader = this.javaClass.classLoader
+        val processors = findProcessors(
+            listOf(
+                // TODO make customizable
+                INCLUDE_DOC_PROCESSOR,
+                INCLUDE_FILE_DOC_PROCESSOR,
+                INCLUDE_ARG_DOC_PROCESSOR,
+                COMMENT_DOC_PROCESSOR,
+                SAMPLE_DOC_PROCESSOR,
+            )
+        )
+
+        // Run all processors
+        val (modifiedDocumentables, time) = measureTimedValue {
+            processors.fold(sourceDocsByPath) { acc, processor ->
+                processor.processSafely(processLimit = processLimit, documentablesByPath = acc)
+            }
+        }
+        println("Running all processors took $time")
+
+        return modifiedDocumentables
+    }
+
+    fun getDocumentableWrappersWithUuidMap(
         psiFiles: List<PsiFile>,
     ): Pair<Map<String, List<DocumentableWrapper>>, Map<UUID, PsiElement>> {
         val uuidMap = Collections.synchronizedMap(mutableMapOf<UUID, PsiElement>())
@@ -124,16 +133,4 @@ class IntellijDocProcessor(private val project: Project, private val processLimi
 
         return Pair(documentablesPerPath, uuidMap)
     }
-
-    private fun getModifiedDocumentablesPerFile(
-        modifiedSourceDocs: Map<String, List<DocumentableWrapper>>,
-    ): Map<File, List<DocumentableWrapper>> =
-        modifiedSourceDocs
-            .entries
-            .flatMap {
-                it.value.filter {
-                    it.isModified // filter out unmodified documentables
-                }
-            }
-            .groupBy { it.file }
 }
