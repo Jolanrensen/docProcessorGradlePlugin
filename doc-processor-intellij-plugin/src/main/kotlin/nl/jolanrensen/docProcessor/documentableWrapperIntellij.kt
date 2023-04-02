@@ -19,6 +19,7 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
         "Documentable must be a KtDeclaration or PsiDocCommentOwner, but was ${documentable::class.simpleName}"
     }
 
+
     val path = documentable.kotlinFqName?.asString() ?: return null
     val extensionPath: String? = if (documentable.isExtensionDeclaration()) {
         (documentable as? KtDeclaration)

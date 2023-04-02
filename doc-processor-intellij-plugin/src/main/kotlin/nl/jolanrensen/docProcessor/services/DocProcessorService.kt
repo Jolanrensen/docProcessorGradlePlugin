@@ -11,9 +11,12 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.util.PsiTreeUtil.processElements
+import com.intellij.psi.util.elementType
 import nl.jolanrensen.docProcessor.*
 import nl.jolanrensen.docProcessor.listeners.DocProcessorFileListener
 import org.jetbrains.kotlin.idea.base.psi.copied
+import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.caches.resolve.safeAnalyzeNonSourceRootCode
 import org.jetbrains.kotlin.idea.codeInsight.DescriptorToSourceUtilsIde
@@ -106,11 +109,29 @@ class DocProcessorService(private val project: Project) {
     }
 
     fun getModifiedElement(
-        psiElement: PsiElement,
+        originalElement: PsiElement,
     ): PsiElement? {
         // TODO get element from copied file
-        TODO()
+        val file = originalElement.containingFile.copied()
 
+
+        var result: PsiElement? = null
+        processElements(file) {
+            if (it.elementType == originalElement.elementType &&
+                it.kotlinFqName == originalElement.kotlinFqName &&
+                it.indexInParent == originalElement.indexInParent
+            ) {
+                result = it
+                false
+            } else true
+        }
+
+        val psiElement = result ?: return null
+
+//        val psiElement =
+//            file.findUElementAt(originalElement.textOffset, KtDeclaration::class.java)
+//
+//                ?: return null
 
         val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
         if (documentableWrapper == null) {
