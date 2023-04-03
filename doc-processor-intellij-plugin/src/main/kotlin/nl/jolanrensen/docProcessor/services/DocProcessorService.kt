@@ -5,28 +5,15 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.LogLevel
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectFileIndex
-import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiElementFactory
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiManager
-import com.intellij.psi.util.PsiTreeUtil.processElements
-import com.intellij.psi.util.elementType
+import com.intellij.psi.*
 import nl.jolanrensen.docProcessor.*
-import nl.jolanrensen.docProcessor.listeners.DocProcessorFileListener
-import org.jetbrains.kotlin.idea.base.psi.copied
-import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
+import nl.jolanrensen.docProcessor.defaultProcessors.*
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.caches.resolve.safeAnalyzeNonSourceRootCode
 import org.jetbrains.kotlin.idea.codeInsight.DescriptorToSourceUtilsIde
-import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.idea.kdoc.KDocElementFactory
 import org.jetbrains.kotlin.idea.kdoc.resolveKDocLink
-import org.jetbrains.kotlin.idea.util.getValue
-import org.jetbrains.kotlin.idea.util.isJavaFileType
-import org.jetbrains.kotlin.idea.util.isKotlinFileType
-import org.jetbrains.kotlin.idea.util.psiModificationTrackerBasedCachedValue
+import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
@@ -39,70 +26,52 @@ class DocProcessorService(private val project: Project) {
         fun getInstance(project: Project): DocProcessorService = project.service()
     }
 
+    // TODO make configurable
+    val processLimit: Int = 10_000
+
     // make sure to listen to file changes
-    private val docProcessorFileListener = DocProcessorFileListener(project)
-        .also {
-            project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, it)
-        }
+//    private val docProcessorFileListener = DocProcessorFileListener(project)
+//        .also {
+//            project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, it)
+//        }
 
-    private val modifiedFilesByPath by psiModificationTrackerBasedCachedValue(project) {
-        val psiList = indexProject()
-        IntellijDocProcessor(project).processFiles(psiList)
-        psiList.associateBy { it.originalFile.virtualFile.path }
-    }
-
-    private fun indexProject(): List<PsiFile> {
-        println("Indexing project: ${project.name} started")
-
-        val result = mutableListOf<PsiFile>()
-        var successful = false
-        while (!successful) {
-            result.clear()
-            val startPsiValue = docProcessorFileListener.getFileChangeCount()
-            successful = ProjectFileIndex.getInstance(project).iterateContent(
-                /* processor = */
-                {
-                    if (docProcessorFileListener.getFileChangeCount() != startPsiValue) {
-                        thisLogger().info("Indexing project: ${project.name} cancelled")
-                        false
-                    } else {
-                        it.toPsiFile(project)?.let { psiFile ->
-                            result += psiFile.copied()
-                        }
-                        true
-                    }
-                },
-                /* filter = */
-                {
-                    "build/generated" !in it.path && // TODO make this configurable
-                            it.exists() &&
-                            (it.isKotlinFileType() || it.isJavaFileType())
-                },
-            )
-        }
-
-        return result
-    }
-
-    private val PsiElement.indexInParent: Int
-        get() = parent.children.indexOf(this)
-
+    /**
+     * Helper function that queries the project for reference links and returns them as a list of DocumentableWrappers.
+     */
     private fun query(context: PsiElement, link: String): List<DocumentableWrapper>? {
         val psiManager = PsiManager.getInstance(project)
 
-        val navElement = context.navigationElement as? KtElement ?: return null // TODO support java
-        val resolutionFacade = navElement.getResolutionFacade()
-        val bindingContext = navElement.safeAnalyzeNonSourceRootCode(resolutionFacade, BodyResolveMode.PARTIAL)
-        val contextDescriptor = bindingContext[BindingContext.DECLARATION_TO_DESCRIPTOR, navElement] ?: return null
-        val descriptors = resolveKDocLink(
-            bindingContext, resolutionFacade,
-            contextDescriptor, navElement, null, link.split('.')
-        )
+        val descriptors = when (val navElement = context.navigationElement) {
+            is KtElement -> {
+                val resolutionFacade = navElement.getResolutionFacade()
+                val bindingContext = navElement.safeAnalyzeNonSourceRootCode(resolutionFacade, BodyResolveMode.PARTIAL)
+                val contextDescriptor =
+                    bindingContext[BindingContext.DECLARATION_TO_DESCRIPTOR, navElement] ?: return null
+
+                resolveKDocLink(
+                    context = bindingContext,
+                    resolutionFacade = resolutionFacade,
+                    fromDescriptor = contextDescriptor,
+                    contextElement = navElement,
+                    fromSubjectOfTag = null,
+                    qualifiedName = link.split('.'),
+                )
+            }
+
+            else -> {
+                error("Java not supported yet.")
+            }
+        }
 
         val targets = descriptors.flatMap {
             DescriptorToSourceUtilsIde.getAllDeclarations(psiManager.project, it)
         }.mapNotNull {
-            DocumentableWrapper.createFromIntellijOrNull(it)
+            when (it) {
+                is KtDeclaration, is PsiDocCommentOwner ->
+                    DocumentableWrapper.createFromIntellijOrNull(it)
+
+                else -> null
+            }
         }
 
         return targets
@@ -111,100 +80,86 @@ class DocProcessorService(private val project: Project) {
     fun getModifiedElement(
         originalElement: PsiElement,
     ): PsiElement? {
-        // TODO get element from copied file
-        val file = originalElement.containingFile.copied()
+        try {
+            // Create a copy of the element so we can modify it
+            val psiElement = originalElement.copiedWithFile()
 
+            // Create a DocumentableWrapper from the element
+            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
+            if (documentableWrapper == null) {
+                thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
+                return null
+            }
 
-        var result: PsiElement? = null
-        processElements(file) {
-            if (it.elementType == originalElement.elementType &&
-                it.kotlinFqName == originalElement.kotlinFqName &&
-                it.indexInParent == originalElement.indexInParent
-            ) {
-                result = it
-                false
-            } else true
-        }
+            // Package the DocumentableWrapper in a DocumentablesByPath with the query function
+            val docsToProcess = listOfNotNull(
+                documentableWrapper.fullyQualifiedPath,
+                documentableWrapper.fullyQualifiedExtensionPath,
+            ).associateWith { listOf(documentableWrapper) }
+            val documentablesByPath = DocumentablesByPathWithCache(
+                unfilteredDocsToProcess = docsToProcess,
+                query = { link -> query(psiElement, link) },
+            )
 
-        val psiElement = result ?: return null
+            // Process the DocumentablesByPath
+            val results = processDocumentablesByPath(documentablesByPath)
 
-//        val psiElement =
-//            file.findUElementAt(originalElement.textOffset, KtDeclaration::class.java)
-//
-//                ?: return null
+            // Retrieve the original DocumentableWrapper from the results
+            val doc = results[documentableWrapper.identifier] ?: error("Something went wrong")
 
-        val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
-        if (documentableWrapper == null) {
-            thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
+            // If the new doc is empty, delete the comment
+            if (doc.docContent.isEmpty()) {
+                psiElement.docComment?.delete()
+                return psiElement
+            }
+
+            // If the new doc is not empty, generate a new doc element
+            val newComment = when (doc.programmingLanguage) {
+                ProgrammingLanguage.KOTLIN -> KDocElementFactory(project)
+                    .createKDocFromText(
+                        doc.docContent.toDoc()
+                    )
+
+                ProgrammingLanguage.JAVA -> PsiElementFactory.getInstance(project)
+                    .createDocCommentFromText(
+                        doc.docContent.toDoc()
+                    )
+            }
+
+            // Replace the old doc element with the new one if it exists, otherwise add a new one
+            if (psiElement.docComment != null) {
+                psiElement.docComment?.replace(newComment)
+            } else {
+                psiElement.addBefore(newComment, psiElement.firstChild)
+            }
+
+            return psiElement
+        } catch (e: Throwable) {
+            e.printStackTrace()
             return null
         }
-
-        val docsToProcess = listOfNotNull(
-            documentableWrapper.fullyQualifiedPath,
-            documentableWrapper.fullyQualifiedExtensionPath,
-        ).associateWith { listOf(documentableWrapper) }
-
-        val documentablesByPath = DocumentablesByPathWithCache(
-            unfilteredDocsToProcess = docsToProcess,
-            query = { link ->
-                query(psiElement, link)
-            },
-        )
-
-        val results = IntellijDocProcessor(project)
-            .processDocumentablesByPath(documentablesByPath)
-
-        val doc = listOfNotNull(
-            documentableWrapper.fullyQualifiedPath,
-            documentableWrapper.fullyQualifiedExtensionPath,
-        )
-            .firstNotNullOfOrNull { results[it] }
-            .let { it ?: error("") }
-            .first { it.identifier == documentableWrapper.identifier }
-
-        if (doc.docContent.isEmpty()) {
-            psiElement.docComment?.delete()
-            return psiElement
-        }
-
-        val newComment = when (doc.programmingLanguage) {
-            ProgrammingLanguage.KOTLIN -> KDocElementFactory(project)
-                .createKDocFromText(
-                    doc.docContent.toDoc()
-                )
-
-            ProgrammingLanguage.JAVA -> PsiElementFactory.getInstance(project)
-                .createDocCommentFromText(
-                    doc.docContent.toDoc()
-                )
-        }
-
-        if (psiElement.docComment != null) {
-            psiElement.docComment?.replace(newComment)
-        } else {
-            psiElement.addBefore(newComment, psiElement.firstChild)
-        }
-
-        return psiElement
-
-
-//        val modifiedFile = getModifiedFile(psiElement.containingFile) ?: return null
-//        var result: PsiElement? = null
-//        processElements(modifiedFile) {
-//            if (it.elementType == psiElement.elementType &&
-//                it.kotlinFqName == psiElement.kotlinFqName &&
-//                it.indexInParent == psiElement.indexInParent
-//            ) {
-//                result = it
-//                false
-//            } else true
-//        }
-//
-//        return result
     }
 
-    private fun getModifiedFile(file: PsiFile?): PsiFile? = file?.originalFile?.virtualFile?.path?.let {
-        modifiedFilesByPath[it]
+    fun processDocumentablesByPath(sourceDocsByPath: DocumentablesByPath): DocumentablesByPath {
+        // Find all processors
+        Thread.currentThread().contextClassLoader = this.javaClass.classLoader
+        val processors = findProcessors(
+            listOf(
+                // TODO make customizable
+                INCLUDE_DOC_PROCESSOR,
+                INCLUDE_FILE_DOC_PROCESSOR,
+                INCLUDE_ARG_DOC_PROCESSOR,
+                COMMENT_DOC_PROCESSOR,
+                SAMPLE_DOC_PROCESSOR,
+            )
+        )
+
+        // Run all processors
+        val modifiedDocumentables = processors.fold(sourceDocsByPath) { acc, processor ->
+            processor.processSafely(processLimit = processLimit, documentablesByPath = acc)
+        }
+
+        return modifiedDocumentables
     }
 
     init {

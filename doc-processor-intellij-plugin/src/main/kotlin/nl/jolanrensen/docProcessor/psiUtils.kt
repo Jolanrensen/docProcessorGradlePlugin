@@ -5,10 +5,15 @@ import com.intellij.psi.PsiDocCommentBase
 import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiJavaFile
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.elementType
 import org.jetbrains.kotlin.idea.KotlinLanguage
+import org.jetbrains.kotlin.idea.base.psi.copied
+import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.psiUtil.elementsInRange
 import org.jetbrains.kotlin.renderer.render
 import org.jetbrains.kotlin.resolve.ImportPath
 
@@ -83,9 +88,20 @@ fun PsiElement.getImports(): List<ImportPath> = buildList {
     }
 }
 
-
 fun ImportPath.toSimpleImportPath(): SimpleImportPath = SimpleImportPath(
     fqName = fqName.toUnsafe().render(),
     isAllUnder = isAllUnder,
     alias = alias?.asString(),
 )
+
+val PsiElement.indexInParent: Int
+    get() = parent.children.indexOf(this)
+
+fun <T : PsiElement> T.copiedWithFile(): T = containingFile
+    .copied()
+    .elementsInRange(textRange)
+    .first {
+        it.elementType == elementType &&
+                it.kotlinFqName == kotlinFqName &&
+                it.indexInParent == indexInParent
+    } as T
