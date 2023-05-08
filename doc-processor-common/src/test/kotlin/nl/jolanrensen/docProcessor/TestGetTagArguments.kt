@@ -16,20 +16,20 @@ class TestGetTagArguments {
 
     @Test
     fun `Some more difficult content with spaces`() {
-        val tagContent = "@tag [some (\"more \\]`difficult] (content with) spaces"
+        val tagContent = "@tag [some (\"more \\]``difficult] (content with) spaces"
 
         tagContent
             .getTagArguments("tag", 1)
             .map { it.removeEscapeCharacters() } shouldBe
                 listOf(
-                    "[some (\"more ]`difficult] (content with) spaces",
+                    "[some (\"more ]``difficult] (content with) spaces",
                 )
 
         tagContent
             .getTagArguments("tag", 2)
             .map { it.removeEscapeCharacters() } shouldBe
                 listOf(
-                    "[some (\"more ]`difficult]",
+                    "[some (\"more ]``difficult]",
                     "(content with) spaces",
                 )
 
@@ -37,7 +37,7 @@ class TestGetTagArguments {
             .getTagArguments("tag", 3)
             .map { it.removeEscapeCharacters() } shouldBe
                 listOf(
-                    "[some (\"more ]`difficult]",
+                    "[some (\"more ]``difficult]",
                     "(content with)",
                     "spaces",
                 )

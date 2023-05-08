@@ -45,7 +45,7 @@ const val INCLUDE_ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProces
  *
  * NOTE: If there are multiple `@arg` tags with the same name, the last one processed will be used.
  * The order is: Inline tags: depth-first, left-to-right. Block tags: top-to-bottom.
- * NOTE: Use `[References]` as keys is you want extra refactoring-safety.
+ * NOTE: Use `[References]` as keys if you want extra refactoring-safety.
  * They are queried and saved by their fully qualified name.
  */
 class IncludeArgDocProcessor : TagDocProcessor() {

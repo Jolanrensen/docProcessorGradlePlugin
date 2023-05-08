@@ -109,6 +109,7 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
         val blocksIndicators = mutableListOf<Char>()
 
         fun isDone(): Boolean = size >= numberOfArguments - 1
+        fun isInCodeBlock() = BACKTICKS in blocksIndicators
 
         var escapeNext = false
         for (char in content) {
@@ -124,21 +125,19 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
                     currentBlock = ""
                 }
 
-                char == '{' -> blocksIndicators += CURLY_BRACES
-                char == '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
-
-                char == '[' -> blocksIndicators += SQUARE_BRACKETS
-                char == ']' -> blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
-
-                char == '(' -> blocksIndicators += PARENTHESES
-                char == ')' -> blocksIndicators.removeAllElementsFromLast(PARENTHESES)
-
-                char == '<' -> blocksIndicators += ANGULAR_BRACKETS
-                char == '>' -> blocksIndicators.removeAllElementsFromLast(ANGULAR_BRACKETS)
-
                 char == '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
-                char == '"' -> if (!blocksIndicators.removeAllElementsFromLast(DOUBLE_QUOTES)) blocksIndicators += DOUBLE_QUOTES
-                char == '\'' -> if (blocksIndicators.removeAllElementsFromLast(SINGLE_QUOTES)) blocksIndicators += SINGLE_QUOTES
+            }
+            if (!isInCodeBlock()) when (char) {
+                '{' -> blocksIndicators += CURLY_BRACES
+                '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
+                '[' -> blocksIndicators += SQUARE_BRACKETS
+                ']' -> blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
+                '(' -> blocksIndicators += PARENTHESES
+                ')' -> blocksIndicators.removeAllElementsFromLast(PARENTHESES)
+                '<' -> blocksIndicators += ANGULAR_BRACKETS
+                '>' -> blocksIndicators.removeAllElementsFromLast(ANGULAR_BRACKETS)
+                '"' -> if (!blocksIndicators.removeAllElementsFromLast(DOUBLE_QUOTES)) blocksIndicators += DOUBLE_QUOTES
+                '\'' -> if (blocksIndicators.removeAllElementsFromLast(SINGLE_QUOTES)) blocksIndicators += SINGLE_QUOTES
 
                 // TODO: issue #11: html tags
             }
@@ -222,6 +221,9 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
     return buildList {
         var currentBlock = ""
         val blocksIndicators = mutableListOf<Char>()
+
+        fun isInCodeBlock() = BACKTICKS in blocksIndicators
+
         for (line in docContent) {
 
             // start a new block if the line starts with a tag and we're not
@@ -249,6 +251,9 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
                 when (char) {
                     '\\' -> escapeNext = true
 
+                    '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
+                }
+                if (!isInCodeBlock()) when (char) {
                     '{' -> blocksIndicators += CURLY_BRACES
                     '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
 
@@ -260,8 +265,6 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
 
                     '<' -> blocksIndicators += ANGULAR_BRACKETS
                     '>' -> blocksIndicators.removeAllElementsFromLast(ANGULAR_BRACKETS)
-
-                    '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
 
                     // TODO: issue #11: html tags
                 }
