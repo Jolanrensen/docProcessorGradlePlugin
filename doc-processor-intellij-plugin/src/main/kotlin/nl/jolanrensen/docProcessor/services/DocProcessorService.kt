@@ -166,6 +166,4 @@ class DocProcessorService(private val project: Project) {
         thisLogger().setLevel(LogLevel.INFO) // TEMP
         thisLogger().info(MessageBundle.message("projectService", project.name))
     }
-
-    fun getRandomNumber() = (1..100).random()
 }
