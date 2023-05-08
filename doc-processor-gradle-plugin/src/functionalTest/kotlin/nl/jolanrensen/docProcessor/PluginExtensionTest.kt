@@ -49,17 +49,16 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
     private val extensionPlugin = """
         package nl.jolanrensen.extension
 
-        import nl.jolanrensen.docProcessor.DocProcessor
-        import nl.jolanrensen.docProcessor.DocumentableWrapper
+        import nl.jolanrensen.docProcessor.*
         
         class Extension : DocProcessor() {
         
             override fun process(
                 processLimit: Int,
-                documentablesByPath: Map<String, List<DocumentableWrapper>>,
-            ): Map<String, List<DocumentableWrapper>> =
-                documentablesByPath.mapValues { (_, v) ->
-                    v.map {
+                documentablesByPath: DocumentablesByPath,
+            ): DocumentablesByPath =
+                documentablesByPath.documentablesToProcess.map { (path, v) ->
+                    path to v.map {
                         it.copy(
                             docContent = it.docContent
                                 .replace('e', 'a')
@@ -67,7 +66,7 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
                             isModified = true,
                         )
                     }
-                }
+                }.toDocumentablesByPath()
         }
     """.trimIndent()
 

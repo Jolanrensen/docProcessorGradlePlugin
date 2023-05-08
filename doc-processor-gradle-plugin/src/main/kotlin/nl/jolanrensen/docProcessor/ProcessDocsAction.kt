@@ -47,10 +47,8 @@ abstract class ProcessDocsAction {
         // analyse the sources with dokka to get the documentables
         val sourceDocs = analyseSourcesWithDokka()
 
-        log.info { "Found ${sourceDocs.size} source docs: $sourceDocs" }
-
         // Find all processors
-        val processors = findProcessors()
+        val processors = findProcessors(parameters.processors)
 
         if (processors.isEmpty())
             log.warn { "No processors found" }
@@ -62,7 +60,7 @@ abstract class ProcessDocsAction {
             processors.fold(sourceDocs) { acc, processor ->
                 log.lifecycle { "Running processor: ${processor::class.qualifiedName}" }
                 processor.processSafely(processLimit = parameters.processLimit, documentablesByPath = acc)
-            }
+            }.documentablesToProcess
 
         // filter to only include the modified documentables
         val modifiedDocumentablesPerFile = getModifiedDocumentablesPerFile(modifiedDocumentables)
@@ -75,7 +73,7 @@ abstract class ProcessDocsAction {
         copyAndModifySources(modifiedDocumentablesPerFile)
     }
 
-    private fun analyseSourcesWithDokka(): Map<String, List<DocumentableWrapper>> {
+    private fun analyseSourcesWithDokka(): DocumentablesByPath {
         // initialize dokka with the sources
         val configuration = DokkaConfigurationImpl(
             sourceSets = listOf(parameters.sources),
@@ -159,22 +157,9 @@ abstract class ProcessDocsAction {
             }
         }
 
-        return documentablesPerPath
-    }
+        log.info { "Found ${documentablesPerPath.size} source docs: $documentablesPerPath" }
 
-    private fun findProcessors(): List<DocProcessor> {
-        val availableProcessors: Set<DocProcessor> = ServiceLoader.load(DocProcessor::class.java).toSet()
-
-        val filteredProcessors = parameters
-            .processors
-            .mapNotNull { name ->
-                availableProcessors.find { it::class.qualifiedName == name }
-            }.map {
-                // create a new instance of the processor, so it can safely be used multiple times
-                it::class.java.newInstance()
-            }
-
-        return filteredProcessors
+        return DocumentablesByPath.of(documentablesPerPath)
     }
 
     private fun getModifiedDocumentablesPerFile(

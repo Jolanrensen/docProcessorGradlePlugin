@@ -210,7 +210,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         val reference = originalKey.decodeCallableTarget()
         val referencedDocumentable = documentable.queryDocumentables(
             query = reference,
-            documentables = allDocumentables,
+            documentables = documentablesByPath,
         )
 
         if (referencedDocumentable != null)

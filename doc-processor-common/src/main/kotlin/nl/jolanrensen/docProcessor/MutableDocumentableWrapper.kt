@@ -1,6 +1,7 @@
 package nl.jolanrensen.docProcessor
 
 import java.io.File
+import java.util.UUID
 
 /**
  * Mutable version of [DocumentableWrapper] for [docContent], [tags], and [isModified].
@@ -17,6 +18,7 @@ open class MutableDocumentableWrapper(
     file: File,
     docFileTextRange: IntRange,
     docIndent: Int,
+    identifier: UUID,
 
     override var docContent: DocContent,
     override var tags: Set<String>,
@@ -34,10 +36,11 @@ open class MutableDocumentableWrapper(
     docContent = docContent,
     tags = tags,
     isModified = isModified,
+    identifier = identifier,
 )
 
 /** Cast or convert current [DocumentableWrapper] to [MutableDocumentableWrapper]. */
-fun DocumentableWrapper.asMutable(): MutableDocumentableWrapper =
+fun DocumentableWrapper.toMutable(): MutableDocumentableWrapper =
     if (this is MutableDocumentableWrapper) this
     else MutableDocumentableWrapper(
         programmingLanguage = programmingLanguage,
@@ -52,4 +55,5 @@ fun DocumentableWrapper.asMutable(): MutableDocumentableWrapper =
         docContent = docContent,
         tags = tags,
         isModified = isModified,
+        identifier = identifier,
     )
