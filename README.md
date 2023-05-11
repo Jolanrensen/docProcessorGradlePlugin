@@ -528,3 +528,15 @@ fun main() {
 ```
 
 See the `defaultProcessor` folder in the project for more examples!
+
+## Preview: IntelliJ plugin
+
+I'm working on an IntelliJ plugin that will allow you to preview the documentation rendered directly in the IDE.
+Currently, the only way to try this is by building the plugin yourself from sources and installing it in IntelliJ.
+The plugin in its current state is unconfigurable and just uses the default processors as shown in the sample above.
+Also, it uses the IDE engine to resolve references.
+This is because it's a lot faster than my own engine + Dokka, but it does mean that there might be some differences
+with the preview and how it will look in the final docs. So, take this into account.
+
+I'm still working on connecting it to the Gradle plugin somehow or provide a way to configure it correctly,
+but until then, you can use it as is and be more efficient in your documentation writing!
