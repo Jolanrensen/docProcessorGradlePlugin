@@ -29,12 +29,6 @@ class DocProcessorService(private val project: Project) {
     // TODO make configurable
     val processLimit: Int = 10_000
 
-    // make sure to listen to file changes
-//    private val docProcessorFileListener = DocProcessorFileListener(project)
-//        .also {
-//            project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, it)
-//        }
-
     /**
      * Helper function that queries the project for reference links and returns them as a list of DocumentableWrappers.
      */
@@ -58,30 +52,35 @@ class DocProcessorService(private val project: Project) {
                 )
             }
 
-            else -> {
-                error("Java not supported yet.")
-            }
+            else -> error("Java not supported yet.")
+
         }
 
-        val targets = descriptors.flatMap {
-            DescriptorToSourceUtilsIde.getAllDeclarations(psiManager.project, it)
-        }.mapNotNull {
-            when (it) {
-                is KtDeclaration, is PsiDocCommentOwner ->
-                    DocumentableWrapper.createFromIntellijOrNull(it)
+        val targets = descriptors
+            .flatMap { DescriptorToSourceUtilsIde.getAllDeclarations(psiManager.project, it) }
+            .map {
+                when (it) {
+                    is KtDeclaration, is PsiDocCommentOwner ->
+                        DocumentableWrapper.createFromIntellijOrNull(it)
 
-                else -> null
+                    else -> null
+                }
             }
-        }
 
-        return targets
+        return when {
+            // No declarations found in entire project, so null
+            targets.isEmpty() -> null
+
+            // All documentables are null, but still declarations found, so empty list
+            targets.all { it == null } -> emptyList()
+
+            else -> targets.filterNotNull()
+        }
     }
 
-    fun getModifiedElement(
-        originalElement: PsiElement,
-    ): PsiElement? {
+    fun getModifiedElement(originalElement: PsiElement): PsiElement? {
         try {
-            // Create a copy of the element so we can modify it
+            // Create a copy of the element, so we can modify it
             val psiElement = originalElement.copiedWithFile()
 
             // Create a DocumentableWrapper from the element
@@ -96,6 +95,7 @@ class DocProcessorService(private val project: Project) {
                 documentableWrapper.fullyQualifiedPath,
                 documentableWrapper.fullyQualifiedExtensionPath,
             ).associateWith { listOf(documentableWrapper) }
+
             val documentablesByPath = DocumentablesByPathWithCache(
                 unfilteredDocsToProcess = docsToProcess,
                 query = { link -> query(psiElement, link) },

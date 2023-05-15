@@ -12,6 +12,15 @@ interface DocumentablesByPath {
 
     val documentablesToProcess: Map<String, List<DocumentableWrapper>>
 
+    /**
+     * Returns a list of [DocumentableWrapper]s for the given [path].
+     *
+     * Returns empty list if [path] exists in the project
+     * but no [DocumentableWrapper] is found.
+     *
+     * Returns `null` if no [DocumentableWrapper] is found for the given [path] and [path]
+     * does not exist in the project.
+     */
     fun query(path: String): List<DocumentableWrapper>?
 
     operator fun get(path: String): List<DocumentableWrapper>? = query(path)
@@ -153,7 +162,7 @@ open class DocumentablesByPathWithCache(
     private val queryCache: MutableMap<String, List<DocumentableWrapper>> = mutableMapOf()
 
     override fun query(path: String): List<DocumentableWrapper>? =
-        queryCache.getOrPut(path) {
+        queryCache.getOrPut(path) { // should return null in SingleColumn.all case
             (unfilteredDocsToProcess[path] ?: query.invoke(path))
                 ?.filter(queryFilter)
                 ?: return@query null
