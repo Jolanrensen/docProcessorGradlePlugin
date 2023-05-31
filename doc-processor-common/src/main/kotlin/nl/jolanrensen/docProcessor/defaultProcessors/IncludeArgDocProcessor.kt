@@ -89,14 +89,14 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         if (atLeastOneRun && !anyModifications) {
             val log = arguments[INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND] as? Boolean ?: true
             if (log) {
-                val fileTexts = argsNotFound.map { (uuid, it) ->
-                    uuid to it.doc.file.readText()
-                }.toMap()
+                val fileTexts = argsNotFound.values
+                    .distinctBy { it.doc.file }
+                    .associate { it.doc.file to it.doc.file.readText() }
 
-                for ((identifier, doc) in argsNotFound) {
-                    val (documentable, args) = doc
+                for ((_, docWithArgs) in argsNotFound) {
+                    val (documentable, args) = docWithArgs
 
-                    val (line, char) = fileTexts[identifier]!!
+                    val (line, char) = fileTexts[documentable.file]!!
                         .getLineAndCharacterOffset(documentable.docFileTextRange.first)
 
                     if (args.isNotEmpty()) {
