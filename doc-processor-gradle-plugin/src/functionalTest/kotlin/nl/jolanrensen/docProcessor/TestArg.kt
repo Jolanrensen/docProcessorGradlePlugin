@@ -373,7 +373,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * This is a large example of how the plugin will work from Test2
              *
              * @param name The name of the person to greet
-             * @see [com.example.plugin.KdocIncludePlugin][com.example.plugin.KdocIncludePlugin]
+             * @see [com.example.plugin.KdocIncludePlugin]
              *  
              */
             @AnnotationTest(a = 24)
@@ -387,7 +387,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * This is a large example of how the plugin will work from someFun
              *
              * @param name The name of the person to greet
-             * @see [com.example.plugin.KdocIncludePlugin][com.example.plugin.KdocIncludePlugin]
+             * @see [com.example.plugin.KdocIncludePlugin]
              */
             fun someFun() {
                 println("Hello World!")
@@ -399,7 +399,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * This is a large example of how the plugin will work from someMoreFun
              *
              * @param name The name of the person to greet
-             * @see [com.example.plugin.KdocIncludePlugin][com.example.plugin.KdocIncludePlugin]
+             * @see [com.example.plugin.KdocIncludePlugin]
              */
             fun someMoreFun() {
                 println("Hello World!")
