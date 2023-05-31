@@ -69,6 +69,15 @@ value class ProcessDocTaskDsl private constructor(public val task: ProcessDocTas
             task.processors.set(value)
         }
 
+    /**
+     * The arguments to be passed on to the processors.
+     */
+    var arguments: Map<String, Any?>
+        get() = task.arguments.get()
+        set(value) {
+            task.arguments.set(value)
+        }
+
     /** The classpath of this task. */
     val classpath: Configuration
         get() = task.classpath

@@ -32,7 +32,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
     private fun getBuildFileContent(processors: List<String>, plugins: List<String>): String = """
         import nl.jolanrensen.docProcessor.gradle.*
         import nl.jolanrensen.docProcessor.defaultProcessors.*
-
+        
         plugins {  
             kotlin("jvm") version "1.8.10"
             id("nl.jolanrensen.docProcessor") version "$version"
@@ -51,6 +51,8 @@ abstract class DocProcessorFunctionalTest(name: String) {
                     ${plugins.joinToString("\n") { "plugin(\"$it\")" }}
                 """.trimIndent()}
             }
+           
+            arguments += INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false
             
             processors = listOf(${processors.joinToString()})
         }

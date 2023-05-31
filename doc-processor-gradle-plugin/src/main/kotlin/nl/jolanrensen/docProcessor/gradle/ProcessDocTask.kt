@@ -13,6 +13,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
@@ -103,6 +104,24 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
      * `"com.example.plugin.MyProcessor"`
      */
     fun processors(vararg strings: String): Unit = processors.set(strings.toList())
+
+    /**
+     * The arguments to be passed on to the processors.
+     */
+    @get:Input
+    val arguments: MapProperty<String, Any?> = factory
+        .mapProperty(String::class.java, Any::class.java)
+        .convention(emptyMap())
+
+    /**
+     * The arguments to be passed on to the processors.
+     */
+    fun arguments(map: Map<String, Any?>): Unit = arguments.set(map)
+
+    /**
+     * The arguments to be passed on to the processors.
+     */
+    fun arguments(vararg arguments: Pair<String, Any?>): Unit = this.arguments.set(arguments.toMap())
 
     /** The classpath of this task. */
     @Classpath
@@ -233,6 +252,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
             it.target = target
             it.processors = processors
             it.processLimit = processLimit.get()
+            it.arguments = arguments.get()
         }
     }
 }

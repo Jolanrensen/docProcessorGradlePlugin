@@ -144,14 +144,15 @@ class DocProcessorService(private val project: Project) {
         // Find all processors
         Thread.currentThread().contextClassLoader = this.javaClass.classLoader
         val processors = findProcessors(
-            listOf(
+            fullyQualifiedNames = listOf(
                 // TODO make customizable
                 INCLUDE_DOC_PROCESSOR,
                 INCLUDE_FILE_DOC_PROCESSOR,
                 INCLUDE_ARG_DOC_PROCESSOR,
                 COMMENT_DOC_PROCESSOR,
                 SAMPLE_DOC_PROCESSOR,
-            )
+            ),
+            arguments = mapOf(INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false), // TODO
         )
 
         // Run all processors

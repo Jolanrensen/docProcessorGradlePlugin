@@ -23,6 +23,10 @@ abstract class DocProcessor : Serializable {
     /** Main logging access point. */
     val logger: KLogger = KotlinLogging.logger(name)
 
+    /** Allows any argument to be passed to the processor. */
+    var arguments: Map<String, Any?> = emptyMap()
+        internal set
+
     /**
      * Process given [documentablesByPath]. This function will only be called once per [DocProcessor] instance.
      * You can use [DocumentableWrapper.copy] to create a new [DocumentableWrapper] with modified
@@ -73,7 +77,7 @@ open class DocProcessorFailedException(
     cause,
 )
 
-fun findProcessors(fullyQualifiedNames: List<String>): List<DocProcessor> {
+fun findProcessors(fullyQualifiedNames: List<String>, arguments: Map<String, Any?>): List<DocProcessor> {
     val availableProcessors: Set<DocProcessor> = ServiceLoader.load(DocProcessor::class.java).toSet()
 
     val filteredProcessors = fullyQualifiedNames
@@ -81,7 +85,9 @@ fun findProcessors(fullyQualifiedNames: List<String>): List<DocProcessor> {
             availableProcessors.find { it::class.qualifiedName == name }
         }.map {
             // create a new instance of the processor, so it can safely be used multiple times
+            // also pass on the arguments
             it::class.java.newInstance()
+                .also { it.arguments = arguments }
         }
 
     return filteredProcessors

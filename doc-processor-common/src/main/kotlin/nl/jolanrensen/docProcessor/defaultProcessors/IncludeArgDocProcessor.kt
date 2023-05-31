@@ -2,11 +2,18 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.*
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
+import java.util.*
 
 /**
  * @see IncludeArgDocProcessor
  */
 const val INCLUDE_ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.IncludeArgDocProcessor"
+
+/**
+ * [Boolean] argument controlling whether to log warnings when an argument is not found.
+ * Default is `true`.
+ */
+const val INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$INCLUDE_ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
 
 /**
  * Adds two tags to your arsenal:
@@ -56,6 +63,16 @@ class IncludeArgDocProcessor : TagDocProcessor() {
     override fun tagIsSupported(tag: String): Boolean =
         tag in listOf(useArgumentTag, declareArgumentTag)
 
+    data class DocWrapperWithArgMap(
+        val doc: DocumentableWrapper,
+        val args: MutableMap<String, String> = mutableMapOf(),
+    )
+
+    data class DocWrapperWithArgSet(
+        val doc: DocumentableWrapper,
+        val args: MutableSet<String> = mutableSetOf(),
+    )
+
     override fun shouldContinue(
         i: Int,
         anyModifications: Boolean,
@@ -70,16 +87,25 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         // We can break out of the recursion if there are no more changes. We don't need to throw an error if an
         // argument is not found, as it might be defined in a different file.
         if (atLeastOneRun && !anyModifications) {
-            val fileTexts = argsNotFound.keys.associateWith { it.file.readText() }
-            for ((documentable, args) in argsNotFound) {
-                val (line, char) = fileTexts[documentable]!!.getLineAndCharacterOffset(documentable.docFileTextRange.start)
+            val log = arguments[INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND] as? Boolean ?: true
+            if (log) {
+                val fileTexts = argsNotFound.map { (uuid, it) ->
+                    uuid to it.doc.file.readText()
+                }.toMap()
 
-                if (args.isNotEmpty()) {
-                    logger.warn {
-                        buildString {
-                            val arguments = if (args.size == 1) "argument" else "arguments"
-                            appendLine("Could not find @arg $arguments in doc (${documentable.file.absolutePath}:$line:$char):")
-                            appendLine(args.joinToString(",\n") { "  \"@$useArgumentTag $it\"" })
+                for ((identifier, doc) in argsNotFound) {
+                    val (documentable, args) = doc
+
+                    val (line, char) = fileTexts[identifier]!!
+                        .getLineAndCharacterOffset(documentable.docFileTextRange.first)
+
+                    if (args.isNotEmpty()) {
+                        logger.warn {
+                            buildString {
+                                val arguments = if (args.size == 1) "argument" else "arguments"
+                                appendLine("Could not find @arg $arguments in doc (${documentable.file.absolutePath}:$line:$char):")
+                                appendLine(args.joinToString(",\n") { "  \"@$useArgumentTag $it\"" })
+                            }
                         }
                     }
                 }
@@ -92,9 +118,9 @@ class IncludeArgDocProcessor : TagDocProcessor() {
     }
 
     // @arg map for path -> arg name -> value
-    private val argMap: MutableMap<DocumentableWrapper, MutableMap<String, String>> = mutableMapOf()
+    private val argMap: MutableMap<UUID, DocWrapperWithArgMap> = mutableMapOf()
 
-    private val argsNotFound: MutableMap<DocumentableWrapper, MutableSet<String>> = mutableMapOf()
+    private val argsNotFound: MutableMap<UUID, DocWrapperWithArgSet> = mutableMapOf()
 
     private fun process(
         tagWithContent: String,
@@ -123,11 +149,15 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                     .removeSuffix("\n")
                     .removeEscapeCharacters()
 
-                argMap.getOrPut(documentable) { mutableMapOf() }.apply {
-                    for (it in keys) this[it] = value
+                argMap.getOrPut(documentable.identifier) {
+                    DocWrapperWithArgMap(documentable)
+                }.also { (_, args) ->
+                    for (it in keys) args[it] = value
                 }
 
-                argsNotFound.getOrPut(documentable) { mutableSetOf() } -= keys.toSet()
+                argsNotFound.getOrPut(documentable.identifier) {
+                    DocWrapperWithArgSet(documentable)
+                }.args -= keys.toSet()
                 ""
             }
 
@@ -163,11 +193,13 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 }
 
                 val content = keys.firstNotNullOfOrNull { key ->
-                    argMap[documentable]?.get(key)
+                    argMap[documentable.identifier]?.args?.get(key)
                 }
                 when {
                     content == null -> {
-                        argsNotFound.getOrPut(documentable) { mutableSetOf() } += keys
+                        argsNotFound.getOrPut(documentable.identifier) {
+                            DocWrapperWithArgSet(documentable)
+                        }.args += keys
                         tagWithContent
                     }
 

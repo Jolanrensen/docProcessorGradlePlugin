@@ -114,6 +114,9 @@ val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
       
         "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
     )
+    
+    // Optional. Send specific arguments to processors.
+    arguments += INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false
 
     // Optional dependencies for this task. These dependencies can introduce custom processors.
     dependencies {
@@ -198,6 +201,9 @@ def processKdocMain = tasks.register('processKdocMain', ProcessDocTask) {
         "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
     )
 
+    // Optional. Send specific arguments to processors.
+    arguments[IncludeArgDocProcessorKt.INCLUDE_ARG_DOC_PROCESSOR] = false
+    
     // Optional dependencies for this task. These dependencies can introduce custom processors.
     dependencies {
         plugin "com.example:plugin:SOME_VERSION"

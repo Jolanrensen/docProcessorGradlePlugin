@@ -39,6 +39,7 @@ abstract class ProcessDocsAction {
         val target: File?
         val processors: List<String>
         val processLimit: Int
+        val arguments: Map<String, Any?>
     }
 
     abstract val parameters: Parameters
@@ -48,7 +49,7 @@ abstract class ProcessDocsAction {
         val sourceDocs = analyseSourcesWithDokka()
 
         // Find all processors
-        val processors = findProcessors(parameters.processors)
+        val processors = findProcessors(parameters.processors, parameters.arguments)
 
         if (processors.isEmpty())
             log.warn { "No processors found" }
