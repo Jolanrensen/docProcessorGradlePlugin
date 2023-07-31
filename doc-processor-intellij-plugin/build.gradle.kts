@@ -23,7 +23,7 @@ repositories {
 }
 
 intellij {
-    version.set("2023.1")
+    version.set("2023.2")
     type.set("IC")
     pluginName.set("DocProcessor")
     plugins.addAll(
