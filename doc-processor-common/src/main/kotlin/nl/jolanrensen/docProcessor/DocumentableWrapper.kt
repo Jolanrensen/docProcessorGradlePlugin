@@ -25,6 +25,7 @@ import java.util.*
  * @property [fullyQualifiedPath] The fully qualified path of the documentable, its key if you will.
  * @property [fullyQualifiedExtensionPath] If the documentable is an extension function/property:
  *   "(The path of the receiver).(name of the documentable)".
+ * @property [fullyQualifiedSuperPaths] The fully qualified paths of the super classes of the documentable.
  * @property [file] The file in which the documentable can be found.
  * @property [docFileTextRange] The text range of the [file] where the original comment can be found.
  *   This is the range from `/**` to `*/`. If there is no comment, the range is empty. `null` if the [doc comment][DocComment]
@@ -49,6 +50,7 @@ open class DocumentableWrapper(
     val sourceHasDocumentation: Boolean,
     val fullyQualifiedPath: String,
     val fullyQualifiedExtensionPath: String?,
+    val fullyQualifiedSuperPaths: List<String>,
     val file: File,
     val docFileTextRange: IntRange,
     val docIndent: Int,
@@ -68,6 +70,7 @@ open class DocumentableWrapper(
         rawSource: String,
         fullyQualifiedPath: String,
         fullyQualifiedExtensionPath: String?,
+        fullyQualifiedSuperPaths: List<String>,
         file: File,
         docFileTextRange: IntRange,
         docIndent: Int,
@@ -78,6 +81,7 @@ open class DocumentableWrapper(
         sourceHasDocumentation = docContent.isNotEmpty() && docFileTextRange.size > 1,
         fullyQualifiedPath = fullyQualifiedPath,
         fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+        fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
         file = file,
         docFileTextRange = docFileTextRange,
         docIndent = docIndent,
@@ -110,15 +114,17 @@ open class DocumentableWrapper(
      * It takes the current [fullyQualifiedPath] and [imports][getPathsUsingImports] into account.
      */
     fun getAllFullPathsFromHereForTargetPath(targetPath: String): List<String> {
-        val subPaths = buildList {
-            val current = fullyQualifiedPath.split(".").toMutableList()
-            while (current.isNotEmpty()) {
-                add(current.joinToString("."))
-                current.removeLast()
+        val subPaths = buildSet {
+            for (path in listOf(fullyQualifiedPath) + fullyQualifiedSuperPaths) {
+                val current = path.split(".").toMutableList()
+                while (current.isNotEmpty()) {
+                    add(current.joinToString("."))
+                    current.removeLast()
+                }
             }
         }
 
-        val queries = buildList {
+        val queries = buildSet {
             // get all possible full target paths with all possible sub paths
             for (subPath in subPaths) {
                 this += "$subPath.$targetPath"
@@ -133,7 +139,7 @@ open class DocumentableWrapper(
             this += targetPath
         }
 
-        return queries
+        return queries.toList()
     }
 
     /**
@@ -203,6 +209,7 @@ open class DocumentableWrapper(
             sourceHasDocumentation = sourceHasDocumentation,
             fullyQualifiedPath = fullyQualifiedPath,
             fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+            fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
             file = file,
             docFileTextRange = docFileTextRange,
             docIndent = docIndent,

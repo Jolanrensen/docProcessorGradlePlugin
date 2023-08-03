@@ -25,9 +25,10 @@ interface DocumentablesByPath {
 
     operator fun get(path: String): List<DocumentableWrapper>? = query(path)
 
-    operator fun get(identifier: UUID): DocumentableWrapper? = documentablesToProcess
-        .values
-        .firstNotNullOfOrNull { it.firstOrNull { it.identifier == identifier } }
+    operator fun get(identifier: UUID): DocumentableWrapper? =
+        documentablesToProcess
+            .values
+            .firstNotNullOfOrNull { it.firstOrNull { it.identifier == identifier } }
 
     fun toMutable(): MutableDocumentablesByPath
 
