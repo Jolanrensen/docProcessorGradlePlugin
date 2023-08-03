@@ -44,7 +44,12 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
 
     override fun generateDoc(element: PsiElement, originalElement: PsiElement?): String? {
         val modifiedElement = getService(element.project).getModifiedElement(element)
-        return kotlin.generateDoc(modifiedElement ?: element, originalElement)
+        return try {
+            kotlin.generateDoc(modifiedElement ?: element, originalElement)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
     override fun generateHoverDoc(element: PsiElement, originalElement: PsiElement?): String? =
@@ -72,14 +77,14 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
     override fun getCustomDocumentationElement(
         editor: Editor,
         file: PsiFile,
-        contextElement: PsiElement?
+        contextElement: PsiElement?,
     ): PsiElement? = kotlin.getCustomDocumentationElement(editor, file, contextElement)
 
     override fun getCustomDocumentationElement(
         editor: Editor,
         file: PsiFile,
         contextElement: PsiElement?,
-        targetOffset: Int
+        targetOffset: Int,
     ): PsiElement? =
         getCustomDocumentationElement(
             editor = editor,
