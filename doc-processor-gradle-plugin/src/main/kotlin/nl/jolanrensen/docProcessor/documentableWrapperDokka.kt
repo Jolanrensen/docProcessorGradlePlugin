@@ -87,12 +87,13 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
     // Get the raw source of the documentable
     val rawSource = source.psi?.text ?: return null
 
-    // Get the paths of all supertypes of the documentable
-    TODO("make recursive")
+    // Get the paths of all supertypes of the documentable one level up
     val superPaths = (documentable as? WithSupertypes)
         ?.supertypes
         ?.flatMap { it.value }
-        ?.flatMap { it.typeConstructor.dri.let { listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath) } }
+        ?.flatMap {
+            it.typeConstructor.dri.let { listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath) }
+        }
         ?: emptyList()
 
     return DocumentableWrapper(

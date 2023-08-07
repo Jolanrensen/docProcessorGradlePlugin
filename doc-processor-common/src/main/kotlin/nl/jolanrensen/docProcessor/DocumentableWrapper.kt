@@ -110,12 +110,26 @@ open class DocumentableWrapper(
     }
 
     /**
+     * Retrieves all types of this [DocumentableWrapper], including its supertypes
+     */
+    fun getAllTypes(documentables: DocumentablesByPath): Set<DocumentableWrapper> =
+        setOf(this) + fullyQualifiedSuperPaths.flatMap {
+            documentables[it]?.flatMap {
+                it.getAllTypes(documentables)
+            } ?: emptySet()
+        }.toSet()
+
+    /**
      * Returns a list of paths that can be meant for the given [targetPath] in the context of this documentable.
      * It takes the current [fullyQualifiedPath] and [imports][getPathsUsingImports] into account.
      */
-    fun getAllFullPathsFromHereForTargetPath(targetPath: String): List<String> {
+    fun getAllFullPathsFromHereForTargetPath(targetPath: String, documentables: DocumentablesByPath): List<String> {
+        val documentablesNoFilters = documentables.withoutFilters()
+        val paths = getAllTypes(documentablesNoFilters).flatMap {
+            listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath)
+        }
         val subPaths = buildSet {
-            for (path in listOf(fullyQualifiedPath) + fullyQualifiedSuperPaths) {
+            for (path in paths) {
                 val current = path.split(".").toMutableList()
                 while (current.isNotEmpty()) {
                     add(current.joinToString("."))
@@ -137,6 +151,23 @@ open class DocumentableWrapper(
 
             // finally, add the path itself in case it's a top level/fq path
             this += targetPath
+
+            // target path could be pointing at something defined on a supertype of the target
+            val (targetPathReceiver, target) = targetPath.split(".").let {
+                if (it.size <= 1) return@buildSet
+                it.dropLast(1).joinToString(".") to it.last()
+            }
+
+            // if that is the case, we need to find the type of the receiver and get all full paths from there too
+            val targetType = queryDocumentables(
+                query = targetPathReceiver,
+                documentables = documentablesNoFilters,
+            ) { it != this@DocumentableWrapper }
+                ?: return@buildSet
+
+            this.addAll(
+                targetType.getAllFullPathsFromHereForTargetPath(target, documentables)
+            )
         }
 
         return queries.toList()
@@ -152,13 +183,14 @@ open class DocumentableWrapper(
         documentables: DocumentablesByPath,
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): DocumentableWrapper? {
-        val queries = getAllFullPathsFromHereForTargetPath(query).toMutableList()
+        val queries = getAllFullPathsFromHereForTargetPath(query, documentables).toMutableList()
 
         if (programmingLanguage == JAVA) { // support KotlinFileKt.Notation from java
             val splitQuery = query.split(".")
             if (splitQuery.firstOrNull()?.endsWith("Kt") == true) {
                 queries += getAllFullPathsFromHereForTargetPath(
-                    splitQuery.drop(1).joinToString(".")
+                    splitQuery.drop(1).joinToString("."),
+                    documentables,
                 )
             }
         }
@@ -189,7 +221,7 @@ open class DocumentableWrapper(
         if (docPath != null) return docPath
 
         // if there is no doc for the query, then we just return the first matching path
-        val queries = getAllFullPathsFromHereForTargetPath(query)
+        val queries = getAllFullPathsFromHereForTargetPath(query, documentables)
 
         return queries.firstOrNull {
             documentables[it] != null

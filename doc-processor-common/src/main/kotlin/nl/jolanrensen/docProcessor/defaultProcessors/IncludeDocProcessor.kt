@@ -141,7 +141,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                 query = includePath,
                 documentables = documentablesByPath,
             )
-            val attemptedQueries = documentable.getAllFullPathsFromHereForTargetPath(includePath)
+            val attemptedQueries = documentable.getAllFullPathsFromHereForTargetPath(includePath, unfilteredDocumentablesByPath)
                 .joinToString("\n") { "|  $it" }
 
             val targetPath = documentable.queryDocumentablesForPath(

@@ -59,7 +59,7 @@ class SampleDocProcessor : TagDocProcessor() {
         // for stuff written after the @sample tag, save and include it later
         val extraContent = sampleArguments.getOrElse(1) { "" }
 
-        val queries = documentable.getAllFullPathsFromHereForTargetPath(samplePath)
+        val queries = documentable.getAllFullPathsFromHereForTargetPath(samplePath, documentablesByPath)
 
         // query all documents for the sample path
         val targetDocumentable = queries.firstNotNullOfOrNull { query ->
