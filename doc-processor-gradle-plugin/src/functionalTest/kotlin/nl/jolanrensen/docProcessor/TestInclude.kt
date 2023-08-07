@@ -907,29 +907,29 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
     fun `type inheritance interface 3`() {
         @Language("kt")
         val content = """
-package com.example.plugin
-
-interface a {
-
-    /**
-     * Hello World
-     */
-    fun test()
-
-    interface b : a {
-
-        interface c : b {
-
-            interface d : c {
-
+            package com.example.plugin
+            
+            interface a {
+            
                 /**
-                 * @include [com.example.plugin.a.b.c.d.test]
+                 * Hello World
                  */
-                fun hello()
+                fun test()
+            
+                interface b : a {
+            
+                    interface c : b {
+            
+                        interface d : c {
+            
+                            /**
+                             * @include [com.example.plugin.a.b.c.d.test]
+                             */
+                            fun hello()
+                        }
+                    }
+                }
             }
-        }
-    }
-}
         """.trimIndent()
 
         @Language("kt")
