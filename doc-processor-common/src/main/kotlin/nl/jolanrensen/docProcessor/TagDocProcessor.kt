@@ -195,6 +195,8 @@ abstract class TagDocProcessor : DocProcessor() {
         documentable: MutableDocumentableWrapper,
         processLimit: Int,
     ): DocContent {
+        logger.info { "Processing inline tags in doc at '$path'" }
+
         // Process the inline tags first
         val processedInlineTagsDoc: DocContent = run {
             var text = docContent
@@ -251,6 +253,8 @@ abstract class TagDocProcessor : DocProcessor() {
 
             return@run text
         }
+
+        logger.info { "Processing block tags in doc at '$path'" }
 
         // Then process the normal tags
         val processedDoc: DocContent = processedInlineTagsDoc

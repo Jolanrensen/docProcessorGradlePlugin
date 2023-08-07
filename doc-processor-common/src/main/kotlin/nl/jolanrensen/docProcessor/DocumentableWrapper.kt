@@ -109,21 +109,34 @@ open class DocumentableWrapper(
         }
     }
 
+    private var allTypes: Set<DocumentableWrapper>? = null
+
     /**
      * Retrieves all types of this [DocumentableWrapper], including its supertypes
      */
-    fun getAllTypes(documentables: DocumentablesByPath): Set<DocumentableWrapper> =
-        setOf(this) + fullyQualifiedSuperPaths.flatMap {
-            documentables[it]?.flatMap {
-                it.getAllTypes(documentables)
-            } ?: emptySet()
-        }.toSet()
+    internal fun getAllTypes(documentables: DocumentablesByPath): Set<DocumentableWrapper> {
+        if (allTypes == null) {
+            val documentablesNoFilters = documentables.withoutFilters()
+
+            allTypes = setOf(this) + fullyQualifiedSuperPaths.flatMap {
+                documentablesNoFilters[it]?.flatMap {
+                    it.getAllTypes(documentablesNoFilters)
+                } ?: emptyList()
+            }
+        }
+
+        return allTypes!!
+    }
 
     /**
      * Returns a list of paths that can be meant for the given [targetPath] in the context of this documentable.
      * It takes the current [fullyQualifiedPath] and [imports][getPathsUsingImports] into account.
      */
-    fun getAllFullPathsFromHereForTargetPath(targetPath: String, documentables: DocumentablesByPath): List<String> {
+    fun getAllFullPathsFromHereForTargetPath(
+        targetPath: String,
+        documentables: DocumentablesByPath,
+        canBeExtension: Boolean = true,
+    ): List<String> {
         val documentablesNoFilters = documentables.withoutFilters()
         val paths = getAllTypes(documentablesNoFilters).flatMap {
             listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath)
@@ -152,7 +165,9 @@ open class DocumentableWrapper(
             // finally, add the path itself in case it's a top level/fq path
             this += targetPath
 
+            // TODO this is very slow and recursive
             // target path could be pointing at something defined on a supertype of the target
+            if (!canBeExtension) return@buildSet
             val (targetPathReceiver, target) = targetPath.split(".").let {
                 if (it.size <= 1) return@buildSet
                 it.dropLast(1).joinToString(".") to it.last()
@@ -162,11 +177,16 @@ open class DocumentableWrapper(
             val targetType = queryDocumentables(
                 query = targetPathReceiver,
                 documentables = documentablesNoFilters,
+                canBeExtension = false,
             ) { it != this@DocumentableWrapper }
                 ?: return@buildSet
 
             this.addAll(
-                targetType.getAllFullPathsFromHereForTargetPath(target, documentables)
+                targetType.getAllFullPathsFromHereForTargetPath(
+                    targetPath = target,
+                    documentables = documentables,
+                    canBeExtension = false,
+                )
             )
         }
 
@@ -181,16 +201,18 @@ open class DocumentableWrapper(
     fun queryDocumentables(
         query: String,
         documentables: DocumentablesByPath,
+        canBeExtension: Boolean = true,
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): DocumentableWrapper? {
-        val queries = getAllFullPathsFromHereForTargetPath(query, documentables).toMutableList()
+        val queries = getAllFullPathsFromHereForTargetPath(query, documentables, canBeExtension).toMutableList()
 
         if (programmingLanguage == JAVA) { // support KotlinFileKt.Notation from java
             val splitQuery = query.split(".")
             if (splitQuery.firstOrNull()?.endsWith("Kt") == true) {
                 queries += getAllFullPathsFromHereForTargetPath(
-                    splitQuery.drop(1).joinToString("."),
-                    documentables,
+                    targetPath = splitQuery.drop(1).joinToString("."),
+                    documentables = documentables,
+                    canBeExtension = canBeExtension
                 )
             }
         }
@@ -208,10 +230,11 @@ open class DocumentableWrapper(
     fun queryDocumentablesForPath(
         query: String,
         documentables: DocumentablesByPath,
+        canBeExtension: Boolean = true,
         pathIsValid: (String, DocumentableWrapper) -> Boolean = { _, _ -> true },
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): String? {
-        val docPath = queryDocumentables(query, documentables, filter)?.let {
+        val docPath = queryDocumentables(query, documentables, canBeExtension, filter)?.let {
             // take either the normal path to the doc or the extension path depending on which is valid and
             // causes the smallest number of collisions
             listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath)
@@ -221,7 +244,7 @@ open class DocumentableWrapper(
         if (docPath != null) return docPath
 
         // if there is no doc for the query, then we just return the first matching path
-        val queries = getAllFullPathsFromHereForTargetPath(query, documentables)
+        val queries = getAllFullPathsFromHereForTargetPath(query, documentables, canBeExtension)
 
         return queries.firstOrNull {
             documentables[it] != null

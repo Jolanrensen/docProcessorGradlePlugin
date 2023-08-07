@@ -36,6 +36,11 @@ interface DocumentablesByPath {
 
     fun withDocsToProcessFilter(docsToProcessFilter: DocumentableWrapperFilter): DocumentablesByPath
 
+    fun withFilters(
+        queryFilter: DocumentableWrapperFilter,
+        docsToProcessFilter: DocumentableWrapperFilter,
+    ): DocumentablesByPath
+
     companion object {
         val EMPTY: DocumentablesByPath = DocumentablesByPathFromMap(emptyMap())
 
@@ -46,8 +51,7 @@ interface DocumentablesByPath {
 }
 
 fun <T : DocumentablesByPath> T.withoutFilters(): T = this
-    .withQueryFilter { true }
-    .withDocsToProcessFilter { true } as T
+    .withFilters({ true }, { true }) as T
 
 fun Map<String, List<DocumentableWrapper>>.toDocumentablesByPath(): DocumentablesByPath = DocumentablesByPath.of(this)
 fun Iterable<Pair<String, List<DocumentableWrapper>>>.toDocumentablesByPath(): DocumentablesByPath =
@@ -62,6 +66,11 @@ interface MutableDocumentablesByPath : DocumentablesByPath {
     override fun withQueryFilter(queryFilter: DocumentableWrapperFilter): MutableDocumentablesByPath
 
     override fun withDocsToProcessFilter(docsToProcessFilter: DocumentableWrapperFilter): MutableDocumentablesByPath
+
+    override fun withFilters(
+        queryFilter: DocumentableWrapperFilter,
+        docsToProcessFilter: DocumentableWrapperFilter,
+    ): MutableDocumentablesByPath
 
 
     override val documentablesToProcess: Map<String, List<MutableDocumentableWrapper>>
@@ -110,6 +119,16 @@ open class DocumentablesByPathFromMap(
             queryFilter = queryFilter,
             documentablesToProcessFilter = docsToProcessFilter,
         )
+
+    override fun withFilters(
+        queryFilter: DocumentableWrapperFilter,
+        docsToProcessFilter: DocumentableWrapperFilter,
+    ): DocumentablesByPath =
+        DocumentablesByPathFromMap(
+            allDocs = allDocs,
+            queryFilter = queryFilter,
+            documentablesToProcessFilter = docsToProcessFilter,
+        )
 }
 
 class MutableDocumentablesByPathFromMap(
@@ -140,6 +159,16 @@ class MutableDocumentablesByPathFromMap(
         )
 
     override fun withDocsToProcessFilter(docsToProcessFilter: DocumentableWrapperFilter): MutableDocumentablesByPath =
+        MutableDocumentablesByPathFromMap(
+            allDocs = allDocs,
+            queryFilter = queryFilter,
+            documentablesToProcessFilter = docsToProcessFilter,
+        )
+
+    override fun withFilters(
+        queryFilter: DocumentableWrapperFilter,
+        docsToProcessFilter: DocumentableWrapperFilter,
+    ): MutableDocumentablesByPath =
         MutableDocumentablesByPathFromMap(
             allDocs = allDocs,
             queryFilter = queryFilter,
@@ -192,6 +221,17 @@ open class DocumentablesByPathWithCache(
             queryFilter = queryFilter,
             documentablesToProcessFilter = docsToProcessFilter,
         )
+
+    override fun withFilters(
+        queryFilter: DocumentableWrapperFilter,
+        docsToProcessFilter: DocumentableWrapperFilter,
+    ): DocumentablesByPath =
+        DocumentablesByPathWithCache(
+            unfilteredDocsToProcess = unfilteredDocsToProcess,
+            query = query,
+            queryFilter = queryFilter,
+            documentablesToProcessFilter = docsToProcessFilter,
+        )
 }
 
 class MutableDocumentablesByPathWithCache(
@@ -227,6 +267,17 @@ class MutableDocumentablesByPathWithCache(
         )
 
     override fun withDocsToProcessFilter(docsToProcessFilter: DocumentableWrapperFilter): MutableDocumentablesByPath =
+        MutableDocumentablesByPathWithCache(
+            unfilteredDocsToProcess = unfilteredDocsToProcess,
+            query = query,
+            queryFilter = queryFilter,
+            documentablesToProcessFilter = docsToProcessFilter,
+        )
+
+    override fun withFilters(
+        queryFilter: DocumentableWrapperFilter,
+        docsToProcessFilter: DocumentableWrapperFilter,
+    ): MutableDocumentablesByPath =
         MutableDocumentablesByPathWithCache(
             unfilteredDocsToProcess = unfilteredDocsToProcess,
             query = query,

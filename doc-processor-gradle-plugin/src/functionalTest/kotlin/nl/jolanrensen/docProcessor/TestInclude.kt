@@ -872,7 +872,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             interface Test1 : TestInterface
             
             /**
-             * @include [Test1.helloWorld]
+             * @include [com.example.plugin.Test1.helloWorld]
              */
             interface Test2
         """.trimIndent()
@@ -894,6 +894,69 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * Hello World!
              */
             interface Test2
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `type inheritance interface 3`() {
+        @Language("kt")
+        val content = """
+package com.example.plugin
+
+interface a {
+
+    /**
+     * Hello World
+     */
+    fun test()
+
+    interface b : a {
+
+        interface c : b {
+
+            interface d : c {
+
+                /**
+                 * @include [com.example.plugin.a.b.c.d.test]
+                 */
+                fun hello()
+            }
+        }
+    }
+}
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            interface a {
+            
+                /**
+                 * Hello World
+                 */
+                fun test()
+            
+                interface b : a {
+            
+                    interface c : b {
+            
+                        interface d : c {
+            
+                            /**
+                             * Hello World
+                             */
+                            fun hello()
+                        }
+                    }
+                }
+            }
         """.trimIndent()
 
         processContent(
