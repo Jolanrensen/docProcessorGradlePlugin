@@ -1,8 +1,10 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
+import org.jetbrains.dokka.links.parent
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
+import org.jetbrains.dokka.model.WithSupertypes
 import org.jetbrains.dokka.utilities.DokkaLogger
 import java.io.File
 
@@ -85,6 +87,15 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
     // Get the raw source of the documentable
     val rawSource = source.psi?.text ?: return null
 
+    // Get the paths of all supertypes of the documentable one level up
+    val superPaths = (documentable as? WithSupertypes)
+        ?.supertypes
+        ?.flatMap { it.value }
+        ?.flatMap {
+            it.typeConstructor.dri.let { listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath) }
+        }
+        ?: emptyList()
+
     return DocumentableWrapper(
         docContent = docContent,
         programmingLanguage = source.programmingLanguage,
@@ -92,6 +103,7 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
         rawSource = rawSource,
         fullyQualifiedPath = path,
         fullyQualifiedExtensionPath = extensionPath,
+        fullyQualifiedSuperPaths = superPaths,
         file = file,
         docFileTextRange = docFileTextRange.toIntRange(),
         docIndent = docIndent,

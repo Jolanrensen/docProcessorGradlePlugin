@@ -25,6 +25,7 @@ import java.util.*
  * @property [fullyQualifiedPath] The fully qualified path of the documentable, its key if you will.
  * @property [fullyQualifiedExtensionPath] If the documentable is an extension function/property:
  *   "(The path of the receiver).(name of the documentable)".
+ * @property [fullyQualifiedSuperPaths] The fully qualified paths of the super classes of the documentable.
  * @property [file] The file in which the documentable can be found.
  * @property [docFileTextRange] The text range of the [file] where the original comment can be found.
  *   This is the range from `/**` to `*/`. If there is no comment, the range is empty. `null` if the [doc comment][DocComment]
@@ -49,6 +50,7 @@ open class DocumentableWrapper(
     val sourceHasDocumentation: Boolean,
     val fullyQualifiedPath: String,
     val fullyQualifiedExtensionPath: String?,
+    val fullyQualifiedSuperPaths: List<String>,
     val file: File,
     val docFileTextRange: IntRange,
     val docIndent: Int,
@@ -68,6 +70,7 @@ open class DocumentableWrapper(
         rawSource: String,
         fullyQualifiedPath: String,
         fullyQualifiedExtensionPath: String?,
+        fullyQualifiedSuperPaths: List<String>,
         file: File,
         docFileTextRange: IntRange,
         docIndent: Int,
@@ -78,6 +81,7 @@ open class DocumentableWrapper(
         sourceHasDocumentation = docContent.isNotEmpty() && docFileTextRange.size > 1,
         fullyQualifiedPath = fullyQualifiedPath,
         fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+        fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
         file = file,
         docFileTextRange = docFileTextRange,
         docIndent = docIndent,
@@ -106,19 +110,35 @@ open class DocumentableWrapper(
     }
 
     /**
+     * Retrieves all types of this [DocumentableWrapper], including its supertypes
+     */
+    fun getAllTypes(documentables: DocumentablesByPath): Set<DocumentableWrapper> =
+        setOf(this) + fullyQualifiedSuperPaths.flatMap {
+            documentables[it]?.flatMap {
+                it.getAllTypes(documentables)
+            } ?: emptySet()
+        }.toSet()
+
+    /**
      * Returns a list of paths that can be meant for the given [targetPath] in the context of this documentable.
      * It takes the current [fullyQualifiedPath] and [imports][getPathsUsingImports] into account.
      */
-    fun getAllFullPathsFromHereForTargetPath(targetPath: String): List<String> {
-        val subPaths = buildList {
-            val current = fullyQualifiedPath.split(".").toMutableList()
-            while (current.isNotEmpty()) {
-                add(current.joinToString("."))
-                current.removeLast()
+    fun getAllFullPathsFromHereForTargetPath(targetPath: String, documentables: DocumentablesByPath): List<String> {
+        val documentablesNoFilters = documentables.withoutFilters()
+        val paths = getAllTypes(documentablesNoFilters).flatMap {
+            listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath)
+        }
+        val subPaths = buildSet {
+            for (path in paths) {
+                val current = path.split(".").toMutableList()
+                while (current.isNotEmpty()) {
+                    add(current.joinToString("."))
+                    current.removeLast()
+                }
             }
         }
 
-        val queries = buildList {
+        val queries = buildSet {
             // get all possible full target paths with all possible sub paths
             for (subPath in subPaths) {
                 this += "$subPath.$targetPath"
@@ -131,9 +151,26 @@ open class DocumentableWrapper(
 
             // finally, add the path itself in case it's a top level/fq path
             this += targetPath
+
+            // target path could be pointing at something defined on a supertype of the target
+            val (targetPathReceiver, target) = targetPath.split(".").let {
+                if (it.size <= 1) return@buildSet
+                it.dropLast(1).joinToString(".") to it.last()
+            }
+
+            // if that is the case, we need to find the type of the receiver and get all full paths from there too
+            val targetType = queryDocumentables(
+                query = targetPathReceiver,
+                documentables = documentablesNoFilters,
+            ) { it != this@DocumentableWrapper }
+                ?: return@buildSet
+
+            this.addAll(
+                targetType.getAllFullPathsFromHereForTargetPath(target, documentables)
+            )
         }
 
-        return queries
+        return queries.toList()
     }
 
     /**
@@ -146,13 +183,14 @@ open class DocumentableWrapper(
         documentables: DocumentablesByPath,
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): DocumentableWrapper? {
-        val queries = getAllFullPathsFromHereForTargetPath(query).toMutableList()
+        val queries = getAllFullPathsFromHereForTargetPath(query, documentables).toMutableList()
 
         if (programmingLanguage == JAVA) { // support KotlinFileKt.Notation from java
             val splitQuery = query.split(".")
             if (splitQuery.firstOrNull()?.endsWith("Kt") == true) {
                 queries += getAllFullPathsFromHereForTargetPath(
-                    splitQuery.drop(1).joinToString(".")
+                    splitQuery.drop(1).joinToString("."),
+                    documentables,
                 )
             }
         }
@@ -183,7 +221,7 @@ open class DocumentableWrapper(
         if (docPath != null) return docPath
 
         // if there is no doc for the query, then we just return the first matching path
-        val queries = getAllFullPathsFromHereForTargetPath(query)
+        val queries = getAllFullPathsFromHereForTargetPath(query, documentables)
 
         return queries.firstOrNull {
             documentables[it] != null
@@ -203,6 +241,7 @@ open class DocumentableWrapper(
             sourceHasDocumentation = sourceHasDocumentation,
             fullyQualifiedPath = fullyQualifiedPath,
             fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+            fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
             file = file,
             docFileTextRange = docFileTextRange,
             docIndent = docIndent,

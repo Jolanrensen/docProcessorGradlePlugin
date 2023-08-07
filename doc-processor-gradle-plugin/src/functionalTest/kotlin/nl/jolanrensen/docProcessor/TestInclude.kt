@@ -808,4 +808,143 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             processors = processors,
         ) shouldBe expectedOutput
     }
+
+    @Test
+    fun `type inheritance interface 1`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            interface TestInterface {
+                /**
+                 * Hello World!
+                 */
+                fun helloWorld()
+            }
+            
+            interface Test1 : TestInterface
+            
+            /**
+             * @include [helloWorld]
+             */
+            interface Test2 : Test1
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            interface TestInterface {
+                /**
+                 * Hello World!
+                 */
+                fun helloWorld()
+            }
+            
+            interface Test1 : TestInterface
+            
+            /**
+             * Hello World!
+             */
+            interface Test2 : Test1
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `type inheritance interface 2`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            interface TestInterface {
+                /**
+                 * Hello World!
+                 */
+                fun helloWorld()
+            }
+            
+            interface Test1 : TestInterface
+            
+            /**
+             * @include [Test1.helloWorld]
+             */
+            interface Test2
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            interface TestInterface {
+                /**
+                 * Hello World!
+                 */
+                fun helloWorld()
+            }
+            
+            interface Test1 : TestInterface
+            
+            /**
+             * Hello World!
+             */
+            interface Test2
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `type inheritance extensions`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            interface TestInterface
+            interface Test1 : TestInterface
+            
+            /**
+             * Hello World!
+             */
+            fun TestInterface.helloWorld()
+            
+            /**
+             * @include [Test1.helloWorld]
+             */
+            interface Test2
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            interface TestInterface
+            interface Test1 : TestInterface
+            
+            /**
+             * Hello World!
+             */
+            fun TestInterface.helloWorld()
+            
+            /**
+             * Hello World!
+             */
+            interface Test2
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
 }

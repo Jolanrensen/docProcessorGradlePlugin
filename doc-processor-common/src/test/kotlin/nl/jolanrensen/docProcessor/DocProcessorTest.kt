@@ -31,6 +31,7 @@ abstract class DocProcessorTest(name: String) {
         fullyQualifiedPath: String,
         docFileTextRange: IntRange,
         fullyQualifiedExtensionPath: String? = null,
+        fullyQualifiedSuperPaths: List<String> = emptyList(),
         docIndent: Int = 0,
         fileName: String = "Test",
         imports: List<SimpleImportPath> = emptyList(),
@@ -43,6 +44,7 @@ abstract class DocProcessorTest(name: String) {
         rawSource = documentation + "\n" + documentableSourceNoDoc,
         fullyQualifiedPath = fullyQualifiedPath,
         fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+        fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
         file = File(
             "src/main/${if (language == KOTLIN) "kotlin" else "java"}/${
                 packageName.replace('.', '/')
