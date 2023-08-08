@@ -34,7 +34,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
         import nl.jolanrensen.docProcessor.defaultProcessors.*
         
         plugins {  
-            kotlin("jvm") version "1.8.10"
+            kotlin("jvm") version "1.9.0"
             id("nl.jolanrensen.docProcessor") version "$version"
         }
         
@@ -58,6 +58,15 @@ abstract class DocProcessorFunctionalTest(name: String) {
         }
         
         tasks.compileKotlin { dependsOn(processKdocMain) }
+        
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+            kotlinOptions.jvmTarget = "1.8"
+        }
+        java {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(8))
+            }
+        }
     """.trimIndent()
 
     private val projectDirectory = File("build/$name")

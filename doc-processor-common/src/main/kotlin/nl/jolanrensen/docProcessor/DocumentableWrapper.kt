@@ -112,19 +112,23 @@ open class DocumentableWrapper(
     private var allTypes: Set<DocumentableWrapper>? = null
 
     /**
-     * Retrieves all types of this [DocumentableWrapper], including its supertypes
+     * Retrieves all types of this [DocumentableWrapper], including its supertypes.
+     * It caches the results in [allTypes].
      */
-    internal fun getAllTypes(documentables: DocumentablesByPath): Set<DocumentableWrapper> {
+    fun getAllTypes(documentables: DocumentablesByPath): Set<DocumentableWrapper> {
         if (allTypes == null) {
             val documentablesNoFilters = documentables.withoutFilters()
 
-            allTypes = setOf(this) + fullyQualifiedSuperPaths.flatMap {
-                documentablesNoFilters[it]?.flatMap {
-                    it.getAllTypes(documentablesNoFilters)
-                } ?: emptyList()
+            allTypes = buildSet {
+                this += this@DocumentableWrapper
+
+                for (path in fullyQualifiedSuperPaths) {
+                    documentablesNoFilters[path]?.forEach {
+                        this += it.getAllTypes(documentablesNoFilters)
+                    }
+                }
             }
         }
-
         return allTypes!!
     }
 
@@ -165,7 +169,6 @@ open class DocumentableWrapper(
             // finally, add the path itself in case it's a top level/fq path
             this += targetPath
 
-            // TODO this is very slow and recursive
             // target path could be pointing at something defined on a supertype of the target
             if (!canBeExtension) return@buildSet
             val (targetPathReceiver, target) = targetPath.split(".").let {
@@ -181,12 +184,9 @@ open class DocumentableWrapper(
             ) { it != this@DocumentableWrapper }
                 ?: return@buildSet
 
-            this.addAll(
-                targetType.getAllFullPathsFromHereForTargetPath(
-                    targetPath = target,
-                    documentables = documentables,
-                    canBeExtension = false,
-                )
+            val targetTypes = targetType.getAllTypes(documentablesNoFilters)
+            addAll(
+                targetTypes.map { "${it.fullyQualifiedPath}.$target" }
             )
         }
 
