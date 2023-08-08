@@ -10,7 +10,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
 
     private val processors = listOf(
         "INCLUDE_DOC_PROCESSOR",
-        "INCLUDE_ARG_DOC_PROCESSOR",
+        "ARG_DOC_PROCESSOR",
         "COMMENT_DOC_PROCESSOR",
     )
 
@@ -22,7 +22,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             
             /**
              * Hello World!
-             * {@arg name World}
+             * {@setArg name World}
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -52,8 +52,8 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             package com.example.plugin
             
             /**
-             * Hello {@includeArg name}!
-             * {@arg name World}
+             * Hello {@getArg name}!
+             * {@setArg name World}
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -83,7 +83,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             package com.example.plugin
             
             /**
-             * Hello {@includeArg name}!
+             * Hello {@getArg name}!
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -93,7 +93,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             package com.example.plugin
             
             /**
-             * Hello {@includeArg name}!
+             * Hello {@getArg name}!
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -112,9 +112,9 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             package com.example.plugin
             
             /**
-             * Hello {@includeArg name}!
-             * {@arg name Everyone}
-             * {@arg name World}
+             * Hello {@getArg name}!
+             * {@setArg name Everyone}
+             * {@setArg name World}
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -145,9 +145,9 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             package com.example.plugin
             
             /**
-             * Hello {@includeArg name}!
-             * @arg name Everyone
-             * @arg name World
+             * Hello {@getArg name}!
+             * @setArg name Everyone
+             * @setArg name World
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -176,10 +176,10 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             package com.example.plugin
             
             /**
-             * Hello {@includeArg name}!
-             * @arg name World
+             * Hello {@getArg name}!
+             * @setArg name World
              * @comment This comment ensures that the arg does not have a newline at the end.
-             * {@arg name Everyone}
+             * {@setArg name Everyone}
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -210,8 +210,8 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             interface Key
             
             /**
-             * Hello {@includeArg [Key]}!
-             * {@arg [Key] World}
+             * Hello {@getArg [Key]}!
+             * {@setArg [Key] World}
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -245,8 +245,8 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             interface Key
             
             /**
-             * Hello {@includeArg [Key]}!
-             * {@arg [Key] {World\}}
+             * Hello {@getArg [Key]}!
+             * {@setArg [Key] {World\}}
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -280,7 +280,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             interface Key
 
             /**
-             * Hello {@includeArg [Key]}!
+             * Hello {@getArg [Key]}!
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -289,7 +289,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
         val content = """
             package com.example.plugin
             
-            /** @include [helloWorld] {@arg [Key] World} */
+            /** @include [helloWorld] {@setArg [Key] World} */
             fun helloWorld2() {}
             """.trimIndent()
 
@@ -323,29 +323,29 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             /**
              * Hello World!
              * 
-             * This is a large example of how the plugin will work from {@includeArg source}
+             * This is a large example of how the plugin will work from {@getArg source}
              * 
              * @param name The name of the person to greet
              * @see [com.example.plugin.KdocIncludePlugin]
-             * {@arg source Test1}
+             * {@setArg source Test1}
              */
             private interface Test1
 
             /**
              * Hello World 2!
-             * @include [Test1] {@arg source Test2}
+             * @include [Test1] {@setArg source Test2}
              */
             @AnnotationTest(a = 24)
             private interface Test2
 
             /**
              * Some extra text
-             * @include [Test2] {@arg source someFun} */
+             * @include [Test2] {@setArg source someFun} */
             fun someFun() {
                 println("Hello World!")
             }
 
-            /** {@include [com.example.plugin.Test2]}{@arg source someMoreFun} */
+            /** {@include [com.example.plugin.Test2]}{@setArg source someMoreFun} */
             fun someMoreFun() {
                 println("Hello World!")
             }

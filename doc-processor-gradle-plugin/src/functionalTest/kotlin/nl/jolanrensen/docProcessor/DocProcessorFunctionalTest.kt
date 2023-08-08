@@ -52,7 +52,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
                 """.trimIndent()}
             }
            
-            arguments += INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false
+            arguments += ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false
             
             processors = listOf(${processors.joinToString()})
         }
