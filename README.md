@@ -21,15 +21,15 @@ The processing order is:
 
 Included preprocessors are:
 
-| Description                                                                                                                      | Name                         |
-|----------------------------------------------------------------------------------------------------------------------------------|------------------------------|
-| `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor).                 | `INCLUDE_DOC_PROCESSOR`      |
-| `@includeFile` tag to include file content into your KDoc / JavaDoc                                                              | `INCLUDE_FILE_DOC_PROCESSOR` |
-| `@arg` / `@includeArg` tags to define and include arguments within your KDoc / JavaDoc. Powerful in combination  with `@include` | `INCLUDE_ARG_DOC_PROCESSOR`  |
-| `@comment` tag to comment out parts of your modified KDoc / JavaDoc                                                              | `COMMENT_DOC_PROCESSOR`      |
-| `@sample` / `@sampleNoComments` tags to include code samples into your KDoc / JavaDoc                                            | `SAMPLE_DOC_PROCESSOR`       |
-| A processor that removes all KDoc / JavaDoc comments                                                                             | `NO_DOC_PROCESSOR`           |
-| A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment                                        | `TODO_DOC_PROCESSOR`         |
+| Description                                                                                                                     | Name                         |
+|---------------------------------------------------------------------------------------------------------------------------------|------------------------------|
+| `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor).                | `INCLUDE_DOC_PROCESSOR`      |
+| `@includeFile` tag to include file content into your KDoc / JavaDoc                                                             | `INCLUDE_FILE_DOC_PROCESSOR` |
+| `@setArg` / `@getArg` tags to define and include arguments within your KDoc / JavaDoc. Powerful in combination  with `@include` | `ARG_DOC_PROCESSOR`          |
+| `@comment` tag to comment out parts of your modified KDoc / JavaDoc                                                             | `COMMENT_DOC_PROCESSOR`      |
+| `@sample` / `@sampleNoComments` tags to include code samples into your KDoc / JavaDoc                                           | `SAMPLE_DOC_PROCESSOR`       |
+| A processor that removes all KDoc / JavaDoc comments                                                                            | `NO_DOC_PROCESSOR`           |
+| A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment                                       | `TODO_DOC_PROCESSOR`         |
 
 Of course, you can also try to make your own preprocessor (see [Custom Processors](#custom-processors)).
 For instance, you could make a processor that makes all KDoc / JavaDoc comments uppercase,
@@ -53,7 +53,8 @@ pluginManagement {
 }
 ```
 
-In `build.gradle.kts` or `build.gradle` add `id("nl.jolanrensen.docProcessor") version "{ VERSION }"` to `plugins { .. }`.
+In `build.gradle.kts` or `build.gradle` add `id("nl.jolanrensen.docProcessor") version "{ VERSION }"`
+to `plugins { .. }`.
 
 ### From sources
 
@@ -70,7 +71,8 @@ pluginManagement {
 }
 ```
 
-In `build.gradle.kts` or `build.gradle` add `id("nl.jolanrensen.docProcessor") version "{ VERSION }"` to `plugins { .. }`.
+In `build.gradle.kts` or `build.gradle` add `id("nl.jolanrensen.docProcessor") version "{ VERSION }"`
+to `plugins { .. }`.
 
 ## How to use
 
@@ -108,15 +110,15 @@ val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
     processors = listOf(
         INCLUDE_DOC_PROCESSOR, // The @include processor
         INCLUDE_FILE_DOC_PROCESSOR, // The @includeFile processor
-        INCLUDE_ARG_DOC_PROCESSOR, // The @arg and @includeArg processor
+        ARG_DOC_PROCESSOR, // The @setArg and @getArg processor
         COMMENT_DOC_PROCESSOR, // The @comment processor
         SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
-      
+
         "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
     )
-    
+
     // Optional. Send specific arguments to processors.
-    arguments += INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false
+    arguments += ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false
 
     // Optional dependencies for this task. These dependencies can introduce custom processors.
     dependencies {
@@ -174,10 +176,10 @@ import org.gradle.jvm.tasks.Jar
 
 plugins {
     id "nl.jolanrensen.docProcessor" version "{ VERSION }"
-    ..
+            ..
 }
 
-..
+        ..
 
 // Backup the kotlin source files location
 def kotlinMainSources = kotlin.sourceSets.main.kotlin.sourceDirectories
@@ -194,16 +196,16 @@ def processKdocMain = tasks.register('processKdocMain', ProcessDocTask) {
     processors(
             IncludeDocProcessorKt.INCLUDE_DOC_PROCESSOR, // The @include processor
             IncludeFileDocProcessorKt.INCLUDE_FILE_DOC_PROCESSOR, // The @includeFile processor
-            IncludeArgDocProcessorKt.INCLUDE_ARG_DOC_PROCESSOR, // The @arg and @includeArg processor
+            IncludeArgDocProcessorKt.ARG_DOC_PROCESSOR, // The @setArg and @getArg processor
             CommentDocProcessorKt.COMMENT_DOC_PROCESSOR, // The @comment processor
             SampleDocProcessorKt.SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
-      
-        "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
+
+            "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
     )
 
     // Optional. Send specific arguments to processors.
-    arguments[IncludeArgDocProcessorKt.INCLUDE_ARG_DOC_PROCESSOR] = false
-    
+    arguments[IncludeArgDocProcessorKt.ARG_DOC_PROCESSOR] = false
+
     // Optional dependencies for this task. These dependencies can introduce custom processors.
     dependencies {
         plugin "com.example:plugin:SOME_VERSION"
@@ -237,32 +239,32 @@ tasks.withType(Jar).configureEach {
     }
 }
 
-..
+        ..
 
 // As a bonus, this will update dokka to use the processed files as sources as well.
-tasks.withType(org.jetbrains.dokka.gradle.AbstractDokkaLeafTask).configureEach {
-    dokkaSourceSets.with {
-        configureEach {
-            sourceRoot(processKdocMain.target.get())
+        tasks.withType(org.jetbrains.dokka.gradle.AbstractDokkaLeafTask).configureEach {
+            dokkaSourceSets.with {
+                configureEach {
+                    sourceRoot(processKdocMain.target.get())
+                }
+            }
         }
-    }
-}
 ```
 
 ### Recommended order of default processors
 
 While you can use the processors in any order and leave out some or include others, the recommended order is as follows:
 
- - `INCLUDE_DOC_PROCESSOR`: The `@include` processor
- - `INCLUDE_FILE_DOC_PROCESSOR`: The `@includeFile` processor
- - `INCLUDE_ARG_DOC_PROCESSOR`: The `@arg` and `@includeArg` processor
- - `COMMENT_DOC_PROCESSOR`: The `@comment` processor
- - `SAMPLE_DOC_PROCESSOR`: The `@sample` and `@sampleNoComments` processor
+- `INCLUDE_DOC_PROCESSOR`: The `@include` processor
+- `INCLUDE_FILE_DOC_PROCESSOR`: The `@includeFile` processor
+- `ARG_DOC_PROCESSOR`: The `@setArg` and `@getArg` processor
+- `COMMENT_DOC_PROCESSOR`: The `@comment` processor
+- `SAMPLE_DOC_PROCESSOR`: The `@sample` and `@sampleNoComments` processor
 
-This order ensures that `@arg`/`@includeArg` is processed after `@include` and `@includeFile` such that any arguments
-that appear by them are available for the `@arg`/`@includeArg` processor.
-The `@comment` processor is recommended to be after `@arg`/`@includeArg` too, as it can be used as a line break for
-tag blocks. `@sample` and `@sampleNoComments` are recommended to be last as processing of inline tags inside comments of 
+This order ensures that `@setArg`/`@getArg` is processed after `@include` and `@includeFile` such that any arguments
+that appear by them are available for the `@setArg`/`@getArg` processor.
+The `@comment` processor is recommended to be after `@setArg`/`@getArg` too, as it can be used as a line break for
+tag blocks. `@sample` and `@sampleNoComments` are recommended to be last as processing of inline tags inside comments of
 `@sample` might not be desired.
 
 ## @include Processor
@@ -274,7 +276,7 @@ Visibility modifiers are ignored for now. Import statements are taken into accou
 JavaDoc is also supported. Add the `"java"` extension to `fileExtensions` in the plugin setup to use it.
 You can even cross include between Java and Kotlin but no conversion whatsoever will be done at the moment.
 
-Example in conjunction with the `@arg` / `@includeArg` processor:
+Example in conjunction with the `@setArg` / `@getArg` processor:
 
 ```kotlin
 package com.example.plugin
@@ -282,18 +284,18 @@ package com.example.plugin
 /**
  * Hello World!
  *
- * This is a large example of how the plugin will work from {@includeArg source}
+ * This is a large example of how the plugin will work from {@getArg source}
  *
  * @param name The name of the person to greet
  * @see [com.example.plugin.KdocIncludePlugin]
- * {@arg source Test1}
+ * {@setArg source Test1}
  */
 private interface Test1
 
 /**
  * Hello World 2!
  * @include [Test1]
- * {@arg source Test2}
+ * {@setArg source Test2}
  */
 @AnnotationTest(a = 24)
 private interface Test2
@@ -301,12 +303,12 @@ private interface Test2
 /**
  * Some extra text
  * @include [Test2]
- * {@arg source someFun} */
+ * {@setArg source someFun} */
 fun someFun() {
     println("Hello World!")
 }
 
-/** {@include [com.example.plugin.Test2]}{@arg source someMoreFun} */
+/** {@include [com.example.plugin.Test2]}{@setArg source someMoreFun} */
 fun someMoreFun() {
     println("Hello World!")
 }
@@ -388,20 +390,16 @@ For example, the following KDoc:
 will be parsed as follows:
 
 ```
-["
-Some extra text",
-"@a [Test2]
-Hi there!",
-"@b source someFun
-Some more text. (
-@c [Test1] {
-)
-"]
+[
+  "\nSome extra text",
+  "@a [Test2]\nHi there!",
+  "@b source someFun\nSome more text. (\n@c [Test1] {\n)\n",
+]
 ```
 
 This is also how tag processors receive their data. Note that any newlines after the `@tag`
 are also included as part of the tag data. Tag processors can then decide what to do with this extra data.
-However, `@include`, `@includeArg`, `@sample`, and `@includeFile` all have systems in place that
+However, `@include`, `@getArg`, `@sample`, and `@includeFile` all have systems in place that
 will keep the content after the tag and on the lines below the tag in place.
 Take this into account when writing your own processors.
 
@@ -433,6 +431,7 @@ abstract `TagDocProcessor` class or
 implementing the `DocProcessor` interface, depending on how much control you need over the docs.
 
 Make sure to depend on the sources by adding the following to your `build.gradle.kts` or `build.gradle` file:
+
 ```kts
 repositories {
     ..
@@ -455,41 +454,42 @@ class ExampleDocProcessor : TagDocProcessor() {
     /** We'll intercept @example tags. */
     override fun tagIsSupported(tag: String): Boolean =
         tag == "example"
-    
+
     /** How `{@inner tags}` are processed. */
     override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
     ): String = processContent(tagWithContent)
-    
+
     /** How `  @normal tags` are processed. */
     override fun processBlockTagWithContent(
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
     ): String = processContent(tagWithContent)
-    
+
     // We can use the same function for both processInnerTagWithContent and processTagWithContent
     private fun processContent(tagWithContent: String): String {
-      
+
         // We can log stuff if we want to using https://github.com/oshai/kotlin-logging
         logger.info { "Hi from the example logs!" }
-      
+
         // We can get the content after the @example tag.
         val contentWithoutTag = tagWithContent
             .getTagArguments(tag = "example", numberOfArguments = 1)
             .single()
             .trimEnd() // remove trailing whitespaces/newlines
             .removeEscapeCharacters() // remove escape character "\" from the content
-      
+
         // While we can play with the other arguments, let's just return some simple modified content
-        var newContent = "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
-      
+        var newContent =
+            "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
+
         // Since we trimmed all trailing newlines from the content, we'll add one back if they were there.
         if (tagWithContent.endsWith("\n"))
             newContent += "\n"
-      
+
         return newContent
     }
 }

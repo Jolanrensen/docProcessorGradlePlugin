@@ -112,12 +112,12 @@ class TestFindingTagsInDocs {
             
             #### Examples for this overload:
             
-            {@includeArg [CommonColsDocs.Examples][org.jetbrains.kotlinx.dataframe.api.ColumnsSelectionDsl.CommonColsDocs.Examples]}
+            {@getArg [CommonColsDocs.Examples][org.jetbrains.kotlinx.dataframe.api.ColumnsSelectionDsl.CommonColsDocs.Examples]}
             
             
             @param [predicate] A [ColumnFilter function][org.jetbrains.kotlinx.dataframe.ColumnFilter] that takes a [ColumnReference][org.jetbrains.kotlinx.dataframe.columns.ColumnReference] and returns a [Boolean].
             @return A [ColumnSet][org.jetbrains.kotlinx.dataframe.columns.ColumnSet] containing the columns that match the given [predicate].
-            @arg [CommonColsDocs.Examples]
+            @setArg [CommonColsDocs.Examples]
             
             `// although these can be shortened to just the `[colsOf][colsOf]` call`
             

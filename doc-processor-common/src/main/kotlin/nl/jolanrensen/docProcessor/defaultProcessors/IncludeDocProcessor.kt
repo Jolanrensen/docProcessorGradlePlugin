@@ -45,12 +45,12 @@ const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  *  */
  * ```
  *
- * NOTE: If you need to substitute something in the included docs, you can use [INCLUDE_ARG_DOC_PROCESSOR] in addition to this.
+ * NOTE: If you need to substitute something in the included docs, you can use [ARG_DOC_PROCESSOR] in addition to this.
  * For example:
  *
  * File A:
  * ```kotlin
- * /** NOTE: The {@includeArg operation} operation is part of the public API. */
+ * /** NOTE: The {@getArg operation} operation is part of the public API. */
  *  internal interface ApiNote
  * ```
  *
@@ -59,7 +59,7 @@ const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  * /**
  *  * Some docs
  *  * @include [ApiNote]
- *  * @arg operation update
+ *  * @setArg operation update
  *  */
  * fun update() {}
  * ```
