@@ -30,6 +30,15 @@ class DocProcessorService(private val project: Project) {
     val processLimit: Int = 10_000
 
     /**
+     * Determines whether the DocProcessor is enabled or disabled.
+     */
+    var isEnabled = true
+        set(value) {
+            field = value
+            thisLogger().info(if (value) "DocProcessor enabled." else "DocProcessor disabled.")
+        }
+
+    /**
      * Helper function that queries the project for reference links and returns them as a list of DocumentableWrappers.
      */
     private fun query(context: PsiElement, link: String): List<DocumentableWrapper>? {

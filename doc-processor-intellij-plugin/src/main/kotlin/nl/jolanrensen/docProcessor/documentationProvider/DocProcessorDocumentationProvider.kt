@@ -31,6 +31,7 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
 
     override fun collectDocComments(file: PsiFile, sink: Consumer<in PsiDocCommentBase>) {
         if (file !is KtFile) return
+        if (!getService(file.project).isEnabled) return
 
         // capture all comments in the file
         processElements(file) {
@@ -43,6 +44,7 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
     }
 
     override fun generateDoc(element: PsiElement, originalElement: PsiElement?): String? {
+        if (!getService(element.project).isEnabled) return null
         val modifiedElement = getService(element.project).getModifiedElement(element)
         return try {
             kotlin.generateDoc(modifiedElement ?: element, originalElement)

@@ -12,9 +12,10 @@
     <resource-bundle>messages.MessageBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-<!--        <toolWindow-->
-<!--                factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"-->
-<!--                id="MyToolWindow"/>-->
+        <toolWindow
+                factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"
+                icon="com.intellij.icons.ExpUiIcons.Gutter.JavadocRead"
+                id="Doc Preprocessor"/>
         <documentationProvider
                 implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
                 id="DocProcessor"
