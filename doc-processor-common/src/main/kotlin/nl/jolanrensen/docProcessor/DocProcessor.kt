@@ -72,10 +72,7 @@ open class DocProcessorFailedException(
     val processorName: String,
     cause: Throwable? = null,
     message: String = "Doc processor $processorName failed: ${cause?.message}",
-) : RuntimeException(
-    message,
-    cause,
-)
+) : RuntimeException(message, cause)
 
 fun findProcessors(fullyQualifiedNames: List<String>, arguments: Map<String, Any?>): List<DocProcessor> {
     val availableProcessors: Set<DocProcessor> = ServiceLoader.load(DocProcessor::class.java).toSet()

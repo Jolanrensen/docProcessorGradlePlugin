@@ -304,34 +304,119 @@ abstract class TagDocProcessor : DocProcessor() {
  */
 open class TagDocProcessorFailedException(
     processorName: String,
-    documentable: DocumentableWrapper,
-    currentDoc: DocContent,
-    rangeInCurrentDoc: IntRange,
+    val documentable: DocumentableWrapper,
+    val currentDoc: DocContent,
+    val rangeInCurrentDoc: IntRange,
     cause: Throwable? = null,
 ) : DocProcessorFailedException(
     processorName = processorName,
     cause = cause,
-    message = buildString {
-        val rangeInFile = documentable.docFileTextRange
-        val fileText = documentable.file.readText()
-        val (line, char) = fileText.getLineAndCharacterOffset(rangeInFile.start)
+    message = renderMessage(
+        documentable = documentable,
+        rangeInCurrentDoc = rangeInCurrentDoc,
+        processorName = processorName,
+        currentDoc = currentDoc,
+        cause = cause,
+    ),
+) {
+    companion object {
+        private fun renderMessage(
+            documentable: DocumentableWrapper,
+            rangeInCurrentDoc: IntRange,
+            processorName: String,
+            currentDoc: DocContent,
+            cause: Throwable?,
+        ): String = buildString {
+            val docRangeInFile = documentable.docFileTextRange
+            val fileText = documentable.file.readText()
+            val (docLine, docChar) = fileText.getLineAndCharacterOffset(docRangeInFile.first)
+            val (exceptionLine, exceptionChar) = fileText.getLineAndCharacterOffset(rangeInCurrentDoc.first)
 
-        appendLine("Doc processor $processorName failed processing doc:")
-        appendLine("(${documentable.file.absolutePath}:$line:$char)")
-        appendLine("\u200E")
-        appendLine("Current state of the doc with the <a href=\"\">cause for the exception</a>:")
+            fun highlightException(it: String) = "<a href=\"\">$it</a>"
+
+            appendLine("Doc processor $processorName failed processing doc:")
+            appendLine("Doc location: ${documentable.file.absolutePath}:$docLine:$docChar")
+            appendLine("Exception location: ${documentable.file.absolutePath}:$exceptionLine:$exceptionChar")
+            appendLine("Tag throwing the exception: ${highlightException(currentDoc.substring(rangeInCurrentDoc))}")
+            cause?.message?.let {
+                appendLine("Reason for the exception: $it")
+            }
+            appendLine("\u200E")
+            appendLine("Current state of the doc with the ${highlightException("cause for the exception")}:")
+            appendLine("--------------------------------------------------")
+            appendLine(
+                try {
+                    currentDoc.replaceRange(
+                        range = rangeInCurrentDoc,
+                        replacement = highlightException(currentDoc.substring(rangeInCurrentDoc)),
+                    )
+                } catch (e: Throwable) {
+                    currentDoc
+                }.toDoc()
+            )
+            appendLine("--------------------------------------------------")
+        }
+    }
+
+    fun renderMessage(): String =
+        renderMessage(
+            documentable = documentable,
+            rangeInCurrentDoc = rangeInCurrentDoc,
+            processorName = processorName,
+            currentDoc = currentDoc,
+            cause = cause,
+        )
+
+    fun renderDoc(): String = buildString {
+        val docRangeInFile = documentable.docFileTextRange
+        val fileText = documentable.file.readText()
+        val (docLine, docChar) = fileText.getLineAndCharacterOffset(docRangeInFile.first)
+        val (exceptionLine, exceptionChar) = fileText.getLineAndCharacterOffset(rangeInCurrentDoc.first)
+
+        fun highlightException(it: String) = "!!!$it!!!"
+
+        val indent = "&nbsp;&nbsp;&nbsp;&nbsp;"
+        val lineBreak = "\n$indent\n"
+
+        appendLine("# Error in DocProcessor")
+        appendLine("## Doc processor $processorName failed processing doc.")
+        appendLine()
+        appendLine("### Doc location:")
+        appendLine()
+        appendLine("`${documentable.file.path}:$docLine:$docChar`")
+        appendLine(lineBreak)
+        appendLine("### Exception location:")
+        appendLine()
+        appendLine("`${documentable.file.absolutePath}:$exceptionLine:$exceptionChar`")
+        appendLine(lineBreak)
+        appendLine("### Tag throwing the exception:")
+        appendLine()
+        appendLine("**`" + currentDoc.substring(rangeInCurrentDoc) + "`**")
+        appendLine(lineBreak)
+        appendLine("### Reason for the exception:")
+        appendLine()
+        cause?.message?.let {
+            for (line in it.lines()) {
+                appendLine(line)
+                appendLine()
+            }
+        }
+        appendLine(lineBreak)
+        appendLine("Current state of the doc with the `${highlightException("cause for the exception")}`:")
+        appendLine()
         appendLine("--------------------------------------------------")
+        appendLine("```")
         appendLine(
             try {
                 currentDoc.replaceRange(
                     range = rangeInCurrentDoc,
-                    replacement = "<a href=\"\">${currentDoc.substring(rangeInCurrentDoc)}</a>",
+                    replacement = highlightException(currentDoc.substring(rangeInCurrentDoc)),
                 )
             } catch (e: Throwable) {
                 currentDoc
             }.toDoc()
         )
+        appendLine("```")
         appendLine("--------------------------------------------------")
-        cause?.message?.let { appendLine(it) }
-    },
-)
+    }
+}
