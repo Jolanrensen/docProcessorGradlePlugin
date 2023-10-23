@@ -94,10 +94,6 @@ class IncludeDocProcessor : TagDocProcessor() {
     override fun <T : DocumentableWrapper> filterDocumentablesToQuery(documentable: T): Boolean =
         documentable.sourceHasDocumentation
 
-    private val unfilteredDocumentablesByPath by lazy {
-        documentablesByPath.withoutFilters()
-    }
-
     /**
      * Provides a helpful message when a circular reference is detected.
      */
@@ -125,6 +121,7 @@ class IncludeDocProcessor : TagDocProcessor() {
         line: String,
         documentable: DocumentableWrapper,
     ): String {
+        val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
         val includeArguments = line.getTagArguments(tag = tag, numberOfArguments = 2)
         val includePath = includeArguments.first().decodeCallableTarget()
         // for stuff written after the @include tag, save and include it later
