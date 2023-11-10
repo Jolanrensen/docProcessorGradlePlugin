@@ -97,7 +97,19 @@ class DocProcessorService(private val project: Project) {
      */
     fun getModifiedElement(originalElement: PsiElement): PsiElement? {
         // Create a copy of the element, so we can modify it
-        val psiElement = originalElement.copiedWithFile()
+        val psiElement = try {
+            originalElement.copiedWithFile()
+        } catch (e: Exception) {
+            null
+        } ?: return null
+
+        // must have the ability to own a docComment
+        try {
+            psiElement.docComment
+        } catch (e: IllegalStateException) {
+            return null
+        }
+
         val docContent = try {
             // Create a DocumentableWrapper from the element
             val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)

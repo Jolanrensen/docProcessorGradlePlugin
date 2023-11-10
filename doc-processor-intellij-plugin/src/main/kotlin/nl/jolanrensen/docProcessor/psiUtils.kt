@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.psi.psiUtil.elementsInRange
 import org.jetbrains.kotlin.renderer.render
 import org.jetbrains.kotlin.resolve.ImportPath
 
+@get:Throws(IllegalStateException::class)
 val PsiElement.docComment: PsiDocCommentBase?
     get() = when (this) {
         is KtDeclaration -> docComment
@@ -97,11 +98,12 @@ fun ImportPath.toSimpleImportPath(): SimpleImportPath = SimpleImportPath(
 val PsiElement.indexInParent: Int
     get() = parent.children.indexOf(this)
 
-fun <T : PsiElement> T.copiedWithFile(): T = containingFile
-    .copied()
-    .elementsInRange(textRange)
-    .first {
-        it.elementType == elementType &&
-                it.kotlinFqName == kotlinFqName &&
-                it.indexInParent == indexInParent
-    } as T
+fun <T : PsiElement> T.copiedWithFile(): T =
+    containingFile
+        .copied()
+        .elementsInRange(textRange)
+        .first {
+            it.elementType == elementType &&
+                    it.kotlinFqName == kotlinFqName &&
+                    it.indexInParent == indexInParent
+        } as T
