@@ -3,12 +3,12 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("java")
     kotlin("jvm")
-    id("org.jetbrains.intellij") version "1.13.2"
+    id("org.jetbrains.intellij") version "1.16.1"
     id("com.github.johnrengelman.shadow")
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "0.2.4-SNAPSHOT"
+version = "0.2.5-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -23,7 +23,7 @@ repositories {
 }
 
 intellij {
-    version.set("2023.2")
+    version.set("2023.3")
     type.set("IC")
     pluginName.set("DocProcessor")
     plugins.addAll(

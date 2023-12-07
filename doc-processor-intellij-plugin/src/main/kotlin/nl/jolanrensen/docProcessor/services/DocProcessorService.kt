@@ -4,12 +4,30 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.LogLevel
 import com.intellij.openapi.diagnostic.thisLogger
-import com.intellij.openapi.progress.JobCanceledException
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
-import com.intellij.psi.*
-import nl.jolanrensen.docProcessor.*
-import nl.jolanrensen.docProcessor.defaultProcessors.*
+import com.intellij.psi.PsiDocCommentOwner
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiElementFactory
+import com.intellij.psi.PsiManager
+import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.DocumentablesByPath
+import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
+import nl.jolanrensen.docProcessor.MessageBundle
+import nl.jolanrensen.docProcessor.ProgrammingLanguage
+import nl.jolanrensen.docProcessor.TagDocProcessorFailedException
+import nl.jolanrensen.docProcessor.copiedWithFile
+import nl.jolanrensen.docProcessor.createFromIntellijOrNull
+import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR_LOG_NOT_FOUND
+import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.docComment
+import nl.jolanrensen.docProcessor.findProcessors
+import nl.jolanrensen.docProcessor.programmingLanguage
+import nl.jolanrensen.docProcessor.toDoc
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.caches.resolve.safeAnalyzeNonSourceRootCode
 import org.jetbrains.kotlin.idea.codeInsight.DescriptorToSourceUtilsIde
@@ -19,7 +37,6 @@ import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
-import java.util.*
 import java.util.concurrent.CancellationException
 
 @Service(Service.Level.PROJECT)
