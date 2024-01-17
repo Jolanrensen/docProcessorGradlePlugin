@@ -23,6 +23,7 @@ import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR_LOG_NOT_F
 import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.docComment
 import nl.jolanrensen.docProcessor.findProcessors
@@ -206,6 +207,7 @@ class DocProcessorService(private val project: Project) {
                 ARG_DOC_PROCESSOR,
                 COMMENT_DOC_PROCESSOR,
                 SAMPLE_DOC_PROCESSOR,
+                REMOVE_ESCAPE_CHARS_PROCESSOR,
             ),
             arguments = mapOf(ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false), // TODO
         )

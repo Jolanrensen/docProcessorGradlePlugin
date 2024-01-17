@@ -199,7 +199,6 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 val value = argArguments.getOrElse(1) { "" }
                     .trimStart()
                     .removeSuffix("\n")
-                    .removeEscapeCharacters()
 
                 argMap.getOrPut(documentable.identifier) {
                     DocWrapperWithArgMap(documentable)

@@ -21,15 +21,16 @@ The processing order is:
 
 Included preprocessors are:
 
-| Description                                                                                                                     | Name                         |
-|---------------------------------------------------------------------------------------------------------------------------------|------------------------------|
-| `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor).                | `INCLUDE_DOC_PROCESSOR`      |
-| `@includeFile` tag to include file content into your KDoc / JavaDoc                                                             | `INCLUDE_FILE_DOC_PROCESSOR` |
-| `@setArg` / `@getArg` tags to define and include arguments within your KDoc / JavaDoc. Powerful in combination  with `@include` | `ARG_DOC_PROCESSOR`          |
-| `@comment` tag to comment out parts of your modified KDoc / JavaDoc                                                             | `COMMENT_DOC_PROCESSOR`      |
-| `@sample` / `@sampleNoComments` tags to include code samples into your KDoc / JavaDoc                                           | `SAMPLE_DOC_PROCESSOR`       |
-| A processor that removes all KDoc / JavaDoc comments                                                                            | `NO_DOC_PROCESSOR`           |
-| A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment                                       | `TODO_DOC_PROCESSOR`         |
+| Description                                                                                                                     | Name                            |
+|---------------------------------------------------------------------------------------------------------------------------------|---------------------------------|
+| `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor).                | `INCLUDE_DOC_PROCESSOR`         |
+| `@includeFile` tag to include file content into your KDoc / JavaDoc                                                             | `INCLUDE_FILE_DOC_PROCESSOR`    |
+| `@setArg` / `@getArg` tags to define and include arguments within your KDoc / JavaDoc. Powerful in combination  with `@include` | `ARG_DOC_PROCESSOR`             |
+| `@comment` tag to comment out parts of your modified KDoc / JavaDoc                                                             | `COMMENT_DOC_PROCESSOR`         |
+| `@sample` / `@sampleNoComments` tags to include code samples into your KDoc / JavaDoc                                           | `SAMPLE_DOC_PROCESSOR`          |
+| A processor that removes all escape characters (`\`) from your KDoc / JavaDoc comments                                          | `REMOVE_ESCAPE_CHARS_PROCESSOR` |
+| A processor that removes all KDoc / JavaDoc comments                                                                            | `NO_DOC_PROCESSOR`              |
+| A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment                                       | `TODO_DOC_PROCESSOR`            |
 
 Of course, you can also try to make your own preprocessor (see [Custom Processors](#custom-processors)).
 For instance, you could make a processor that makes all KDoc / JavaDoc comments uppercase,
@@ -113,7 +114,8 @@ val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
         ARG_DOC_PROCESSOR, // The @setArg and @getArg processor
         COMMENT_DOC_PROCESSOR, // The @comment processor
         SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
-
+        REMOVE_ESCAPE_CHARS_PROCESSOR, // The processor that removes escape characters
+      
         "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
     )
 
@@ -199,6 +201,7 @@ def processKdocMain = tasks.register('processKdocMain', ProcessDocTask) {
             IncludeArgDocProcessorKt.ARG_DOC_PROCESSOR, // The @setArg and @getArg processor
             CommentDocProcessorKt.COMMENT_DOC_PROCESSOR, // The @comment processor
             SampleDocProcessorKt.SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
+            RemoveEscapeCharsProcessorKt.REMOVE_ESCAPE_CHARS_PROCESSOR, // The processor that removes escape characters
 
             "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
     )
@@ -260,12 +263,14 @@ While you can use the processors in any order and leave out some or include othe
 - `ARG_DOC_PROCESSOR`: The `@setArg` and `@getArg` processor
 - `COMMENT_DOC_PROCESSOR`: The `@comment` processor
 - `SAMPLE_DOC_PROCESSOR`: The `@sample` and `@sampleNoComments` processor
+- `REMOVE_ESCAPE_CHARS_PROCESSOR`: The processor that removes escape characters
 
 This order ensures that `@setArg`/`@getArg` is processed after `@include` and `@includeFile` such that any arguments
 that appear by them are available for the `@setArg`/`@getArg` processor.
 The `@comment` processor is recommended to be after `@setArg`/`@getArg` too, as it can be used as a line break for
-tag blocks. `@sample` and `@sampleNoComments` are recommended to be last as processing of inline tags inside comments of
-`@sample` might not be desired.
+tag blocks. `@sample` and `@sampleNoComments` are recommended to be last of the tag processors, as processing of inline tags inside comments of
+`@sample` might not be desired. Finally, the `REMOVE_ESCAPE_CHARS_PROCESSOR` is recommended to be last to clean up
+any escape characters that might have been introduced by the user to evade some parts of the docs being processed.
 
 ## @include Processor
 

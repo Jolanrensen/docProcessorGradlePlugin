@@ -12,6 +12,7 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
 
     private val processors = listOf(
         "\"nl.jolanrensen.extension.Extension\"",
+        "REMOVE_ESCAPE_CHARS_PROCESSOR",
     )
 
     private val plugins = listOf(
