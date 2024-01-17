@@ -10,6 +10,7 @@ class TestSample : DocProcessorFunctionalTest(name = "sample") {
 
     private val processors = listOf(
         "SAMPLE_DOC_PROCESSOR",
+        "REMOVE_ESCAPE_CHARS_PROCESSOR",
     )
 
     @Test

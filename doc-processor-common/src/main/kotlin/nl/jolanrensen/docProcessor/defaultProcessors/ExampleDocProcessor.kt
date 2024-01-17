@@ -36,7 +36,6 @@ class ExampleDocProcessor : TagDocProcessor() {
             .getTagArguments(tag = "example", numberOfArguments = 1)
             .single()
             .trimEnd() // remove trailing whitespaces/newlines
-            .removeEscapeCharacters() // remove escape character "\" from the content
 
         // While we can play with the other arguments, let's just return some simple modified content
         var newContent = "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""

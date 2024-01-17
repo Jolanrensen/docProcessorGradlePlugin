@@ -31,7 +31,7 @@ const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  * ```
  * NOTE: `[links]` that are present in included docs are recognized and replaced by their
  * fully qualified names, so that they still work in the docs. If you don't want this to happen,
- * simply break the link like [this\]. The escape character will be removed upon @include processing and the link will
+ * simply break the link like [this\]. The escape character can be removed by [RemoveEscapeCharsProcessor] and the link will
  * not be replaced.
  *
  * NOTE: Newlines at the beginning and end of included doc are removed, making including:
@@ -220,7 +220,7 @@ class IncludeDocProcessor : TagDocProcessor() {
         }
 
         // replace the include statement with the kdoc of the queried node (if found)
-        return targetContent.removeEscapeCharacters()
+        return targetContent
     }
 
     /**
