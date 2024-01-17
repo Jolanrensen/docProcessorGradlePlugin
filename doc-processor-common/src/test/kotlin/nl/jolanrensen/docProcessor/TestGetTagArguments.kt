@@ -1,9 +1,28 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
+import nl.jolanrensen.docProcessor.defaultProcessors.findKeyFromDollarSign
 import org.junit.jupiter.api.Test
 
 class TestGetTagArguments {
+
+    @Test
+    fun `Using it for ${} notation`() {
+        "\${ spaces}".findKeyFromDollarSign() shouldBe "spaces"
+        "\${anything here with or without spaces}".findKeyFromDollarSign() shouldBe "anything"
+        "\${[unless spaces are in][Aliases]}".findKeyFromDollarSign() shouldBe "[unless spaces are in][Aliases]"
+    }
+
+    @Test
+    fun `Using it for $ notation`() {
+        "\$anything here without spaces".findKeyFromDollarSign() shouldBe "anything"
+        "\$[anything [] goes {}[a][test] ][replaceDollarNotation] blah".findKeyFromDollarSign() shouldBe "[anything [] goes {}[a][test] ][replaceDollarNotation]"
+//        "\$[hello[[[`]]]` there][replaceDollarNotation] blah".findKeyFromDollarSign() shouldBe "[hello[[[`]]]` there][replaceDollarNotation]"
+        "\$[key] \$[key2] \$[key3]".findKeyFromDollarSign() shouldBe "[key]"
+        "\$key no more key".findKeyFromDollarSign() shouldBe "key"
+//        "\$someKey\\brokenUp".findKeyFromDollarSign() shouldBe "someKey"
+        "\$(some\nlarge key <>) that ends there".findKeyFromDollarSign() shouldBe "(some\nlarge key <>)"
+    }
 
     @Test
     fun `Simple content with spaces`() {

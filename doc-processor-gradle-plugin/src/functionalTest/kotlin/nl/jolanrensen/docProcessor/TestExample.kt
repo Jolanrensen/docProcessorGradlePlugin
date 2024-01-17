@@ -9,7 +9,8 @@ import org.junit.Test
 class TestExample : DocProcessorFunctionalTest(name = "example") {
 
     private val processors = listOf(
-        "\"nl.jolanrensen.docProcessor.defaultProcessors.ExampleDocProcessor\""
+        "\"nl.jolanrensen.docProcessor.defaultProcessors.ExampleDocProcessor\"",
+        "REMOVE_ESCAPE_CHARS_PROCESSOR",
     )
 
     @Test

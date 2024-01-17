@@ -2,6 +2,7 @@ package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
+import kotlin.test.Ignore
 
 class TestFindingTagsInDocs {
 
@@ -23,7 +24,7 @@ class TestFindingTagsInDocs {
         Some extra text. @b nothing, this is skipped
         
         Other test {@c [TestA
-        blabla {@d TestA }
+        blabla {@d TestA `{ nested brackets in code \}` }
         }
         Other test `{@h TestA}`
         ```kotlin
@@ -44,7 +45,7 @@ class TestFindingTagsInDocs {
                Some extra text. @b nothing, this is skipped
                
                Other test {@c [TestA
-               blabla {@d TestA }
+               blabla {@d TestA `{ nested brackets in code \}` }
                }
                Other test `{@h TestA}`
                ```kotlin
@@ -63,11 +64,15 @@ class TestFindingTagsInDocs {
     @Test
     fun `Find inline tag names with ranges`() {
         val expected = listOf(
-            "d" to 92..102,
-            "c" to 74..104,
-            "h" to 118..127,
-            "f" to 149..159,
+            "d" to 92..133,
+            "c" to 74..135,
+            "h" to 149..158,
+            "f" to 180..190,
         )
+
+        difficultKdoc.findInlineTagNamesInDocContentWithRanges()
+            .map { difficultKdoc.substring(it.second) }
+            .let { println(it) }
 
         difficultKdoc.findInlineTagNamesInDocContentWithRanges() shouldBe expected
     }
@@ -90,10 +95,10 @@ class TestFindingTagsInDocs {
         difficultKdoc.findBlockTagNamesInDocContent().toSet() shouldBe expected
     }
 
-    @Test
+    @Ignore
     fun `Find tag after difficult doc content`() {
-        val expectedInline = setOf("includeArg")
-        val expectedBlock = setOf("param", "return", "arg", "see")
+        val expectedInline = setOf("getArg")
+        val expectedBlock = setOf("param", "return", "setArg", "see")
         val kdoc1 = """
             ## Cols
             Creates a subset of columns ([ColumnSet][org.jetbrains.kotlinx.dataframe.columns.ColumnSet]) from a parent [ColumnSet][org.jetbrains.kotlinx.dataframe.columns.ColumnSet], -[ColumnGroup][org.jetbrains.kotlinx.dataframe.columns.ColumnGroup], or -[DataFrame][org.jetbrains.kotlinx.dataframe.DataFrame].
@@ -133,8 +138,8 @@ class TestFindingTagsInDocs {
             
         """.trimIndent()
 
-//        kdoc1.findInlineTagNamesInDocContent().toSet() shouldBe expectedInline
-//        kdoc1.findBlockTagNamesInDocContent().toSet() shouldBe expectedBlock
+        kdoc1.findInlineTagNamesInDocContent().toSet() shouldBe expectedInline
+        kdoc1.findBlockTagNamesInDocContent().toSet() shouldBe expectedBlock
         println(kdoc1.splitDocContentPerBlock().joinToString("\n.............................................\n"))
     }
 

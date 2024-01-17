@@ -3,6 +3,7 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
+import nl.jolanrensen.docProcessor.defaultProcessors.ArgDocProcessor
 import org.intellij.lang.annotations.Language
 import org.junit.Test
 
@@ -237,6 +238,129 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
         ) shouldBe expectedOutput
     }
 
+    /**
+     * Hello ${aas}!
+     * {@setArg [Key] World}
+     */
+    @Test
+    fun `Reference key simple kotlin ${} notation`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+
+            interface Key
+            
+            /**
+             * Hello ${'$'}{[Key]}!
+             * {@setArg [Key] World}
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+
+            interface Key
+            
+            /**
+             * Hello World!
+             *
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    /**
+     * Hello $[Key]
+     * {@setArg [Key] World!}
+     */
+    @Test
+    fun `Reference key simple kotlin $ notation`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+
+            interface Key
+            
+            /**
+             * Hello ${'$'}[Key]
+             * {@setArg [Key] World!}
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+
+            interface Key
+            
+            /**
+             * Hello World!
+             *
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    /**
+     * Hello $[Aliased Key][Key][erntjkrent]
+     * Hello $[Aliased Key][Key]
+     * Hello $[Aliased Key] a
+     * Hello $Aliased{@param }
+     * Hello $Aliased {@param }
+     * {@setArg [Key] World!}
+     */
+    @Test
+    fun `Reference key kotlin $ notation with aliased ref keys`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+
+            interface Key
+            
+            /**
+             * {@setArg a b}
+             * {@setArg ${'$'}a World!}
+             * Hello ${'$'}b
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+
+            interface Key
+            
+            /**
+             * 
+             * 
+             * Hello World!
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
     @Test
     fun `Escaping character reference key kotlin`() {
         @Language("kt")
@@ -412,5 +536,30 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             packageName = "com.example.plugin",
             processors = processors,
         ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `replace dollar notation`() {
+        with(ArgDocProcessor()) {
+            "\${a}".replaceDollarNotation() shouldBe "{@getArg a}"
+            " \${a}".replaceDollarNotation() shouldBe " {@getArg a}"
+            "a\${a}".replaceDollarNotation() shouldBe "a{@getArg a}"
+            "a\${a}a".replaceDollarNotation() shouldBe "a{@getArg a}a"
+            "a\${test\\test}".replaceDollarNotation() shouldBe "a{@getArg test\\test}"
+            "a\${test test}".replaceDollarNotation() shouldBe "a{@getArg test test}"
+            "\${[test with spaces][function]}".replaceDollarNotation() shouldBe "{@getArg [test with spaces][function]}"
+            "\${hi \${test} \${\$hi}}".replaceDollarNotation() shouldBe "{@getArg hi {@getArg test} {@getArg {@getArg hi}}}"
+
+            "\\\${a}".replaceDollarNotation() shouldBe "\\\${a}"
+//            "\$\\{a}".replaceDollarNotation() shouldBe "\$\\{a}"
+//            "\${a\\}".replaceDollarNotation() shouldBe "\${a\\}"
+
+            "\$key no more key".replaceDollarNotation() shouldBe "{@getArg key} no more key"
+            "\$[key] \$[key2] \$[key3]".replaceDollarNotation() shouldBe "{@getArg [key]} {@getArg [key2]} {@getArg [key3]}"
+            "a\${a}a\${a}a".replaceDollarNotation() shouldBe "a{@getArg a}a{@getArg a}a"
+            "\$[anything [] goes {}[a][test] ][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@getArg [anything [] goes {}[a][test] ][replaceDollarNotation]}"
+            "\$[hello[[[`]]]` there][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@getArg [hello[[[`]]]` there][replaceDollarNotation]}"
+            "{@setArg \$a test}".replaceDollarNotation() shouldBe "{@setArg {@getArg a} test}"
+        }
     }
 }

@@ -88,7 +88,6 @@ fun DocContent.toDoc(indent: Int = 0): String = this
  * Blocks "marks" are ignored if "\" escaped.
  */
 fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
-    require("@$tag" in this) { "Could not find @$tag in $this" }
     require(numberOfArguments > 0) { "numberOfArguments must be greater than 0" }
 
     var content = this
@@ -102,7 +101,7 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
     content = content.trimStart()
 
     // remove tag
-    content = content.removePrefix("@$tag").trimStart()
+    content = content.removePrefix("@").removePrefix(tag).trimStart()
 
     val arguments = buildList {
         var currentBlock = ""
@@ -253,7 +252,8 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
 
                     '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
                 }
-                if (!isInCodeBlock()) when (char) {
+                if (isInCodeBlock()) continue
+                when (char) {
                     '{' -> blocksIndicators += CURLY_BRACES
                     '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
 
@@ -294,7 +294,8 @@ fun DocContent.splitDocContentPerBlockWithRanges(): List<Pair<DocContent, IntRan
     }
 }
 
-/** Finds any inline tag with its depth, preferring the innermost one.
+/**
+ * Finds any inline {@tag ...} with its depth, preferring the innermost one.
  * "{@}" marks are ignored if "\" escaped.
  */
 private fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
@@ -413,10 +414,12 @@ fun DocContent.replaceKdocLinks(process: (String) -> String): DocContent {
                     '`' -> insideCodeBlock = !insideCodeBlock
 
                     '[' -> if (!insideCodeBlock) {
-                        referenceState = if (previousChar() == ']')
-                            INSIDE_ALIASED_REFERENCE
-                        else
-                            INSIDE_REFERENCE
+                        referenceState =
+                            if (previousChar() == ']') {
+                                INSIDE_ALIASED_REFERENCE
+                            } else {
+                                INSIDE_REFERENCE
+                            }
                         appendCurrentBlock()
                     }
 

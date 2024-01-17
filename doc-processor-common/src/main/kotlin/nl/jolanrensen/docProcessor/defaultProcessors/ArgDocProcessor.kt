@@ -5,21 +5,15 @@ import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import java.util.*
 
 /**
- * @see IncludeArgDocProcessor
+ * @see ArgDocProcessor
  */
-const val ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.IncludeArgDocProcessor"
+const val ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.ArgDocProcessor"
 
 /**
  * [Boolean] argument controlling whether to log warnings when an argument is not found.
  * Default is `true`.
  */
 const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
-
-@Deprecated("Use 'ARG_DOC_PROCESSOR' instead", ReplaceWith("ARG_DOC_PROCESSOR"))
-const val INCLUDE_ARG_DOC_PROCESSOR = ARG_DOC_PROCESSOR
-
-@Deprecated("Use 'ARG_DOC_PROCESSOR_LOG_NOT_FOUND' instead", ReplaceWith("ARG_DOC_PROCESSOR_LOG_NOT_FOUND"))
-const val INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND = ARG_DOC_PROCESSOR_LOG_NOT_FOUND
 
 /**
  * Adds two tags to your arsenal:
@@ -64,21 +58,13 @@ const val INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND = ARG_DOC_PROCESSOR_LOG_NOT_FO
  * NOTE: Use `[References]` as keys if you want extra refactoring-safety.
  * They are queried and saved by their fully qualified name.
  */
-class IncludeArgDocProcessor : TagDocProcessor() {
-
-    @Deprecated("")
-    private val oldUseArgumentTag = "includeArg"
-
-    @Deprecated("")
-    private val oldDeclareArgumentTag = "arg"
+class ArgDocProcessor : TagDocProcessor() {
 
     private val useArgumentTag = "getArg"
     private val declareArgumentTag = "setArg"
 
     override fun tagIsSupported(tag: String): Boolean =
         tag in listOf(
-            oldUseArgumentTag,
-            oldDeclareArgumentTag,
             useArgumentTag,
             declareArgumentTag,
         )
@@ -142,52 +128,137 @@ class IncludeArgDocProcessor : TagDocProcessor() {
 
     private val argsNotFound: MutableMap<UUID, DocWrapperWithArgSet> = mutableMapOf()
 
-    // TODO remove if deprecation is gone
-    private fun provideNewNameWarning(documentable: DocumentableWrapper) =
-        logger.warn {
-            buildString {
-                val (line, char) = documentable.file
-                    .readText()
-                    .getLineAndCharacterOffset(documentable.docFileTextRange.first)
-
-                appendLine("Old tag names used in doc: (${documentable.file.absolutePath}:$line:$char)")
-                appendLine("The tag name \"$oldUseArgumentTag\" is deprecated. Use \"$useArgumentTag\" instead.")
-                appendLine("The tag name \"$oldDeclareArgumentTag\" is deprecated. Use \"$declareArgumentTag\" instead.")
+    /**
+     * Preprocess all ${a} and $a tags to {@getArg a} before running the normal tag processor.
+     */
+    override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath {
+        val mutable = documentablesByPath.toMutable()
+        for ((_, docs) in mutable.documentablesToProcess) {
+            for (doc in docs) {
+                doc.docContent = doc.docContent.replaceDollarNotation()
             }
         }
 
-    private fun process(
+        return super.process(processLimit, mutable)
+    }
+
+    /**
+     * Replaces all ${CONTENT} and $CONTENT with {@getArg CONTENT} for some doc's content.
+     */
+    fun DocContent.replaceDollarNotation(): DocContent {
+        var text = this
+
+        // First replacing all ${CONTENT} with {@getArg CONTENT}
+        val bracketsRanges = findInlineDollarTagsInDocContentWithRanges()
+
+        text = text.replaceRanges(
+            *bracketsRanges
+                .map { it.first..it.first + 1 to "{@$useArgumentTag " } // replacing just "${" with "{@getArg "
+                .toTypedArray()
+        )
+
+        // Then replacing all "$CONTENT test" with "{@getArg CONTENT} test"
+        val noBracketsRangesWithKey = buildList {
+            var escapeNext = false
+            for ((i, char) in text.withIndex()) {
+                when {
+                    escapeNext -> escapeNext = false
+
+                    char == '\\' -> escapeNext = true
+
+                    char == '$' -> {
+                        val key = text.substring(startIndex = i).findKeyFromDollarSign()
+                        this += i..i + key.length to key
+                    }
+                }
+            }
+        }
+
+        text = text.replaceRanges(
+            *noBracketsRangesWithKey
+                .map { (range, content) -> range to "{@$useArgumentTag $content}" }
+                .toTypedArray()
+        )
+
+        return text
+    }
+
+    /**
+     * Finds all inline tag names, including nested ones,
+     * together with their respective range in the doc.
+     * The list is sorted by depth, with the deepest tags first and then by order of appearance.
+     * "{@}" marks are ignored if "\" escaped.
+     */
+    private fun DocContent.findInlineDollarTagsInDocContentWithRanges(): List<IntRange> {
+        var text = this
+
+        return buildMap<Int, MutableList<IntRange>> {
+            while (text.findInlineDollarTagRangesWithDepthOrNull() != null) {
+                val (range, depth) = text.findInlineDollarTagRangesWithDepthOrNull()!!
+                val comment = text.substring(range)
+                getOrPut(depth) { mutableListOf() } += range
+
+                text = text.replaceRange(
+                    range = range,
+                    replacement = comment
+                        .replace('{', '<')
+                        .replace('}', '>'),
+                )
+            }
+        }.toSortedMap(Comparator.reverseOrder())
+            .flatMap { it.value }
+    }
+
+    /**
+     * Finds any inline ${...} with its depth, preferring the innermost one.
+     * "${}" marks are ignored if "\" escaped.
+     */
+    private fun DocContent.findInlineDollarTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
+        var depth = 0
+        var start: Int? = null
+        var escapeNext = false
+        for ((i, char) in this.withIndex()) {
+            // escape this char
+            when {
+                escapeNext -> escapeNext = false
+
+                char == '\\' -> escapeNext = true
+
+                char == '$' && this.getOrNull(i + 1) == '{' -> {
+                    start = i
+                    depth++
+                }
+
+                char == '}' -> {
+                    if (start != null) {
+                        return Pair(start..i, depth)
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    private fun processTag(
         tagWithContent: String,
         documentable: DocumentableWrapper,
     ): String {
         val tagName = tagWithContent.getTagNameOrNull()
-        val isOldArgDeclaration = tagName == oldDeclareArgumentTag
         val isSetArgDeclaration = tagName == declareArgumentTag
 
         val tagNames = documentable.docContent.findTagNamesInDocContent()
 
-        val oldDeclareArgTagsStillPresent = oldDeclareArgumentTag in tagNames
         val declareArgTagsStillPresent = declareArgumentTag in tagNames
 
-        val oldUseArgTagsPresent = oldUseArgumentTag in tagNames
         val useArgTagsPresent = useArgumentTag in tagNames
 
         return when {
-            isOldArgDeclaration || isSetArgDeclaration -> { // @setArg
-                val argArguments = run {
-                    if (isOldArgDeclaration) {
-                        provideNewNameWarning(documentable)
-                        tagWithContent.getTagArguments(
-                            tag = oldDeclareArgumentTag,
-                            numberOfArguments = 2,
-                        )
-                    } else {
-                        tagWithContent.getTagArguments(
-                            tag = declareArgumentTag,
-                            numberOfArguments = 2,
-                        )
-                    }
-                }
+            isSetArgDeclaration -> { // @setArg
+                val argArguments =
+                    tagWithContent.getTagArguments(
+                        tag = declareArgumentTag,
+                        numberOfArguments = 2,
+                    )
 
                 val originalKey = argArguments.first()
                 var keys = listOf(originalKey)
@@ -212,7 +283,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                 ""
             }
 
-            declareArgTagsStillPresent || oldDeclareArgTagsStillPresent -> {
+            declareArgTagsStillPresent -> {
                 // skip @getArg tags if there are still @setArgs present
                 tagWithContent
             }
@@ -222,13 +293,6 @@ class IncludeArgDocProcessor : TagDocProcessor() {
                     if (useArgTagsPresent) {
                         this += tagWithContent.getTagArguments(
                             tag = useArgumentTag,
-                            numberOfArguments = 2,
-                        )
-                    }
-                    if (oldUseArgTagsPresent) {
-                        provideNewNameWarning(documentable)
-                        this += tagWithContent.getTagArguments(
-                            tag = oldUseArgumentTag,
                             numberOfArguments = 2,
                         )
                     }
@@ -282,7 +346,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = process(
+    ): String = processTag(
         tagWithContent = tagWithContent,
         documentable = documentable,
     )
@@ -291,7 +355,7 @@ class IncludeArgDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = process(
+    ): String = processTag(
         tagWithContent = tagWithContent,
         documentable = documentable,
     )
@@ -315,4 +379,17 @@ class IncludeArgDocProcessor : TagDocProcessor() {
 
         return keys
     }
+}
+
+/**
+ * Given a "$[string starting with] dollar sign notation", it
+ * returns the first key of the notation, in this case
+ * "[string starting with]".
+ */
+internal fun String.findKeyFromDollarSign(): String {
+    require(startsWith('$')) { "String must start with a dollar sign" }
+
+    return removePrefix("\$")
+        .getTagArguments("", 2) // using the getTagArguments' logic to split up the string
+        .first()
 }
