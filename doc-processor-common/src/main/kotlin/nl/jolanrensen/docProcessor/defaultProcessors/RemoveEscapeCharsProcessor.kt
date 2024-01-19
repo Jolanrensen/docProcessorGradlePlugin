@@ -19,6 +19,9 @@ class RemoveEscapeCharsProcessor : DocProcessor() {
 
     private val escapeChars = listOf('\\')
     override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath {
+        // TODO this breaks [links\] that are broken up and then thus
+        // TODO the breaking up of the block tags by [\]
+        TODO()
         val mutableDocs = documentablesByPath
             .toMutable()
             .withDocsToProcessFilter { it.sourceHasDocumentation }

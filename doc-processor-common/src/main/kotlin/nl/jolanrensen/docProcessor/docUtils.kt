@@ -88,6 +88,7 @@ fun DocContent.toDoc(indent: Int = 0): String = this
  * Blocks "marks" are ignored if "\" escaped.
  */
 fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
+    require("@$tag" in this) { "Could not find @$tag in $this" }
     require(numberOfArguments > 0) { "numberOfArguments must be greater than 0" }
 
     var content = this
@@ -101,7 +102,7 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
     content = content.trimStart()
 
     // remove tag
-    content = content.removePrefix("@").removePrefix(tag).trimStart()
+    content = content.removePrefix("@$tag").trimStart()
 
     val arguments = buildList {
         var currentBlock = ""
@@ -162,6 +163,105 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
 }
 
 /**
+ * Can retrieve the arguments of an inline- or block-tag.
+ * Arguments are split by spaces, unless they are in a block of "{}", "[]", "()", "<>", "`", """, or "'".
+ * Blocks "marks" are ignored if "\" escaped.
+ *
+ * @param tag The tag name, without the "@", will be removed after removing optional surrounding {}'s
+ * @param numberOfArguments The number of arguments to retrieve. This will be the size of the @return list.
+ *   The last argument will contain all remaining content, no matter if it can be split or not.
+ * @param onRogueClosingChar Optional lambda that will be called when a '}', ']', ')', or '>' is found without respective
+ *   opening char. Won't be triggered if '\' escaped.
+ * @param isSplitter Defaults to `{ isWhitespace() }`. Can be used to change the splitting behavior.
+ */
+fun String.getTagArguments(
+    tag: String,
+    numberOfArguments: Int,
+    onRogueClosingChar: (closingChar: Char, argument: Int, indexInArg: Int) -> Unit,
+    isSplitter: Char.() -> Boolean,
+): List<String> {
+    require(numberOfArguments > 0) { "numberOfArguments must be greater than 0" }
+
+    var content = this
+
+    // remove inline tag stuff
+    if (content.startsWith("{") && content.endsWith("}")) {
+        content = content.removePrefix("{").removeSuffix("}")
+    }
+
+    // remove leading spaces
+    content = content.trimStart { it.isSplitter() }
+
+    // remove tag
+    content = content.removePrefix("@").removePrefix(tag).trimStart { it.isSplitter() }
+
+    val arguments = buildList {
+        var currentBlock = ""
+        val blocksIndicators = mutableListOf<Char>()
+
+        fun isDone(): Boolean = size >= numberOfArguments - 1
+        fun isInCodeBlock() = BACKTICKS in blocksIndicators
+
+        var escapeNext = false
+        for (char in content) {
+            when {
+                escapeNext -> escapeNext = false
+
+                char == '\\' -> escapeNext = true
+
+                isDone() -> Unit
+
+                char.isSplitter() && blocksIndicators.isEmpty() -> {
+                    if (!currentBlock.all { it.isSplitter() }) add(currentBlock)
+                    currentBlock = ""
+                }
+
+                char == '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
+            }
+            if (!isInCodeBlock()) when (char) {
+                '{' -> blocksIndicators += CURLY_BRACES
+                '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
+                    .let { if (!it) onRogueClosingChar('}', this.size, currentBlock.length) }
+
+                '[' -> blocksIndicators += SQUARE_BRACKETS
+                ']' -> blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
+                    .let { if (!it) onRogueClosingChar(']', this.size, currentBlock.length) }
+
+                '(' -> blocksIndicators += PARENTHESES
+                ')' -> blocksIndicators.removeAllElementsFromLast(PARENTHESES)
+                    .let { if (!it) onRogueClosingChar(')', this.size, currentBlock.length) }
+
+                '<' -> blocksIndicators += ANGULAR_BRACKETS
+                '>' -> blocksIndicators.removeAllElementsFromLast(ANGULAR_BRACKETS)
+                    .let { if (!it) onRogueClosingChar('>', this.size, currentBlock.length) }
+
+                '"' -> if (!blocksIndicators.removeAllElementsFromLast(DOUBLE_QUOTES)) blocksIndicators += DOUBLE_QUOTES
+                '\'' -> if (blocksIndicators.removeAllElementsFromLast(SINGLE_QUOTES)) blocksIndicators += SINGLE_QUOTES
+
+                // TODO: issue #11: html tags
+            }
+            if (isDone() || !currentBlock.all { it.isSplitter() } || !char.isSplitter())
+                currentBlock += char
+        }
+
+        add(currentBlock)
+    }
+
+    val trimmedArguments = arguments.mapIndexed { i, it ->
+        when (i) {
+            arguments.lastIndex -> // last argument will be kept as is, removing one "splitting" space if it starts with one
+                if (it.first().isSplitter() && it.firstOrNull() != '\n') it.drop(1)
+                else it
+
+            else -> // other arguments will be trimmed. A newline counts as a space
+                it.removePrefix("\n").trimStart { it.isSplitter() }
+        }
+    }
+
+    return trimmedArguments
+}
+
+/**
  * Decodes something like `[Alias][Foo]` to `Foo`
  * But also `{@link Foo#main(String[])}` to `Foo.main`
  */
@@ -215,7 +315,7 @@ fun DocContent.getTagNameOrNull(): String? =
  * Block "marks" are ignored if "\" escaped.
  * Can be joint with '\n' to get the original content.
  */
-fun DocContent.splitDocContentPerBlock(): List<DocContent> {
+fun DocContent.splitDocContentPerBlock(): List<DocContent> { // TODO remove blocks as they are inconsistent with kdoc spec
     val docContent = this@splitDocContentPerBlock.split('\n')
     return buildList {
         var currentBlock = ""
@@ -252,8 +352,7 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
 
                     '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
                 }
-                if (isInCodeBlock()) continue
-                when (char) {
+                if (!isInCodeBlock()) when (char) {
                     '{' -> blocksIndicators += CURLY_BRACES
                     '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
 

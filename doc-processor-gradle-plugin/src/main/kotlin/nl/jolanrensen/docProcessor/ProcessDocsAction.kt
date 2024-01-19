@@ -216,7 +216,7 @@ abstract class ProcessDocsAction {
                         )
                     }
 
-                val processedFileContent = fileContent.replaceRanges(*modificationsByRange.toTypedArray())
+                val processedFileContent = fileContent.replaceNonOverlappingRanges(*modificationsByRange.toTypedArray())
 
                 try {
                     targetFile.writeText(processedFileContent)

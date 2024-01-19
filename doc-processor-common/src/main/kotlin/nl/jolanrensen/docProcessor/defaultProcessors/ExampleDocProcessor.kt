@@ -3,7 +3,6 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.getTagArguments
-import nl.jolanrensen.docProcessor.removeEscapeCharacters
 
 class ExampleDocProcessor : TagDocProcessor() {
 

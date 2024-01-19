@@ -35,9 +35,9 @@ fun String.removeEscapeCharacters(escapeChars: List<Char> = listOf('\\')): Strin
 
 /**
  * Replaces multiple ranges with their respective replacements.
- * The replacements can be of any size.
+ * The replacements can be of any size but cannot overlap
  */
-fun String.replaceRanges(vararg rangeToReplacement: Pair<IntRange, String>): String {
+fun String.replaceNonOverlappingRanges(vararg rangeToReplacement: Pair<IntRange, String>): String {
     val textRange = this.indices.associateWith { this[it].toString() }.toMutableMap()
     for ((range, replacement) in rangeToReplacement) {
         if (range.size == 0 && replacement.isEmpty()) continue
@@ -83,7 +83,7 @@ fun CharSequence.replaceAll(
         }
     }
 
-    return text.replaceRanges(*replacements.map { it.key to it.value }.toTypedArray())
+    return text.replaceNonOverlappingRanges(*replacements.map { it.key to it.value }.toTypedArray())
 }
 
 fun String.indexOfFirstOrNullWhile(char: Char, startIndex: Int = 0, whileCondition: (Char) -> Boolean): Int? {

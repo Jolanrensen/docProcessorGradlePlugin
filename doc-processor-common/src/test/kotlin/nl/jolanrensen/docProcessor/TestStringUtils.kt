@@ -30,7 +30,7 @@ class TestStringUtils {
             26..29 to "other text then before",
         )
 
-        someText.replaceRanges(*replacements) shouldBe
+        someText.replaceNonOverlappingRanges(*replacements) shouldBe
                 """
                     Hi World
                     This is some other text then before.

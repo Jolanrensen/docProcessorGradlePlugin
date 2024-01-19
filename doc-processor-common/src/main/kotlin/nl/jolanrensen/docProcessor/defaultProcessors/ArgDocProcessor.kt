@@ -135,7 +135,14 @@ class ArgDocProcessor : TagDocProcessor() {
         val mutable = documentablesByPath.toMutable()
         for ((_, docs) in mutable.documentablesToProcess) {
             for (doc in docs) {
-                doc.docContent = doc.docContent.replaceDollarNotation()
+                doc.apply {
+                    val newContent = docContent.replaceDollarNotation()
+                    if (newContent != docContent) {
+                        docContent = newContent
+                        tags = newContent.findTagNamesInDocContent().toSet()
+                        isModified = true
+                    }
+                }
             }
         }
 
@@ -149,15 +156,29 @@ class ArgDocProcessor : TagDocProcessor() {
         var text = this
 
         // First replacing all ${CONTENT} with {@getArg CONTENT}
-        val bracketsRanges = findInlineDollarTagsInDocContentWithRanges()
+        // and ${KEY=CONTENT} with {@setArg KEY CONTENT}
+        val bracketsRangesWithKeyAndValues = `find ${}'s`()
+            .associateWith { text.substring(it).findKeyAndValueFromDollarSign() }
 
-        text = text.replaceRanges(
-            *bracketsRanges
-                .map { it.first..it.first + 1 to "{@$useArgumentTag " } // replacing just "${" with "{@getArg "
+        //todo
+        text = text.replaceNonOverlappingRanges(
+            *bracketsRangesWithKeyAndValues
+                .map { (range, keyAndValue) ->
+                    val (key, value) = keyAndValue
+
+                    if (value == null) { // replacing just "${" with "{@getArg "
+                        range.first..range.first + 1 to "{@$useArgumentTag "
+                    } else { // replacing the entire "${key=value}" with "{@setArg key value}"
+                        range to "{@$declareArgumentTag $key $value}"
+                    }
+                }
                 .toTypedArray()
         )
 
+        TODO("migrate to `find \$tags`()")
+
         // Then replacing all "$CONTENT test" with "{@getArg CONTENT} test"
+        // and "$KEY=CONTENT" with "{@setArg KEY CONTENT}"
         val noBracketsRangesWithKey = buildList {
             var escapeNext = false
             for ((i, char) in text.withIndex()) {
@@ -167,29 +188,57 @@ class ArgDocProcessor : TagDocProcessor() {
                     char == '\\' -> escapeNext = true
 
                     char == '$' -> {
-                        val key = text.substring(startIndex = i).findKeyFromDollarSign()
-                        this += i..i + key.length to key
+                        val (key, value) = text.substring(startIndex = i).findKeyAndValueFromDollarSign()
+
+                        this += if (value == null) { // replacing "$key" with "{@getArg key}"
+                            i..<i + key.length + 1 to "{@$useArgumentTag $key}"
+                        } else { // replacing "$key=value" with "{@setArg key value}"
+                            i..<i + key.length + value.length + 2 to "{@$declareArgumentTag $key $value}"
+                        }
                     }
                 }
             }
         }
 
-        text = text.replaceRanges(
-            *noBracketsRangesWithKey
-                .map { (range, content) -> range to "{@$useArgumentTag $content}" }
-                .toTypedArray()
-        )
+        text = text.replaceNonOverlappingRanges(*noBracketsRangesWithKey.toTypedArray())
 
         return text
     }
 
+    // TODO test
+    fun DocContent.`find $tags`(): List<IntRange> {
+        val text = this
+
+        return buildList {
+            var escapeNext = false
+            for ((i, char) in text.withIndex()) {
+                when {
+                    escapeNext -> escapeNext = false
+
+                    char == '\\' -> escapeNext = true
+
+                    char == '$' -> {
+                        val (key, value) = text.substring(startIndex = i).findKeyAndValueFromDollarSign()
+
+                        this += if (value == null) { // reporting "$key" range
+                            i..<i + key.length + 1
+                        } else { // reporting "$key=value" range
+                            i..<i + key.length + value.length + 2
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+
     /**
-     * Finds all inline tag names, including nested ones,
+     * Finds all inline ${} tags, including nested ones,
      * together with their respective range in the doc.
      * The list is sorted by depth, with the deepest tags first and then by order of appearance.
-     * "{@}" marks are ignored if "\" escaped.
+     * "${}" marks are ignored if "\" escaped.
      */
-    private fun DocContent.findInlineDollarTagsInDocContentWithRanges(): List<IntRange> {
+    fun DocContent.`find ${}'s`(): List<IntRange> {
         var text = this
 
         return buildMap<Int, MutableList<IntRange>> {
@@ -384,12 +433,84 @@ class ArgDocProcessor : TagDocProcessor() {
 /**
  * Given a "$[string starting with] dollar sign notation", it
  * returns the first key of the notation, in this case
- * "[string starting with]".
+ * ("[string starting with]", null).
+ *
+ * If the notation is "$[string starting with]=value something", it returns
+ * ("[string starting with]", "value").
+ *
+ * If the notation is "${[string starting with]=value something}", it returns
+ * ("[string starting with]", "value something").
  */
-internal fun String.findKeyFromDollarSign(): String {
+fun String.findKeyAndValueFromDollarSign(): Pair<String, String?> {
     require(startsWith('$')) { "String must start with a dollar sign" }
 
-    return removePrefix("\$")
-        .getTagArguments("", 2) // using the getTagArguments' logic to split up the string
-        .first()
+    val allowSpacesInValue = startsWith("\${") && endsWith("}")
+    var encounteredEquals = false
+    var firstEncounteredClosingBracketIndex: Pair<Int, Int>? = null
+    val arguments = this
+        .removePrefix("\$")
+        .getTagArguments(
+            // using the getTagArguments' logic to split up the string
+            tag = "",
+            numberOfArguments = 2,
+            onRogueClosingChar = { char, argument, i ->
+                if (char == '}') firstEncounteredClosingBracketIndex = argument to i
+            },
+            isSplitter = {
+                when {
+                    this == '=' && firstEncounteredClosingBracketIndex == null -> {
+                        encounteredEquals = true
+                        true
+                    }
+
+                    this == '=' -> true
+
+                    else -> isWhitespace()
+                }
+            },
+        )
+
+    return when {
+        encounteredEquals ->
+            when {
+                // if spaces are allowed, take the first argument as the key and the rest as the value
+                allowSpacesInValue -> {
+
+                    // if there is a rogue closing bracket, we'll need to cap the value early
+                    // can't appear in first argument because then encounteredEquals can't be true
+                    val value = firstEncounteredClosingBracketIndex
+                        ?.takeIf { (arg, _) -> arg == 1 }
+                        ?.let { (_, i) -> arguments[1].take(i - 1 /* the = */) }
+                        ?: arguments[1]
+
+                    arguments[0] to value
+                }
+
+                // if spaces are not allowed, we'll need to split the content in 3 and take just the first two parts
+                else -> {
+                    val arguments = this.removePrefix("\$")
+                        .getTagArguments("", 3, { _, _, _ -> }) { isWhitespace() || this == '=' }
+
+                    // if there is a rogue closing bracket, we'll need to cap the value early
+                    // can't appear in first argument because then encounteredEquals can't be true
+                    val value = firstEncounteredClosingBracketIndex
+                        ?.takeIf { (arg, _) -> arg == 1 }
+                        ?.let { (_, i) -> arguments[1].take(i - 1 /* the = */) }
+                        ?: arguments[1]
+
+                    arguments[0] to value
+                }
+            }
+
+        // simply take the first argument of the content split by whitespace
+        else -> {
+            // if there is a rogue closing bracket, we'll need to cap the argument early
+            val argument = firstEncounteredClosingBracketIndex
+                ?.takeIf { (arg, _) -> arg == 0 }
+                ?.let { (_, i) -> arguments[0].take(i) }
+                ?: arguments[0]
+
+            argument to null
+        }
+    }
 }
