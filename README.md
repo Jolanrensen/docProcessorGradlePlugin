@@ -10,7 +10,7 @@ having the comments modified in a `javadoc.jar` or a Dokka HTML website.
 
 Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}` work too.
 
-The processing order is:
+The processing order per processor is:
 
 - Inline tags
     - depth-first
@@ -381,30 +381,32 @@ For example, the following KDoc:
  * @a [Test2]
  * Hi there!
  * @b source someFun
- * Some more text. (
- * @c [Test1] {
- * )
+ * Some more text. {@c
+ * @d [Test1] (
+ * }
+ * @e)
  */
 ```
 
-will be parsed as follows:
+will be split up in blocks as follows:
 
 ```
 [
   "\nSome extra text",
   "@a [Test2]\nHi there!",
-  "@b source someFun\nSome more text. (\n@c [Test1] {\n)\n",
+  "@b source someFun\nSome more text. (\n{@c [Test1] (\n}",
+  "@e)\n",
 ]
 ```
 
-This is also how tag processors receive their data. Note that any newlines after the `@tag`
+This is also how tag processors receive their block-data. Note that any newlines after the `@tag`
 are also included as part of the tag data. Tag processors can then decide what to do with this extra data.
 However, `@include`, `@getArg`, `@sample`, and `@includeFile` all have systems in place that
 will keep the content after the tag and on the lines below the tag in place.
 Take this into account when writing your own processors.
 
 To avoid any confusion, it's usually easier to stick to `{@inline tags}` as then it's clear which part of the doc
-belongs to the tag and what does not. Inline tags are processed before block tags.
+belongs to the tag and what does not. Inline tags are processed before block tags per processor.
 
 Take extra care when using tags that can introduce new tags, such as `@include`, as this will cause the structure
 of the doc to change mid-processing. Very powerful, but also potentially dangerous.
