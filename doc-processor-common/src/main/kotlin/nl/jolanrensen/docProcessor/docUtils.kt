@@ -309,9 +309,9 @@ fun DocContent.getTagNameOrNull(): String? =
 
 /**
  * Split doc content in blocks of content and text belonging to tags.
- * The tag, if present, can be found with optional leading spaces in the first line of the block.
+ * The tag, if present, can be found with optional (up to max 2) leading spaces in the first line of the block.
  * You can get the name with [String.getTagNameOrNull].
- * Splitting takes `{}`, `[]`, `()`, and triple backticks into account.
+ * Splitting takes triple backticks and `{@..}` into account.
  * Block "marks" are ignored if "\" escaped.
  * Can be joint with '\n' to get the original content.
  */
@@ -319,6 +319,11 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> { // TODO remove bloc
     val docContent = this@splitDocContentPerBlock.split('\n')
     return buildList {
         var currentBlock = ""
+
+        /**
+         * keeps track of the current blocks
+         * denoting `{@..}` with [CURLY_BRACES] and triple "`" with [BACKTICKS]
+         */
         val blocksIndicators = mutableListOf<Char>()
 
         fun isInCodeBlock() = BACKTICKS in blocksIndicators
@@ -326,46 +331,54 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> { // TODO remove bloc
         for (line in docContent) {
 
             // start a new block if the line starts with a tag and we're not
-            // in a {} or `````` block
-            if (line.trimStart().startsWith("@") && blocksIndicators.isEmpty()) {
-                if (currentBlock.isNotEmpty()) add(currentBlock.removeSuffix("\n"))
-                currentBlock = "$line\n"
-            } else if (line.isEmpty() && blocksIndicators.isEmpty()) {
-                currentBlock += "\n"
-            } else {
-                if (currentBlock.isEmpty()) {
+            // in a {@..} or ```..``` block
+            val lineStartsWithTag = line
+                .removePrefix(" ")
+                .removePrefix(" ")
+                .startsWith("@")
+
+            when {
+                // start a new block if the line starts with a tag and we're not in a {@..} or ```..``` block
+                lineStartsWithTag && blocksIndicators.isEmpty() -> {
+                    if (currentBlock.isNotEmpty())
+                        this += currentBlock.removeSuffix("\n")
                     currentBlock = "$line\n"
-                } else {
-                    currentBlock += "$line\n"
+                }
+
+                line.isEmpty() && blocksIndicators.isEmpty() -> {
+                    currentBlock += "\n"
+                }
+
+                else -> {
+                    if (currentBlock.isEmpty()) {
+                        currentBlock = "$line\n"
+                    } else {
+                        currentBlock += "$line\n"
+                    }
                 }
             }
             var escapeNext = false
-            for (char in line) {
+            for ((i, char) in line.withIndex()) {
+                when {
+                    escapeNext -> {
+                        escapeNext = false
+                        continue
+                    }
 
-                if (escapeNext) {
-                    escapeNext = false
-                    continue
+                    char == '\\' ->
+                        escapeNext = true
+
+                    // ``` detection
+                    char == '`' && line.getOrNull(i + 1) == '`' && line.getOrNull(i + 2) == '`' ->
+                        if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
                 }
+                if (isInCodeBlock()) continue
+                when {
+                    char == '{' && line.getOrNull(i + 1) == '@' ->
+                        blocksIndicators += CURLY_BRACES
 
-                when (char) {
-                    '\\' -> escapeNext = true
-
-                    '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
-                }
-                if (!isInCodeBlock()) when (char) {
-                    '{' -> blocksIndicators += CURLY_BRACES
-                    '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
-
-                    '[' -> blocksIndicators += SQUARE_BRACKETS
-                    ']' -> blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
-
-                    '(' -> blocksIndicators += PARENTHESES
-                    ')' -> blocksIndicators.removeAllElementsFromLast(PARENTHESES)
-
-                    '<' -> blocksIndicators += ANGULAR_BRACKETS
-                    '>' -> blocksIndicators.removeAllElementsFromLast(ANGULAR_BRACKETS)
-
-                    // TODO: issue #11: html tags
+                    char == '}' ->
+                        blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
                 }
             }
         }
