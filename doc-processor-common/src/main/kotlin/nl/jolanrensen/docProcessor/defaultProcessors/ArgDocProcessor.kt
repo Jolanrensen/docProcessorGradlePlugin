@@ -60,13 +60,15 @@ const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
  */
 class ArgDocProcessor : TagDocProcessor() {
 
-    private val useArgumentTag = "getArg"
-    private val declareArgumentTag = "setArg"
+    internal companion object {
+        internal const val RETRIEVE_ARGUMENT_TAG = "getArg"
+        internal const val DECLARE_ARGUMENT_TAG = "setArg"
+    }
 
     override fun tagIsSupported(tag: String): Boolean =
         tag in listOf(
-            useArgumentTag,
-            declareArgumentTag,
+            RETRIEVE_ARGUMENT_TAG,
+            DECLARE_ARGUMENT_TAG,
         )
 
     data class DocWrapperWithArgMap(
@@ -110,7 +112,7 @@ class ArgDocProcessor : TagDocProcessor() {
                             buildString {
                                 val arguments = if (args.size == 1) "argument" else "arguments"
                                 appendLine("Could not find @setArg $arguments in doc (${documentable.file.absolutePath}:$line:$char):")
-                                appendLine(args.joinToString(",\n") { "  \"@$useArgumentTag $it\"" })
+                                appendLine(args.joinToString(",\n") { "  \"@$RETRIEVE_ARGUMENT_TAG $it\"" })
                             }
                         }
                     }
@@ -149,163 +151,24 @@ class ArgDocProcessor : TagDocProcessor() {
         return super.process(processLimit, mutable)
     }
 
-    /**
-     * Replaces all ${CONTENT} and $CONTENT with {@getArg CONTENT} for some doc's content.
-     */
-    fun DocContent.replaceDollarNotation(): DocContent {
-        var text = this
-
-        // First replacing all ${CONTENT} with {@getArg CONTENT}
-        // and ${KEY=CONTENT} with {@setArg KEY CONTENT}
-        val bracketsRangesWithKeyAndValues = `find ${}'s`()
-            .associateWith { text.substring(it).findKeyAndValueFromDollarSign() }
-
-        //todo
-        text = text.replaceNonOverlappingRanges(
-            *bracketsRangesWithKeyAndValues
-                .map { (range, keyAndValue) ->
-                    val (key, value) = keyAndValue
-
-                    if (value == null) { // replacing just "${" with "{@getArg "
-                        range.first..range.first + 1 to "{@$useArgumentTag "
-                    } else { // replacing the entire "${key=value}" with "{@setArg key value}"
-                        range to "{@$declareArgumentTag $key $value}"
-                    }
-                }
-                .toTypedArray()
-        )
-
-        TODO("migrate to `find \$tags`()")
-
-        // Then replacing all "$CONTENT test" with "{@getArg CONTENT} test"
-        // and "$KEY=CONTENT" with "{@setArg KEY CONTENT}"
-        val noBracketsRangesWithKey = buildList {
-            var escapeNext = false
-            for ((i, char) in text.withIndex()) {
-                when {
-                    escapeNext -> escapeNext = false
-
-                    char == '\\' -> escapeNext = true
-
-                    char == '$' -> {
-                        val (key, value) = text.substring(startIndex = i).findKeyAndValueFromDollarSign()
-
-                        this += if (value == null) { // replacing "$key" with "{@getArg key}"
-                            i..<i + key.length + 1 to "{@$useArgumentTag $key}"
-                        } else { // replacing "$key=value" with "{@setArg key value}"
-                            i..<i + key.length + value.length + 2 to "{@$declareArgumentTag $key $value}"
-                        }
-                    }
-                }
-            }
-        }
-
-        text = text.replaceNonOverlappingRanges(*noBracketsRangesWithKey.toTypedArray())
-
-        return text
-    }
-
-    // TODO test
-    fun DocContent.`find $tags`(): List<IntRange> {
-        val text = this
-
-        return buildList {
-            var escapeNext = false
-            for ((i, char) in text.withIndex()) {
-                when {
-                    escapeNext -> escapeNext = false
-
-                    char == '\\' -> escapeNext = true
-
-                    char == '$' -> {
-                        val (key, value) = text.substring(startIndex = i).findKeyAndValueFromDollarSign()
-
-                        this += if (value == null) { // reporting "$key" range
-                            i..<i + key.length + 1
-                        } else { // reporting "$key=value" range
-                            i..<i + key.length + value.length + 2
-                        }
-                    }
-                }
-            }
-
-        }
-    }
-
-    /**
-     * Finds all inline ${} tags, including nested ones,
-     * together with their respective range in the doc.
-     * The list is sorted by depth, with the deepest tags first and then by order of appearance.
-     * "${}" marks are ignored if "\" escaped.
-     */
-    fun DocContent.`find ${}'s`(): List<IntRange> {
-        var text = this
-
-        return buildMap<Int, MutableList<IntRange>> {
-            while (text.findInlineDollarTagRangesWithDepthOrNull() != null) {
-                val (range, depth) = text.findInlineDollarTagRangesWithDepthOrNull()!!
-                val comment = text.substring(range)
-                getOrPut(depth) { mutableListOf() } += range
-
-                text = text.replaceRange(
-                    range = range,
-                    replacement = comment
-                        .replace('{', '<')
-                        .replace('}', '>'),
-                )
-            }
-        }.toSortedMap(Comparator.reverseOrder())
-            .flatMap { it.value }
-    }
-
-    /**
-     * Finds any inline ${...} with its depth, preferring the innermost one.
-     * "${}" marks are ignored if "\" escaped.
-     */
-    private fun DocContent.findInlineDollarTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
-        var depth = 0
-        var start: Int? = null
-        var escapeNext = false
-        for ((i, char) in this.withIndex()) {
-            // escape this char
-            when {
-                escapeNext -> escapeNext = false
-
-                char == '\\' -> escapeNext = true
-
-                char == '$' && this.getOrNull(i + 1) == '{' -> {
-                    start = i
-                    depth++
-                }
-
-                char == '}' -> {
-                    if (start != null) {
-                        return Pair(start..i, depth)
-                    }
-                }
-            }
-        }
-        return null
-    }
-
     private fun processTag(
         tagWithContent: String,
         documentable: DocumentableWrapper,
     ): String {
         val tagName = tagWithContent.getTagNameOrNull()
-        val isSetArgDeclaration = tagName == declareArgumentTag
+        val isSetArgDeclaration = tagName == DECLARE_ARGUMENT_TAG
 
         val tagNames = documentable.docContent.findTagNamesInDocContent()
 
-        val declareArgTagsStillPresent = declareArgumentTag in tagNames
+        val declareArgTagsStillPresent = DECLARE_ARGUMENT_TAG in tagNames
 
-        val useArgTagsPresent = useArgumentTag in tagNames
+        val useArgTagsPresent = RETRIEVE_ARGUMENT_TAG in tagNames
 
         return when {
             isSetArgDeclaration -> { // @setArg
                 val argArguments =
                     tagWithContent.getTagArguments(
-                        tag = declareArgumentTag,
+                        tag = DECLARE_ARGUMENT_TAG,
                         numberOfArguments = 2,
                     )
 
@@ -341,7 +204,7 @@ class ArgDocProcessor : TagDocProcessor() {
                 val includeArgArguments: List<String> = buildList {
                     if (useArgTagsPresent) {
                         this += tagWithContent.getTagArguments(
-                            tag = useArgumentTag,
+                            tag = RETRIEVE_ARGUMENT_TAG,
                             numberOfArguments = 2,
                         )
                     }
@@ -427,6 +290,177 @@ class ArgDocProcessor : TagDocProcessor() {
             ).map { "[$it]" }
 
         return keys
+    }
+}
+
+/**
+ * Replaces all ${CONTENT} and $CONTENT with {@getArg CONTENT} for some doc's content.
+ */
+fun DocContent.replaceDollarNotation(): DocContent {
+    var text = this
+
+    // First replacing all ${CONTENT} with {@getArg CONTENT}
+    // and ${KEY=CONTENT} with {@setArg KEY CONTENT}
+    text = text.`replace ${}'s`()
+
+    // Then replacing all "$CONTENT test" with "{@getArg CONTENT} test"
+    // and "$KEY=CONTENT" with "{@setArg KEY CONTENT}"
+    text = text.`replace $tags`()
+
+    return text
+}
+
+/**
+ * Replaces all `${CONTENT}` with `{@getArg CONTENT}`
+ * and `${KEY=CONTENT}` with `{@setArg KEY CONTENT}`
+ */
+fun DocContent.`replace ${}'s`(): DocContent {
+    val text = this
+    val locations = `find ${}'s`()
+    val locationsWithKeyValues = locations
+        .associateWith { text.substring(it).findKeyAndValueFromDollarSign() }
+
+    val nonOverlappingRangesWithReplacement = locationsWithKeyValues
+        .flatMap { (range, keyAndValue) ->
+            val (key, value) = keyAndValue
+
+            buildList {
+                if (value == null) {
+                    // replacing "${" with "{@getArg "
+                    this += range.first..range.first + 1 to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAG} "
+                } else {
+                    val equalsPosition = 2 + key.length
+
+                    // replacing "${" with "{@setArg "
+                    this += range.first..range.first + 1 to "{@${ArgDocProcessor.DECLARE_ARGUMENT_TAG} "
+
+                    // replacing "=" with " "
+                    this += equalsPosition..equalsPosition to " "
+                }
+            }
+        }
+
+    return text.replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+}
+
+/**
+ * Finds all inline ${} tags, including nested ones
+ * by their respective range in the doc.
+ * The list is sorted by depth, with the deepest tags first and then by order of appearance.
+ * "${}" marks are ignored if "\" escaped.
+ */
+private fun DocContent.`find ${}'s`(): List<IntRange> {
+    var text = this
+
+    /*
+     * Finds any inline ${...} with its depth, preferring the innermost one.
+     * "${}" marks are ignored if "\" escaped.
+     */
+    fun DocContent.findInlineDollarTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
+        var depth = 0
+        var start: Int? = null
+        var escapeNext = false
+        for ((i, char) in this.withIndex()) {
+            // escape this char
+            when {
+                escapeNext -> escapeNext = false
+
+                char == '\\' -> escapeNext = true
+
+                char == '$' && this.getOrNull(i + 1) == '{' -> {
+                    start = i
+                    depth++
+                }
+
+                char == '}' -> {
+                    if (start != null) {
+                        return Pair(start..i, depth)
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    return buildMap<Int, MutableList<IntRange>> {
+        while (text.findInlineDollarTagRangesWithDepthOrNull() != null) {
+            val (range, depth) = text.findInlineDollarTagRangesWithDepthOrNull()!!
+            val comment = text.substring(range)
+            getOrPut(depth) { mutableListOf() } += range
+
+            text = text.replaceRange(
+                range = range,
+                replacement = comment
+                    .replace('{', '<')
+                    .replace('}', '>'),
+            )
+        }
+    }.toSortedMap(Comparator.reverseOrder())
+        .flatMap { it.value }
+}
+
+/**
+ * Replaces all "$CONTENT" with "{@getArg CONTENT}"
+ * and "$KEY=CONTENT" with "{@setArg KEY CONTENT}"
+ */
+fun DocContent.`replace $tags`(): DocContent {
+    val text = this
+    val locations = `find $tags`()
+
+    val nonOverlappingRangesWithReplacement = locations.flatMap { (range, equalsPosition) ->
+        buildList {
+            if (equalsPosition == null) {
+
+                // replacing "$" with "{@getArg "
+                this += range.first..range.first to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAG} "
+            } else {
+                // replacing "$" with "{@setArg "
+                this += range.first..range.first to "{@${ArgDocProcessor.DECLARE_ARGUMENT_TAG} "
+
+                // replacing "=" with " "
+                this += equalsPosition..equalsPosition to " "
+            }
+
+            // adding "}" at the end
+            this += range.last + 1..range.last to "}"
+        }
+    }
+
+    return text.replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+}
+
+/**
+ * Finds all inline $ tags by their respective range in the doc.
+ * The function also returns the absolute index of the `=` sign if it exists
+ */
+private fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
+    val text = this
+
+    return buildList {
+        var escapeNext = false
+        for ((i, char) in text.withIndex()) {
+            when {
+                escapeNext -> escapeNext = false
+
+                char == '\\' -> escapeNext = true
+
+                char == '$' -> {
+                    val (key, value) = text.substring(startIndex = i).findKeyAndValueFromDollarSign()
+
+                    this += if (value == null) { // reporting "$key" range
+                        Pair(
+                            first = i..<i + key.length + 1,
+                            second = null,
+                        )
+                    } else { // reporting "$key=value" range
+                        Pair(
+                            first = i..<i + key.length + value.length + 2,
+                            second = i + 1 + key.length,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

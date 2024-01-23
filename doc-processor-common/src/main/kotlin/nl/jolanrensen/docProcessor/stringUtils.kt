@@ -36,6 +36,9 @@ fun String.removeEscapeCharacters(escapeChars: List<Char> = listOf('\\')): Strin
 /**
  * Replaces multiple ranges with their respective replacements.
  * The replacements can be of any size but cannot overlap
+ *
+ * Note: a range like `i .. i - 1` will not replace anything, but it will insert something
+ * new at index `i`.
  */
 fun String.replaceNonOverlappingRanges(vararg rangeToReplacement: Pair<IntRange, String>): String {
     val textRange = this.indices.associateWith { this[it].toString() }.toMutableMap()

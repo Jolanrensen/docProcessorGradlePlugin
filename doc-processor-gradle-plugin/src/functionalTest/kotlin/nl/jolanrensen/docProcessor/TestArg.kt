@@ -5,6 +5,7 @@ package nl.jolanrensen.docProcessor
 import io.kotest.matchers.shouldBe
 import nl.jolanrensen.docProcessor.defaultProcessors.ArgDocProcessor
 import nl.jolanrensen.docProcessor.defaultProcessors.findKeyAndValueFromDollarSign
+import nl.jolanrensen.docProcessor.defaultProcessors.replaceDollarNotation
 import org.intellij.lang.annotations.Language
 import org.junit.Test
 
@@ -629,42 +630,38 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
 
     @Test
     fun `replace dollar notation`() {
-        with(ArgDocProcessor()) {
-//            "\${a}".replaceDollarNotation() shouldBe "{@getArg a}"
-//            " \${a}".replaceDollarNotation() shouldBe " {@getArg a}"
-//            "a\${a}".replaceDollarNotation() shouldBe "a{@getArg a}"
-//            "a\${a}a".replaceDollarNotation() shouldBe "a{@getArg a}a"
-//            "a\${test\\test}".replaceDollarNotation() shouldBe "a{@getArg test\\test}"
-//            "a\${test test}".replaceDollarNotation() shouldBe "a{@getArg test test}"
-//            "\${[test with spaces][function]}".replaceDollarNotation() shouldBe "{@getArg [test with spaces][function]}"
-//            "\${hi \${test} \${\$hi}}".replaceDollarNotation() shouldBe "{@getArg hi {@getArg test} {@getArg {@getArg hi}}}"
-//            "\${hi \${test} \${\$hi hi}}".replaceDollarNotation() shouldBe "{@getArg hi {@getArg test} {@getArg {@getArg hi} hi}}"
-//            "Hello \${name}!".replaceDollarNotation() shouldBe "Hello {@getArg name}!"
-//            "\nHello \${name}!\n".replaceDollarNotation() shouldBe "\nHello {@getArg name}!\n"
-//
-//            "\\\${a}".replaceDollarNotation() shouldBe "\\\${a}"
-////            "\$\\{a}".replaceDollarNotation() shouldBe "\$\\{a}"
-////            "\${a\\}".replaceDollarNotation() shouldBe "\${a\\}"
-//
-//            "\$key no more key".replaceDollarNotation() shouldBe "{@getArg key} no more key"
-//            "\$[key] \$[key2] \$[key3]".replaceDollarNotation() shouldBe "{@getArg [key]} {@getArg [key2]} {@getArg [key3]}"
-//            "a\${a}a\${a}a".replaceDollarNotation() shouldBe "a{@getArg a}a{@getArg a}a"
-//            "\$[anything [] goes {}[a][test] ][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@getArg [anything [] goes {}[a][test] ][replaceDollarNotation]}"
-//            "\$[hello[[[`]]]` there][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@getArg [hello[[[`]]]` there][replaceDollarNotation]}"
-//            "{@setArg \$a test}".replaceDollarNotation() shouldBe "{@setArg {@getArg a} test}"
-//            "Hello \$name!".replaceDollarNotation() shouldBe "Hello {@getArg name!}"
-//
-//            "\${a=b}".replaceDollarNotation() shouldBe "{@setArg a b}"
-//            " \${a=b c}".replaceDollarNotation() shouldBe " {@setArg a b c}"
-//            "a\${a=b}".replaceDollarNotation() shouldBe "a{@setArg a b}"
-//            "a\${a= b c}a".replaceDollarNotation() shouldBe "a{@setArg a  b c}a"
-//            "a\${test=test\\test}".replaceDollarNotation() shouldBe "a{@setArg test test\\test}"
-//            "a\${test test=test}".replaceDollarNotation() shouldBe "a{@getArg test test=test}"
-//            "\${[test with spaces][function]=something}".replaceDollarNotation() shouldBe "{@setArg [test with spaces][function] something}"
-            "\${hi=\${test} \${\$hi=2}}".replaceDollarNotation() shouldBe "{@setArg hi {@getArg test} {@getArg {@setArg hi 2}}}"
+        "\${a}".replaceDollarNotation() shouldBe "{@getArg a}"
+        " \${a}".replaceDollarNotation() shouldBe " {@getArg a}"
+        "a\${a}".replaceDollarNotation() shouldBe "a{@getArg a}"
+        "a\${a}a".replaceDollarNotation() shouldBe "a{@getArg a}a"
+        "a\${test\\test}".replaceDollarNotation() shouldBe "a{@getArg test\\test}"
+        "a\${test test}".replaceDollarNotation() shouldBe "a{@getArg test test}"
+        "\${[test with spaces][function]}".replaceDollarNotation() shouldBe "{@getArg [test with spaces][function]}"
+        "\${hi \${test} \${\$hi}}".replaceDollarNotation() shouldBe "{@getArg hi {@getArg test} {@getArg {@getArg hi}}}"
+        "\${hi \${test} \${\$hi hi}}".replaceDollarNotation() shouldBe "{@getArg hi {@getArg test} {@getArg {@getArg hi} hi}}"
+        "Hello \${name}!".replaceDollarNotation() shouldBe "Hello {@getArg name}!"
+        "\nHello \${name}!\n".replaceDollarNotation() shouldBe "\nHello {@getArg name}!\n"
 
-            "\${hi=\${test} \${\$hi=2}}".`find ${}'s`()
-        }
+        "\\\${a}".replaceDollarNotation() shouldBe "\\\${a}"
+//            "\$\\{a}".replaceDollarNotation() shouldBe "\$\\{a}"
+//            "\${a\\}".replaceDollarNotation() shouldBe "\${a\\}"
+
+        "\$key no more key".replaceDollarNotation() shouldBe "{@getArg key} no more key"
+        "\$[key] \$[key2] \$[key3]".replaceDollarNotation() shouldBe "{@getArg [key]} {@getArg [key2]} {@getArg [key3]}"
+        "a\${a}a\${a}a".replaceDollarNotation() shouldBe "a{@getArg a}a{@getArg a}a"
+        "\$[anything [] goes {}[a][test] ][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@getArg [anything [] goes {}[a][test] ][replaceDollarNotation]}"
+        "\$[hello[[[`]]]` there][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@getArg [hello[[[`]]]` there][replaceDollarNotation]}"
+        "{@setArg \$a test}".replaceDollarNotation() shouldBe "{@setArg {@getArg a} test}"
+        "Hello \$name!".replaceDollarNotation() shouldBe "Hello {@getArg name!}"
+
+        "\${a=b}".replaceDollarNotation() shouldBe "{@setArg a b}"
+        " \${a=b c}".replaceDollarNotation() shouldBe " {@setArg a b c}"
+        "a\${a=b}".replaceDollarNotation() shouldBe "a{@setArg a b}"
+        "a\${a= b c}a".replaceDollarNotation() shouldBe "a{@setArg a  b c}a"
+        "a\${test=test\\test}".replaceDollarNotation() shouldBe "a{@setArg test test\\test}"
+        "a\${test test=test}".replaceDollarNotation() shouldBe "a{@getArg test test=test}"
+        "\${[test with spaces][function]=something}".replaceDollarNotation() shouldBe "{@setArg [test with spaces][function] something}"
+        "\${hi=\${test} \${\$hi=2}}".replaceDollarNotation() shouldBe "{@setArg hi {@getArg test} {@getArg {@setArg hi 2}}}"
     }
 
     @Test

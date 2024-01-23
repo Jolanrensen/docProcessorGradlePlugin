@@ -311,11 +311,11 @@ fun DocContent.getTagNameOrNull(): String? =
  * Split doc content in blocks of content and text belonging to tags.
  * The tag, if present, can be found with optional (up to max 2) leading spaces in the first line of the block.
  * You can get the name with [String.getTagNameOrNull].
- * Splitting takes triple backticks and `{@..}` into account.
+ * Splitting takes triple backticks and `{@..}` and `${..}` into account.
  * Block "marks" are ignored if "\" escaped.
  * Can be joint with '\n' to get the original content.
  */
-fun DocContent.splitDocContentPerBlock(): List<DocContent> { // TODO remove blocks as they are inconsistent with kdoc spec
+fun DocContent.splitDocContentPerBlock(): List<DocContent> {
     val docContent = this@splitDocContentPerBlock.split('\n')
     return buildList {
         var currentBlock = ""
@@ -374,7 +374,12 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> { // TODO remove bloc
                 }
                 if (isInCodeBlock()) continue
                 when {
+                    // {@ detection
                     char == '{' && line.getOrNull(i + 1) == '@' ->
+                        blocksIndicators += CURLY_BRACES
+
+                    // ${ detection for ArgDocProcessor
+                    char == '{' && line.getOrNull(i - 1) == '$' && line.getOrNull(i - 2) != '\\' ->
                         blocksIndicators += CURLY_BRACES
 
                     char == '}' ->
@@ -407,36 +412,6 @@ fun DocContent.splitDocContentPerBlockWithRanges(): List<Pair<DocContent, IntRan
 }
 
 /**
- * Finds any inline {@tag ...} with its depth, preferring the innermost one.
- * "{@}" marks are ignored if "\" escaped.
- */
-private fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
-    var depth = 0
-    var start: Int? = null
-    var escapeNext = false
-    for ((i, char) in this.withIndex()) {
-        // escape this char
-        when {
-            escapeNext -> escapeNext = false
-
-            char == '\\' -> escapeNext = true
-
-            char == '{' && this.getOrNull(i + 1) == '@' -> {
-                start = i
-                depth++
-            }
-
-            char == '}' -> {
-                if (start != null) {
-                    return Pair(start..i, depth)
-                }
-            }
-        }
-    }
-    return null
-}
-
-/**
  * Finds all inline tag names, including nested ones,
  * together with their respective range in the doc.
  * The list is sorted by depth, with the deepest tags first and then by order of appearance.
@@ -444,6 +419,36 @@ private fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>
  */
 fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, IntRange>> {
     var text = this
+
+    /*
+     * Finds any inline {@tag ...} with its depth, preferring the innermost one.
+     * "{@}" marks are ignored if "\" escaped.
+     */
+    fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
+        var depth = 0
+        var start: Int? = null
+        var escapeNext = false
+        for ((i, char) in this.withIndex()) {
+            // escape this char
+            when {
+                escapeNext -> escapeNext = false
+
+                char == '\\' -> escapeNext = true
+
+                char == '{' && this.getOrNull(i + 1) == '@' -> {
+                    start = i
+                    depth++
+                }
+
+                char == '}' -> {
+                    if (start != null) {
+                        return Pair(start..i, depth)
+                    }
+                }
+            }
+        }
+        return null
+    }
 
     return buildMap<Int, MutableList<Pair<String, IntRange>>> {
         while (text.findInlineTagRangesWithDepthOrNull() != null) {
