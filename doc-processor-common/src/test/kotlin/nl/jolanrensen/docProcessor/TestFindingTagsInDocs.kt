@@ -92,8 +92,8 @@ class TestFindingTagsInDocs {
 
     @Test
     fun `Find tag after difficult doc content`() {
-        val expectedInline = setOf("includeArg")
-        val expectedBlock = setOf("param", "return", "arg", "see")
+        val expectedInline = setOf("getArg")
+        val expectedBlock = setOf("param", "return", "setArg", "see")
         val kdoc1 = """
             ## Cols
             Creates a subset of columns ([ColumnSet][org.jetbrains.kotlinx.dataframe.columns.ColumnSet]) from a parent [ColumnSet][org.jetbrains.kotlinx.dataframe.columns.ColumnSet], -[ColumnGroup][org.jetbrains.kotlinx.dataframe.columns.ColumnGroup], or -[DataFrame][org.jetbrains.kotlinx.dataframe.DataFrame].
@@ -133,8 +133,8 @@ class TestFindingTagsInDocs {
             
         """.trimIndent()
 
-//        kdoc1.findInlineTagNamesInDocContent().toSet() shouldBe expectedInline
-//        kdoc1.findBlockTagNamesInDocContent().toSet() shouldBe expectedBlock
+        kdoc1.findInlineTagNamesInDocContent().toSet() shouldBe expectedInline
+        kdoc1.findBlockTagNamesInDocContent().toSet() shouldBe expectedBlock
         println(kdoc1.splitDocContentPerBlock().joinToString("\n.............................................\n"))
     }
 
