@@ -11,6 +11,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
 
     private val processors = listOf(
         "INCLUDE_FILE_DOC_PROCESSOR",
+        "REMOVE_ESCAPE_CHARS_PROCESSOR",
     )
 
     @Test

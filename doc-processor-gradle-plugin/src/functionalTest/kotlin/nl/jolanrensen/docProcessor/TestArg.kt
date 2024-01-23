@@ -12,6 +12,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
         "INCLUDE_DOC_PROCESSOR",
         "ARG_DOC_PROCESSOR",
         "COMMENT_DOC_PROCESSOR",
+        "REMOVE_ESCAPE_CHARS_PROCESSOR",
     )
 
     @Test
