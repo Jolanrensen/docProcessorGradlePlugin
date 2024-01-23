@@ -131,7 +131,9 @@ class ArgDocProcessor : TagDocProcessor() {
     private val argsNotFound: MutableMap<UUID, DocWrapperWithArgSet> = mutableMapOf()
 
     /**
-     * Preprocess all ${a} and $a tags to {@getArg a} before running the normal tag processor.
+     * Preprocess all `${a}` and `$a` tags to `{@getArg a}`
+     * and all `${a=b}` and `$a=b` tags to `{@setArg a b}`
+     * before running the normal tag processor.
      */
     override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath {
         val mutable = documentablesByPath.toMutable()
@@ -294,7 +296,9 @@ class ArgDocProcessor : TagDocProcessor() {
 }
 
 /**
- * Replaces all ${CONTENT} and $CONTENT with {@getArg CONTENT} for some doc's content.
+ * Replaces all `${CONTENT}` and `$CONTENT` with `{@getArg CONTENT}`
+ * and all `${KEY=CONTENT}` and `$KEY=CONTENT` with `{@setArg KEY CONTENT}`
+ * for some doc's content.
  */
 fun DocContent.replaceDollarNotation(): DocContent {
     var text = this
@@ -329,7 +333,7 @@ fun DocContent.`replace ${}'s`(): DocContent {
                     // replacing "${" with "{@getArg "
                     this += range.first..range.first + 1 to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAG} "
                 } else {
-                    val equalsPosition = 2 + key.length
+                    val equalsPosition = range.first + 2 + key.length
 
                     // replacing "${" with "{@setArg "
                     this += range.first..range.first + 1 to "{@${ArgDocProcessor.DECLARE_ARGUMENT_TAG} "

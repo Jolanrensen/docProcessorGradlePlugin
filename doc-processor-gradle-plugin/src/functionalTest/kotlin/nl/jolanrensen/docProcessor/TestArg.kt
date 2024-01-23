@@ -3,7 +3,6 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
-import nl.jolanrensen.docProcessor.defaultProcessors.ArgDocProcessor
 import nl.jolanrensen.docProcessor.defaultProcessors.findKeyAndValueFromDollarSign
 import nl.jolanrensen.docProcessor.defaultProcessors.replaceDollarNotation
 import org.intellij.lang.annotations.Language
@@ -643,8 +642,9 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
         "\nHello \${name}!\n".replaceDollarNotation() shouldBe "\nHello {@getArg name}!\n"
 
         "\\\${a}".replaceDollarNotation() shouldBe "\\\${a}"
-//            "\$\\{a}".replaceDollarNotation() shouldBe "\$\\{a}"
-//            "\${a\\}".replaceDollarNotation() shouldBe "\${a\\}"
+        // edge cases, but works as expected
+        "\$\\{a}".replaceDollarNotation() shouldBe "{@getArg \\{a}}"
+        "\${a\\}".replaceDollarNotation() shouldBe "{@getArg {a}\\}"
 
         "\$key no more key".replaceDollarNotation() shouldBe "{@getArg key} no more key"
         "\$[key] \$[key2] \$[key3]".replaceDollarNotation() shouldBe "{@getArg [key]} {@getArg [key2]} {@getArg [key3]}"
@@ -661,7 +661,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
         "a\${test=test\\test}".replaceDollarNotation() shouldBe "a{@setArg test test\\test}"
         "a\${test test=test}".replaceDollarNotation() shouldBe "a{@getArg test test=test}"
         "\${[test with spaces][function]=something}".replaceDollarNotation() shouldBe "{@setArg [test with spaces][function] something}"
-        "\${hi=\${test} \${\$hi=2}}".replaceDollarNotation() shouldBe "{@setArg hi {@getArg test} {@getArg {@setArg hi 2}}}"
+        "\${hi=\${test} \${\$hi=2}}".replaceDollarNotation() shouldBe "{@setArg hi {@getArg test} {@setArg {@getArg hi} 2}}"
     }
 
     @Test
@@ -685,10 +685,8 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     fun `Using it for $ notation`() {
         "\$anything here without spaces".findKeyAndValueFromDollarSign() shouldBe ("anything" to null)
         "\$[anything [] goes {}[a][test] ][replaceDollarNotation] blah".findKeyAndValueFromDollarSign() shouldBe ("[anything [] goes {}[a][test] ][replaceDollarNotation]" to null)
-//        "\$[hello[[[`]]]` there][replaceDollarNotation] blah".findKeyFromDollarSign() shouldBe ("[hello[[[`]]]` there][replaceDollarNotation]")
         "\$[key] \$[key2] \$[key3]".findKeyAndValueFromDollarSign() shouldBe ("[key]" to null)
         "\$key no more key".findKeyAndValueFromDollarSign() shouldBe ("key" to null)
-//        "\$someKey\\brokenUp".findKeyFromDollarSign() shouldBe "someKey"
         "\$(some\nlarge key <>) that ends there".findKeyAndValueFromDollarSign() shouldBe ("(some\nlarge key <>)" to null)
 
         // rogue }

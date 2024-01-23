@@ -87,7 +87,15 @@ fun DocContent.toDoc(indent: Int = 0): String = this
  * Arguments are split by spaces, unless they are in a block of "{}", "[]", "()", "<>", "`", """, or "'".
  * Blocks "marks" are ignored if "\" escaped.
  */
-fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
+fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String>
+// TODO see if both are identical enough to be merged into one
+//   = getTagArguments(
+//        tag = tag,
+//        numberOfArguments = numberOfArguments,
+//        onRogueClosingChar = { _, _, _ -> },
+//        isSplitter = { isWhitespace() },
+//    )
+{
     require("@$tag" in this) { "Could not find @$tag in $this" }
     require(numberOfArguments > 0) { "numberOfArguments must be greater than 0" }
 
