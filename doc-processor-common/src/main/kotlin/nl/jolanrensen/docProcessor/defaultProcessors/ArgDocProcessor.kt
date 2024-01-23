@@ -5,9 +5,9 @@ import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import java.util.*
 
 /**
- * @see IncludeArgDocProcessor
+ * @see ArgDocProcessor
  */
-const val ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.IncludeArgDocProcessor"
+const val ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.ArgDocProcessor"
 
 /**
  * [Boolean] argument controlling whether to log warnings when an argument is not found.
@@ -64,7 +64,7 @@ const val INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND = ARG_DOC_PROCESSOR_LOG_NOT_FO
  * NOTE: Use `[References]` as keys if you want extra refactoring-safety.
  * They are queried and saved by their fully qualified name.
  */
-class IncludeArgDocProcessor : TagDocProcessor() {
+class ArgDocProcessor : TagDocProcessor() {
 
     @Deprecated("")
     private val oldUseArgumentTag = "includeArg"
