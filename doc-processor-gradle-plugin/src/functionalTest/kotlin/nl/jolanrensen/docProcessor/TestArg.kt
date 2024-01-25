@@ -3,6 +3,7 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
+import nl.jolanrensen.docProcessor.defaultProcessors.KeyAndValue
 import nl.jolanrensen.docProcessor.defaultProcessors.findKeyAndValueFromDollarSign
 import nl.jolanrensen.docProcessor.defaultProcessors.replaceDollarNotation
 import org.intellij.lang.annotations.Language
@@ -113,7 +114,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     }
 
     @Test
-    fun `Simple $`() {
+    fun `Simple ${}`() {
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -121,6 +122,68 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             /**
              * Hello ${'$'}{name}!
              * ${'$'}{name=World}
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             *
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Simple $`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello ${'$'}name!
+             * ${'$'}name=World
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            /**
+             * Hello World!
+             *
+             */
+            fun helloWorld() {}
+            """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Simple $ 2`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello ${'$'}`name`!
+             * ${'$'}`name`=World
              */
             fun helloWorld() {}
             """.trimIndent()
@@ -652,7 +715,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
         "\$[anything [] goes {}[a][test] ][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@getArg [anything [] goes {}[a][test] ][replaceDollarNotation]}"
         "\$[hello[[[`]]]` there][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@getArg [hello[[[`]]]` there][replaceDollarNotation]}"
         "{@setArg \$a test}".replaceDollarNotation() shouldBe "{@setArg {@getArg a} test}"
-        "Hello \$name!".replaceDollarNotation() shouldBe "Hello {@getArg name!}"
+        "Hello \$name!".replaceDollarNotation() shouldBe "Hello {@getArg name}!"
 
         "\${a=b}".replaceDollarNotation() shouldBe "{@setArg a b}"
         " \${a=b c}".replaceDollarNotation() shouldBe " {@setArg a b c}"
@@ -661,36 +724,52 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
         "a\${test=test\\test}".replaceDollarNotation() shouldBe "a{@setArg test test\\test}"
         "a\${test test=test}".replaceDollarNotation() shouldBe "a{@getArg test test=test}"
         "\${[test with spaces][function]=something}".replaceDollarNotation() shouldBe "{@setArg [test with spaces][function] something}"
-        "\${hi=\${test} \${\$hi=2}}".replaceDollarNotation() shouldBe "{@setArg hi {@getArg test} {@setArg {@getArg hi} 2}}"
+        "\${hi=\${test} \${\$hi=2}}".also(::println).replaceDollarNotation() shouldBe "{@setArg hi {@getArg test} {@getArg {@setArg hi 2}}}"
     }
 
     @Test
     fun `Using it for ${} notation`() {
-        "\${ spaces}".findKeyAndValueFromDollarSign() shouldBe ("spaces" to null)
-        "\${anything here with or without spaces}".findKeyAndValueFromDollarSign() shouldBe ("anything" to null)
-        "\${[unless spaces are in][Aliases]}".findKeyAndValueFromDollarSign() shouldBe ("[unless spaces are in][Aliases]" to null)
-        "\${someKey}blahblah}".findKeyAndValueFromDollarSign() shouldBe ("someKey" to null)
-        "\${someKey{}blahblah}".findKeyAndValueFromDollarSign() shouldBe ("someKey{}blahblah" to null)
+        "\${spaces}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("spaces", null)
+        "\${anything here with or without spaces}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("anything", null)
+        "\${[unless spaces are in][Aliases]}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[unless spaces are in][Aliases]", null)
+        "\${someKey}blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
+        "\${someKey{}blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
 
-        "\${spaces=}".findKeyAndValueFromDollarSign() shouldBe ("spaces" to "")
-        "\${anything=here with or without spaces}".findKeyAndValueFromDollarSign() shouldBe ("anything" to "here with or without spaces")
-        "\${[unless spaces are in][Aliases]=test}".findKeyAndValueFromDollarSign() shouldBe ("[unless spaces are in][Aliases]" to "test")
-        "\${someKey}=blahblah}".findKeyAndValueFromDollarSign() shouldBe ("someKey" to null)
-        "\${someKey=}blahblah}".findKeyAndValueFromDollarSign() shouldBe ("someKey" to "")
-        "\${someKey{}=blahblah}".findKeyAndValueFromDollarSign() shouldBe ("someKey{}" to "blahblah")
-        "\${someKey={}blahblah}".findKeyAndValueFromDollarSign() shouldBe ("someKey" to "{}blahblah")
+        "\${spaces=}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("spaces", "")
+        "\${anything=here with or without spaces}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("anything", "here with or without spaces")
+        "\${[unless spaces are in][Aliases]=test}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[unless spaces are in][Aliases]", "test")
+        "\${someKey}=blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
+        "\${someKey=}blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", "")
+        "\${someKey{}=blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
+        "\${someKey={}blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", "{}blahblah")
     }
 
     @Test
     fun `Using it for $ notation`() {
-        "\$anything here without spaces".findKeyAndValueFromDollarSign() shouldBe ("anything" to null)
-        "\$[anything [] goes {}[a][test] ][replaceDollarNotation] blah".findKeyAndValueFromDollarSign() shouldBe ("[anything [] goes {}[a][test] ][replaceDollarNotation]" to null)
-        "\$[key] \$[key2] \$[key3]".findKeyAndValueFromDollarSign() shouldBe ("[key]" to null)
-        "\$key no more key".findKeyAndValueFromDollarSign() shouldBe ("key" to null)
-        "\$(some\nlarge key <>) that ends there".findKeyAndValueFromDollarSign() shouldBe ("(some\nlarge key <>)" to null)
+        "\$anything here without spaces".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("anything", null)
+        "\$[anything [] goes {}[a][test] ][replaceDollarNotation] blah".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[anything [] goes {}[a][test] ][replaceDollarNotation]", null)
+        "\$[key] \$[key2] \$[key3]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[key]", null)
+        "\$key no more key".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("key", null)
+        "\$`some\nlarge key <>` that ends there".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("`some\nlarge key <>`", null)
 
         // rogue }
-        "\$someKey}blahblah".findKeyAndValueFromDollarSign() shouldBe ("someKey" to null)
-        "\$someKey{}b".findKeyAndValueFromDollarSign() shouldBe ("someKey{}b" to null)
+        "\$someKey}blahblah".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
+        "\$someKey{}b".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
+
+        // =
+        "\$someKey=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", "[hi there][test]")
+        "\$[hi there][test]=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[hi there][test]", "[hi there][test]")
+        "\$[hi there][test][test2]=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[hi there][test]", null)
+        "\$[hi there][test]\\[test2\\]=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[hi there][test]\\[test2\\]", "[hi there][test]")
+
+        // rando { without }
+        "\${hello=there".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("", null)
+        "\${{hello=there}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("{hello=there", null)
+        "\${{hello}=there}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("{hello}", "there")
+
+        // will not happen, but just curious
+        "\${hello}=there".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("", null)
+        // because detection will not return that, it will be like this:
+        "\${hello}=there".replaceDollarNotation() shouldBe "{@getArg hello}=there"
     }
 }

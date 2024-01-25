@@ -9,13 +9,13 @@ import java.util.Comparator
 typealias DocContent = String
 
 // used to keep track of the current blocks
-private const val CURLY_BRACES = '{'
-private const val SQUARE_BRACKETS = '['
-private const val PARENTHESES = '('
-private const val ANGULAR_BRACKETS = '<'
-private const val BACKTICKS = '`'
-private const val DOUBLE_QUOTES = '"'
-private const val SINGLE_QUOTES = '\''
+internal const val CURLY_BRACES = '{'
+internal const val SQUARE_BRACKETS = '['
+internal const val PARENTHESES = '('
+internal const val ANGULAR_BRACKETS = '<'
+internal const val BACKTICKS = '`'
+internal const val DOUBLE_QUOTES = '"'
+internal const val SINGLE_QUOTES = '\''
 
 /**
  * Returns the actual content of the KDoc/Javadoc comment
@@ -87,15 +87,7 @@ fun DocContent.toDoc(indent: Int = 0): String = this
  * Arguments are split by spaces, unless they are in a block of "{}", "[]", "()", "<>", "`", """, or "'".
  * Blocks "marks" are ignored if "\" escaped.
  */
-fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String>
-// TODO see if both are identical enough to be merged into one
-//   = getTagArguments(
-//        tag = tag,
-//        numberOfArguments = numberOfArguments,
-//        onRogueClosingChar = { _, _, _ -> },
-//        isSplitter = { isWhitespace() },
-//    )
-{
+fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
     require("@$tag" in this) { "Could not find @$tag in $this" }
     require(numberOfArguments > 0) { "numberOfArguments must be greater than 0" }
 
@@ -213,7 +205,10 @@ fun String.getTagArguments(
         var escapeNext = false
         for (char in content) {
             when {
-                escapeNext -> escapeNext = false
+                escapeNext -> {
+                    escapeNext = false
+                    continue
+                }
 
                 char == '\\' -> escapeNext = true
 
@@ -600,7 +595,7 @@ private fun StringBuilder.processReference(
 }
 
 /**
- * Finds removes the last occurrence of [element] from the list and, if found, all elements after it.
+ * Finds and removes the last occurrence of [element] from the list and, if found, all elements after it.
  * Returns true if [element] was found and removed, false otherwise.
  */
 fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {

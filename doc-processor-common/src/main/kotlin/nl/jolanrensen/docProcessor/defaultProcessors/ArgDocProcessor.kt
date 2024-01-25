@@ -478,77 +478,172 @@ private fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
  *
  * If the notation is "${[string starting with]=value something}", it returns
  * ("[string starting with]", "value something").
+ *
+ * Semantics:
+ *
+ * key, value:
+ * - `anything ][}{}]` don't open inner []{} scopes
+ * - {[][`}`{}} anything but } (unless opened by {), unless in ``, don't open [] scopes
+ * - [ [] {]}`}[]][]]`] anything but ] unless opened or in {} or ``
+ * - [][] same as above, just twice
+ * - only first char can open some of these scopes from no-scope
+ * - { cannot be used as first char in key unless in brackets
+ *
+ * key:
+ * - letters, digits, or _, no whitespace
+ *
+ * '=' is splitter
+ *
+ * value (inside ${}):
+ * - anything but }, can open scopes
+ *
+ * value (outside $):
+ * - letters, digits, or _, no whitespace
+ *
  */
-fun String.findKeyAndValueFromDollarSign(): Pair<String, String?> {
+fun String.findKeyAndValueFromDollarSign(): KeyAndValue<String, String?> {
     require(startsWith('$')) { "String must start with a dollar sign" }
 
-    val allowSpacesInValue = startsWith("\${") && endsWith("}")
-    var encounteredEquals = false
-    var firstEncounteredClosingBracketIndex: Pair<Int, Int>? = null
-    val arguments = this
-        .removePrefix("\$")
-        .getTagArguments(
-            // using the getTagArguments' logic to split up the string
-            tag = "",
-            numberOfArguments = 2,
-            onRogueClosingChar = { char, argument, i ->
-                if (char == '}') firstEncounteredClosingBracketIndex = argument to i
-            },
-            isSplitter = {
-                when {
-                    this == '=' && firstEncounteredClosingBracketIndex == null -> {
-                        encounteredEquals = true
-                        true
+    val isInBrackets = startsWith("\${") && endsWith("}")
+    val content = when (isInBrackets) {
+        true -> removePrefix("\${").removeSuffix("}")
+        false -> removePrefix("$")
+    }
+
+    val blocksIndicators = mutableListOf<Char>()
+    fun isInQuoteBlock() = BACKTICKS in blocksIndicators
+    fun isInSquareBrackets() = SQUARE_BRACKETS in blocksIndicators
+    fun isInCurlyBraces() = CURLY_BRACES in blocksIndicators
+
+    var key = ""
+    var value: String? = null
+    var timesInSquareBrackets = 0
+    var readyForSecondSquareBracket = false
+    var escapeNext = false
+
+    fun isWritingValue() = value != null
+    fun isWritingKey() = value == null
+    fun appendChar(char: Char) {
+        if (isWritingValue()) value += char
+        else key += char
+    }
+
+    fun startWritingValue() {
+        require(isWritingKey()) { "Cannot start writing value twice" }
+        value = ""
+        timesInSquareBrackets = 0
+    }
+
+    for ((i, char) in content.withIndex()) {
+        // can be the first char of the key or value, this allows notations like $`hello there`=[something else]
+        val isFirstChar = i == 0 || value == ""
+        when {
+            escapeNext -> {
+                escapeNext = false
+                appendChar(char)
+            }
+
+            char == '\\' -> { // next character can be anything and will simply be added
+                escapeNext = true
+                appendChar(char)
+            }
+
+            isFirstChar && char == '`' -> {
+                blocksIndicators += BACKTICKS
+                appendChar(char)
+            }
+
+
+            isFirstChar && char == '[' -> {
+                blocksIndicators += SQUARE_BRACKETS
+                timesInSquareBrackets++
+                appendChar(char)
+            }
+
+            isFirstChar && char == '{' && (isWritingValue() || isInBrackets) -> {
+                blocksIndicators += CURLY_BRACES
+                appendChar(char)
+            }
+
+            isInQuoteBlock() -> {
+                if (char == '`') blocksIndicators.removeAllElementsFromLast(BACKTICKS)
+                appendChar(char)
+            }
+
+            isInCurlyBraces() -> {
+                when (char) {
+                    '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
+                    '{' -> blocksIndicators += CURLY_BRACES
+                    '`' -> blocksIndicators += BACKTICKS
+                }
+                appendChar(char)
+            }
+
+            isInSquareBrackets() -> {
+                when (char) {
+                    ']' -> {
+                        blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
+                        if (!isInSquareBrackets() && timesInSquareBrackets == 1) {
+                            readyForSecondSquareBracket = true
+                            appendChar(char)
+                            continue  // skip it being set to false again
+                        }
                     }
 
-                    this == '=' -> true
-
-                    else -> isWhitespace()
+                    '[' -> blocksIndicators += SQUARE_BRACKETS
+                    '{' -> blocksIndicators += CURLY_BRACES
+                    '`' -> blocksIndicators += BACKTICKS
                 }
-            },
-        )
+                appendChar(char)
+            }
 
-    return when {
-        encounteredEquals ->
-            when {
-                // if spaces are allowed, take the first argument as the key and the rest as the value
-                allowSpacesInValue -> {
+            char == '[' && readyForSecondSquareBracket -> {
+                timesInSquareBrackets++
+                blocksIndicators += SQUARE_BRACKETS
+                appendChar(char)
+            }
 
-                    // if there is a rogue closing bracket, we'll need to cap the value early
-                    // can't appear in first argument because then encounteredEquals can't be true
-                    val value = firstEncounteredClosingBracketIndex
-                        ?.takeIf { (arg, _) -> arg == 1 }
-                        ?.let { (_, i) -> arguments[1].take(i - 1 /* the = */) }
-                        ?: arguments[1]
-
-                    arguments[0] to value
-                }
-
-                // if spaces are not allowed, we'll need to split the content in 3 and take just the first two parts
-                else -> {
-                    val arguments = this.removePrefix("\$")
-                        .getTagArguments("", 3, { _, _, _ -> }) { isWhitespace() || this == '=' }
-
-                    // if there is a rogue closing bracket, we'll need to cap the value early
-                    // can't appear in first argument because then encounteredEquals can't be true
-                    val value = firstEncounteredClosingBracketIndex
-                        ?.takeIf { (arg, _) -> arg == 1 }
-                        ?.let { (_, i) -> arguments[1].take(i - 1 /* the = */) }
-                        ?: arguments[1]
-
-                    arguments[0] to value
+            isWritingKey() -> {
+                when {
+                    // move to writing value
+                    char == '=' -> startWritingValue()
+                    // only letters, digits, or _, no whitespace are allowed
+                    Regex("[\\p{L}\\p{N}_]") in char.toString() -> appendChar(char)
+                    // stop otherwise
+                    else -> break
                 }
             }
 
-        // simply take the first argument of the content split by whitespace
-        else -> {
-            // if there is a rogue closing bracket, we'll need to cap the argument early
-            val argument = firstEncounteredClosingBracketIndex
-                ?.takeIf { (arg, _) -> arg == 0 }
-                ?.let { (_, i) -> arguments[0].take(i) }
-                ?: arguments[0]
+            isWritingValue() && isInBrackets -> {
+                when (char) {
+                    '[' -> blocksIndicators += SQUARE_BRACKETS
+                    '{' -> blocksIndicators += CURLY_BRACES
+                    '`' -> blocksIndicators += BACKTICKS
+                    '}' -> break // rogue '}' closes the value writing
+                }
+                appendChar(char)
+            }
 
-            argument to null
+            isWritingValue() && !isInBrackets -> {
+                when {
+                    // only letters, digits, or _, no whitespace are allowed
+                    Regex("[\\p{L}\\p{N}_]") in char.toString() -> appendChar(char)
+                    // stop otherwise
+                    else -> break
+                }
+            }
+
+            else -> {
+                error("should not happen")
+            }
         }
+        readyForSecondSquareBracket = false
     }
+
+    return KeyAndValue(key, value)
 }
+
+data class KeyAndValue<K, V>(
+    val key: K,
+    val value: V,
+)
