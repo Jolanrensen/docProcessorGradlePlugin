@@ -308,7 +308,7 @@ fun DocContent.getTagNameOrNull(): String? =
         ?.trimStart()
         ?.removePrefix("{")
         ?.removePrefix("@")
-        ?.takeWhile { !it.isWhitespace() }
+        ?.takeWhile { !it.isWhitespace() && it != '{' && it != '}' }
 
 /**
  * Split doc content in blocks of content and text belonging to tags.
@@ -425,7 +425,7 @@ fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, Int
 
     /*
      * Finds any inline {@tag ...} with its depth, preferring the innermost one.
-     * "{@}" marks are ignored if "\" escaped.
+     * "{@..}" marks are ignored if "\" escaped.
      */
     fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
         var depth = 0

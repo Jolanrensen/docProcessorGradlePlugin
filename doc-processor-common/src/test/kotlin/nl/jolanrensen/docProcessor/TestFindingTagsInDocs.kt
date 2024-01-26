@@ -16,6 +16,21 @@ class TestFindingTagsInDocs {
         "{@someTag someContent}".getTagNameOrNull() shouldBe "someTag"
     }
 
+    @Test
+    fun `Find tag name no content inline`() {
+        "{@someTag}".getTagNameOrNull() shouldBe "someTag"
+    }
+
+    @Test
+    fun `Find tag name no content difficult`() {
+        "{@someTag{}}".getTagNameOrNull() shouldBe "someTag"
+    }
+
+    @Test
+    fun `Find tag name no content`() {
+        "@someTag".getTagNameOrNull() shouldBe "someTag"
+    }
+
     private val difficultKdoc = """
         
         
@@ -29,7 +44,7 @@ class TestFindingTagsInDocs {
         Other test `{@h TestA}`
         ```kotlin
         @e TestB
-        {@f TestC }
+        {@f TestC }{@i}
         ```
         @g Test
         
@@ -50,7 +65,7 @@ class TestFindingTagsInDocs {
                Other test `{@h TestA}`
                ```kotlin
                @e TestB
-               {@f TestC }
+               {@f TestC }{@i}
                ```
                """.trimIndent(),
 
@@ -68,6 +83,7 @@ class TestFindingTagsInDocs {
             "c" to 74..135,
             "h" to 149..158,
             "f" to 180..190,
+            "i" to 191..194,
         )
 
         difficultKdoc.findInlineTagNamesInDocContentWithRanges()
@@ -80,7 +96,7 @@ class TestFindingTagsInDocs {
     @Test
     fun `Find inline tags in doc content`() {
         val expected = setOf(
-            "c", "d", "h", "f"
+            "c", "d", "h", "f", "i",
         )
 
         difficultKdoc.findInlineTagNamesInDocContent().toSet() shouldBe expected
@@ -181,5 +197,15 @@ class TestFindingTagsInDocs {
             ?.splitDocContentPerBlock()
             ?.joinToString("\n")
             ?.toDoc() shouldBe kdoc
+    }
+
+    @Test
+    fun `Test temp`() {
+        val kdoc = """
+            /** @{[Hello]} World! */
+        """.trimIndent()
+
+        kdoc.getDocContentOrNull()!!
+            .findTagNamesInDocContent()
     }
 }
