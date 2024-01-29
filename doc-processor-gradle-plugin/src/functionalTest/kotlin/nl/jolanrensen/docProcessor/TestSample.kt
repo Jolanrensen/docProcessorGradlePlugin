@@ -3,15 +3,17 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
+import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import org.intellij.lang.annotations.Language
 import org.junit.Test
 
 class TestSample : DocProcessorFunctionalTest(name = "sample") {
 
     private val processors = listOf(
-        "SAMPLE_DOC_PROCESSOR",
-        "REMOVE_ESCAPE_CHARS_PROCESSOR",
-    )
+        ::SAMPLE_DOC_PROCESSOR,
+        ::REMOVE_ESCAPE_CHARS_PROCESSOR,
+    ).map { it.name }
 
     @Test
     fun `Simple sample same file Kotlin`() {

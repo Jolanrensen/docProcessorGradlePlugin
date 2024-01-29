@@ -4,15 +4,17 @@ package nl.jolanrensen.docProcessor
 
 import io.kotest.assertions.throwables.shouldThrowAny
 import io.kotest.matchers.shouldBe
+import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import org.intellij.lang.annotations.Language
 import org.junit.Test
 
 class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
 
     private val processors = listOf(
-        "INCLUDE_FILE_DOC_PROCESSOR",
-        "REMOVE_ESCAPE_CHARS_PROCESSOR",
-    )
+        ::INCLUDE_FILE_DOC_PROCESSOR,
+        ::REMOVE_ESCAPE_CHARS_PROCESSOR,
+    ).map { it.name }
 
     @Test
     fun `Simple include file kotlin`() {

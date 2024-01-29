@@ -3,6 +3,7 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
+import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import org.intellij.lang.annotations.Language
 import org.junit.Test
 
@@ -10,7 +11,7 @@ class TestExample : DocProcessorFunctionalTest(name = "example") {
 
     private val processors = listOf(
         "\"nl.jolanrensen.docProcessor.defaultProcessors.ExampleDocProcessor\"",
-        "REMOVE_ESCAPE_CHARS_PROCESSOR",
+        ::REMOVE_ESCAPE_CHARS_PROCESSOR.name,
     )
 
     @Test
