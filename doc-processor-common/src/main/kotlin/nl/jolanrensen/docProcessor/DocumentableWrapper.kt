@@ -33,6 +33,8 @@ import java.util.*
  * @property [docIndent] The amount of spaces the comment is indented with. `null` if the [doc comment][DocComment]
  *   could not be found (e.g. because the PSI/AST of the file is not found).
  * @property [identifier] A unique identifier for this documentable, will survive [copy] and [asMutable].
+ * @property [annotationFullyQualifiedPaths] Fully qualified paths to any annotation present on this documentable.
+ * @property [fileTextRange] The range in the file this documentable is defined in.
  *
  * @property [docContent] Just the contents of the comment, without the `*`-stuff. Can be modified with [copy] or via
  *   [toMutable].
@@ -55,6 +57,8 @@ open class DocumentableWrapper(
     val docFileTextRange: IntRange,
     val docIndent: Int,
     val identifier: UUID = UUID.randomUUID(),
+    val annotationFullyQualifiedPaths: List<String>,
+    val fileTextRange: IntRange,
 
     open val docContent: DocContent,
     open val tags: Set<String>,
@@ -74,6 +78,8 @@ open class DocumentableWrapper(
         file: File,
         docFileTextRange: IntRange,
         docIndent: Int,
+        annotationFullyQualifiedPaths: List<String>,
+        fileTextRange: IntRange,
     ) : this(
         programmingLanguage = programmingLanguage,
         imports = imports,
@@ -84,8 +90,10 @@ open class DocumentableWrapper(
         fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
         file = file,
         docFileTextRange = docFileTextRange,
+        fileTextRange = fileTextRange,
         docIndent = docIndent,
         docContent = docContent,
+        annotationFullyQualifiedPaths = annotationFullyQualifiedPaths,
         tags = docContent.findTagNamesInDocContent().toSet(),
         isModified = false,
     )
@@ -271,6 +279,8 @@ open class DocumentableWrapper(
             docContent = docContent,
             tags = tags,
             isModified = isModified,
+            annotationFullyQualifiedPaths = annotationFullyQualifiedPaths,
             identifier = identifier,
+            fileTextRange = fileTextRange,
         )
 }

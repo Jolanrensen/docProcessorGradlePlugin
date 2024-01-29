@@ -66,12 +66,14 @@ abstract class ProcessDocsAction {
         // filter to only include the modified documentables
         val modifiedDocumentablesPerFile = getModifiedDocumentablesPerFile(modifiedDocumentables)
 
+        val documentablesToExcludeFromSourcesPerFile = getDocumentablesToExcludePerFile(modifiedDocumentables)
+
         log.info {
             "Modified documentables: ${modifiedDocumentablesPerFile.values.flatMap { it.map { it.fullyQualifiedPath } }}"
         }
 
         // copy the sources to the target folder while replacing all docs in modified documentables
-        copyAndModifySources(modifiedDocumentablesPerFile)
+        copyAndModifySources(modifiedDocumentablesPerFile, documentablesToExcludeFromSourcesPerFile)
     }
 
     private fun analyseSourcesWithDokka(): DocumentablesByPath {
@@ -119,26 +121,25 @@ abstract class ProcessDocsAction {
 
         // collect the right documentables from the modules (only linkable elements with docs)
         val pathsWithoutSources = mutableSetOf<String>()
-        val documentables = modules.flatMap {
-            it.withDescendants().let {
-                // TODO: issue #12: support Type Aliases
-                // TODO: issue #13: support read-only docs
-                val (withSources, withoutSources) = it.partition { it is WithSources }
+        val documentables = mutableListOf<DocumentableWrapper>()
+        modules.flatMap { it.withDescendants() }.let { rawDocs ->
+            // TODO: issue #12: support Type Aliases
+            // TODO: issue #13: support read-only docs
+            val (withSources, withoutSources) = rawDocs.partition { it is WithSources }
 
-                // paths without sources are likely generated files or external sources, such as dependencies
-                pathsWithoutSources += withoutSources.map { it.dri.fullyQualifiedPath }
-                pathsWithoutSources += withoutSources.mapNotNull { it.dri.fullyQualifiedExtensionPath }
+            // paths without sources are likely generated files or external sources, such as dependencies
+            pathsWithoutSources += withoutSources.map { it.dri.fullyQualifiedPath }
+            pathsWithoutSources += withoutSources.mapNotNull { it.dri.fullyQualifiedExtensionPath }
 
-                withSources.mapNotNull {
-                    val source = (it as WithSources).sources[parameters.sources]
-                        ?: return@mapNotNull null
+            documentables += withSources.mapNotNull {
+                val source = (it as WithSources).sources[parameters.sources]
+                    ?: return@mapNotNull null
 
-                    DocumentableWrapper.createFromDokkaOrNull(
-                        documentable = it,
-                        source = source,
-                        logger = logger,
-                    )
-                }
+                DocumentableWrapper.createFromDokkaOrNull(
+                    documentable = it,
+                    source = source,
+                    logger = logger,
+                )
             }
         }
 
@@ -175,8 +176,25 @@ abstract class ProcessDocsAction {
             }
             .groupBy { it.file }
 
+    private fun getDocumentablesToExcludePerFile(
+        modifiedSourceDocs: Map<String, List<DocumentableWrapper>>,
+    ): Map<File, List<DocumentableWrapper>> =
+        modifiedSourceDocs
+            .entries
+            .flatMap {
+                it.value.filter {
+                    it.annotationFullyQualifiedPaths.any {
+                        it.split('.').last() == ExcludeFromSources::class.simpleName
+                    }
+                }
+            }
+            .groupBy { it.file }
+
     @Throws(IOException::class)
-    private fun copyAndModifySources(modifiedDocumentablesPerFile: Map<File, List<DocumentableWrapper>>) {
+    private fun copyAndModifySources(
+        modifiedDocumentablesPerFile: Map<File, List<DocumentableWrapper>>,
+        documentablesToExcludeFromSources: Map<File, List<DocumentableWrapper>>,
+    ) {
         for (source in parameters.sourceRoots) {
             for (file in source.walkTopDown()) {
                 if (!file.isFile) continue
@@ -200,9 +218,12 @@ abstract class ProcessDocsAction {
                     throw IOException("Could not read source file $file", e)
                 }
 
+                val documentablesToExclude = documentablesToExcludeFromSources[file] ?: emptyList()
+                val idsToExclude = documentablesToExclude.map { it.identifier }
                 val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 
-                val modificationsByRange = modifications
+                val docModificationsByRange = modifications
+                    .filter { it.identifier !in idsToExclude } // skip modification if entire documentable is excluded
                     .groupBy { it.docFileTextRange.toTextRange() }
                     .mapValues { it.value.first() }
                     .toSortedMap(compareBy { it.startOffset })
@@ -216,7 +237,17 @@ abstract class ProcessDocsAction {
                         )
                     }
 
-                val processedFileContent = fileContent.replaceNonOverlappingRanges(*modificationsByRange.toTypedArray())
+                val exclusionModificationsByRange = documentablesToExclude
+                    .groupBy { it.fileTextRange.toTextRange() }
+                    .mapValues { it.value.first() }
+                    .toSortedMap(compareBy { it.startOffset })
+                    .map { (fileTextRange, _) ->
+                        fileTextRange.toIntRange() to ""
+                    }
+
+                val processedFileContent = fileContent.replaceNonOverlappingRanges(
+                    *(docModificationsByRange + exclusionModificationsByRange).toTypedArray()
+                )
 
                 try {
                     targetFile.writeText(processedFileContent)

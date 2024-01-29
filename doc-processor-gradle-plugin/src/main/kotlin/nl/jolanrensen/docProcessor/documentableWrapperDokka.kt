@@ -1,9 +1,10 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
-import org.jetbrains.dokka.links.parent
+import org.jetbrains.dokka.base.signatures.KotlinSignatureUtils.annotations
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.DocumentableSource
+import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.WithSupertypes
 import org.jetbrains.dokka.utilities.DokkaLogger
 import java.io.File
@@ -96,6 +97,11 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
         }
         ?: emptyList()
 
+    val annotations = documentable.annotations().values.flatten()
+        .map { it.dri.fullyQualifiedPath }
+
+    val fileTextRange = source.textRange!!.toIntRange()
+
     return DocumentableWrapper(
         docContent = docContent,
         programmingLanguage = source.programmingLanguage,
@@ -107,5 +113,7 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
         file = file,
         docFileTextRange = docFileTextRange.toIntRange(),
         docIndent = docIndent,
+        annotationFullyQualifiedPaths = annotations,
+        fileTextRange = fileTextRange,
     )
 }
