@@ -15,6 +15,8 @@ class TestExcludeFromSources : DocProcessorFunctionalTest(name = "excl") {
     private val annotationDef = """
         package com.example.plugin
         
+        import kotlin.annotation.AnnotationTarget.*
+        
         @Target(
             CLASS,
             ANNOTATION_CLASS,
@@ -29,11 +31,12 @@ class TestExcludeFromSources : DocProcessorFunctionalTest(name = "excl") {
             PROPERTY_SETTER,
             TYPE,
             TYPEALIAS,
+            FILE,
         )
-        annotation class ExcludeFromSources""".trimIndent()
+        annotation class ${ExcludeFromSources::class.simpleName}""".trimIndent()
 
     @Test
-    fun `Simple exclusion test`() {
+    fun `Simple interface exclusion test`() {
 
         @Language("kt")
         val content = """
@@ -42,7 +45,8 @@ class TestExcludeFromSources : DocProcessorFunctionalTest(name = "excl") {
             /**
              * Hello World
              */
-            @ExcludeFromSources interface HelloWorld
+            @ExcludeFromSources
+            interface HelloWorld
             
             /**
              * {@include [HelloWorld]}!
@@ -55,6 +59,235 @@ class TestExcludeFromSources : DocProcessorFunctionalTest(name = "excl") {
             package com.example.plugin
             
             
+            
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            additionals = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
+            ),
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `Simple interface exclusion test one line`() {
+
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello World
+             */
+            @ExcludeFromSources interface HelloWorld
+            @ExcludeFromSources interface HelloWorld2
+            
+            /**
+             * {@include [HelloWorld]}!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            
+            
+            
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            additionals = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
+            ),
+        ) shouldBe expectedOutput
+    }
+    @Test
+    fun `Nested exclusion test`() {
+
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello World
+             */
+            @ExcludeFromSources
+            interface HelloWorld {
+            
+                /**
+                 * {@include [HelloWorld]}!
+                 */
+                fun helloWorld() {}
+            }
+            
+            /**
+             * {@include [HelloWorld.helloWorld]}!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            
+            
+            /**
+             * Hello World!!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            additionals = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
+            ),
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `class`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello World
+             */
+            @ExcludeFromSources
+            class HelloWorld
+            
+            /**
+             * {@include [HelloWorld]}!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            
+            
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            additionals = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
+            ),
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `annotation class`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello World
+             */
+            @ExcludeFromSources
+            annotation class HelloWorld
+            
+            /**
+             * {@include [HelloWorld]}!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            
+            
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            additionals = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
+            ),
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `property`() {
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            
+            class HelloWorld {
+                /**
+                 * Hello World
+                 */
+                @ExcludeFromSources
+                val helloWorld = "Hello World"
+            }
+            
+            /**
+             * {@include [HelloWorld.helloWorld]}!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            package com.example.plugin
+            
+            
+            class HelloWorld {
+                
+            }
             
             /**
              * Hello World!

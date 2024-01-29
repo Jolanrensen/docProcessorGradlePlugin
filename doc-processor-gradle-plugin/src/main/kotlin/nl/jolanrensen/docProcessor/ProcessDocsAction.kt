@@ -193,7 +193,7 @@ abstract class ProcessDocsAction {
     @Throws(IOException::class)
     private fun copyAndModifySources(
         modifiedDocumentablesPerFile: Map<File, List<DocumentableWrapper>>,
-        documentablesToExcludeFromSources: Map<File, List<DocumentableWrapper>>,
+        documentablesToExcludeFromPerFile: Map<File, List<DocumentableWrapper>>,
     ) {
         for (source in parameters.sourceRoots) {
             for (file in source.walkTopDown()) {
@@ -218,7 +218,7 @@ abstract class ProcessDocsAction {
                     throw IOException("Could not read source file $file", e)
                 }
 
-                val documentablesToExclude = documentablesToExcludeFromSources[file] ?: emptyList()
+                val documentablesToExclude = documentablesToExcludeFromPerFile[file] ?: emptyList()
                 val idsToExclude = documentablesToExclude.map { it.identifier }
                 val modifications = modifiedDocumentablesPerFile[file] ?: emptyList()
 

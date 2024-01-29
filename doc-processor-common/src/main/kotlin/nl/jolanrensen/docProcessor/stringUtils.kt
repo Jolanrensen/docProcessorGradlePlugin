@@ -35,7 +35,8 @@ fun String.removeEscapeCharacters(escapeChars: List<Char> = listOf('\\')): Strin
 
 /**
  * Replaces multiple ranges with their respective replacements.
- * The replacements can be of any size but cannot overlap
+ * The replacements can be of any size but cannot overlap. Ranges
+ * are relative to the source, [this], the merging is done by the function.
  *
  * Note: a range like `i .. i - 1` will not replace anything, but it will insert something
  * new at index `i`.
