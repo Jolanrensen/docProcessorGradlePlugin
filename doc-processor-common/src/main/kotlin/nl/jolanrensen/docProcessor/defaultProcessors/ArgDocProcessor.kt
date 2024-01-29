@@ -61,15 +61,28 @@ const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
 class ArgDocProcessor : TagDocProcessor() {
 
     internal companion object {
-        internal const val RETRIEVE_ARGUMENT_TAG = "getArg"
-        internal const val DECLARE_ARGUMENT_TAG = "setArg"
+        internal val RETRIEVE_ARGUMENT_TAGS = listOf(
+            "getArg",
+            "get",
+            "obtain",
+            "retrieve",
+            // $, handled in process()
+        )
+        internal val DECLARE_ARGUMENT_TAGS = listOf(
+            "setArg",
+            "set",
+            "def",
+            "define",
+            "decl",
+            "declare",
+        )
     }
 
     override fun tagIsSupported(tag: String): Boolean =
         tag in listOf(
-            RETRIEVE_ARGUMENT_TAG,
-            DECLARE_ARGUMENT_TAG,
-        )
+            RETRIEVE_ARGUMENT_TAGS,
+            DECLARE_ARGUMENT_TAGS,
+        ).flatten()
 
     data class DocWrapperWithArgMap(
         val doc: DocumentableWrapper,
@@ -111,8 +124,8 @@ class ArgDocProcessor : TagDocProcessor() {
                         logger.warn {
                             buildString {
                                 val arguments = if (args.size == 1) "argument" else "arguments"
-                                appendLine("Could not find @setArg $arguments in doc (${documentable.file.absolutePath}:$line:$char):")
-                                appendLine(args.joinToString(",\n") { "  \"@$RETRIEVE_ARGUMENT_TAG $it\"" })
+                                appendLine("Could not find @$DECLARE_ARGUMENT_TAGS $arguments in doc (${documentable.file.absolutePath}:$line:$char):")
+                                appendLine(args.joinToString(",\n") { "  \"@$RETRIEVE_ARGUMENT_TAGS $it\"" })
                             }
                         }
                     }
@@ -158,19 +171,19 @@ class ArgDocProcessor : TagDocProcessor() {
         documentable: DocumentableWrapper,
     ): String {
         val tagName = tagWithContent.getTagNameOrNull()
-        val isSetArgDeclaration = tagName == DECLARE_ARGUMENT_TAG
+        val isSetArgDeclaration = tagName in DECLARE_ARGUMENT_TAGS
 
         val tagNames = documentable.docContent.findTagNamesInDocContent()
 
-        val declareArgTagsStillPresent = DECLARE_ARGUMENT_TAG in tagNames
+        val declareArgTagsStillPresent = DECLARE_ARGUMENT_TAGS.any { it in tagNames }
 
-        val useArgTagsPresent = RETRIEVE_ARGUMENT_TAG in tagNames
+        val useArgTagsPresent = RETRIEVE_ARGUMENT_TAGS.any { it in tagNames }
 
         return when {
             isSetArgDeclaration -> { // @setArg
                 val argArguments =
                     tagWithContent.getTagArguments(
-                        tag = DECLARE_ARGUMENT_TAG,
+                        tag = tagName!!,
                         numberOfArguments = 2,
                     )
 
@@ -206,7 +219,7 @@ class ArgDocProcessor : TagDocProcessor() {
                 val includeArgArguments: List<String> = buildList {
                     if (useArgTagsPresent) {
                         this += tagWithContent.getTagArguments(
-                            tag = RETRIEVE_ARGUMENT_TAG,
+                            tag = tagName!!,
                             numberOfArguments = 2,
                         )
                     }
@@ -331,12 +344,12 @@ fun DocContent.`replace ${}'s`(): DocContent {
             buildList {
                 if (value == null) {
                     // replacing "${" with "{@getArg "
-                    this += range.first..range.first + 1 to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAG} "
+                    this += range.first..range.first + 1 to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAGS.first()} "
                 } else {
                     val equalsPosition = range.first + 2 + key.length
 
                     // replacing "${" with "{@setArg "
-                    this += range.first..range.first + 1 to "{@${ArgDocProcessor.DECLARE_ARGUMENT_TAG} "
+                    this += range.first..range.first + 1 to "{@${ArgDocProcessor.DECLARE_ARGUMENT_TAGS.first()} "
 
                     // replacing "=" with " "
                     this += equalsPosition..equalsPosition to " "
@@ -416,10 +429,10 @@ fun DocContent.`replace $tags`(): DocContent {
             if (equalsPosition == null) {
 
                 // replacing "$" with "{@getArg "
-                this += range.first..range.first to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAG} "
+                this += range.first..range.first to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAGS.first()} "
             } else {
                 // replacing "$" with "{@setArg "
-                this += range.first..range.first to "{@${ArgDocProcessor.DECLARE_ARGUMENT_TAG} "
+                this += range.first..range.first to "{@${ArgDocProcessor.DECLARE_ARGUMENT_TAGS.first()} "
 
                 // replacing "=" with " "
                 this += equalsPosition..equalsPosition to " "
