@@ -17,6 +17,30 @@ abstract class DocProcessorFunctionalTest(name: String) {
         println("NOTE!! make sure you have the plugin installed in your local maven repo")
     }
 
+    @Language("kt")
+    val annotationDef = """
+        package com.example.plugin
+        
+        import kotlin.annotation.AnnotationTarget.*
+        
+        @Target(
+            CLASS,
+            ANNOTATION_CLASS,
+            TYPE_PARAMETER,
+            PROPERTY,
+            FIELD,
+            LOCAL_VARIABLE,
+            VALUE_PARAMETER,
+            CONSTRUCTOR,
+            FUNCTION,
+            PROPERTY_GETTER,
+            PROPERTY_SETTER,
+            TYPE,
+            TYPEALIAS,
+            FILE,
+        )
+        annotation class ${ExcludeFromSources::class.simpleName}""".trimIndent()
+
     @Language("kts")
     private val settingsFile = """
         pluginManagement {

@@ -11,30 +11,6 @@ class TestExcludeFromSources : DocProcessorFunctionalTest(name = "excl") {
         ::INCLUDE_DOC_PROCESSOR
     ).map { it.name }
 
-    @Language("kt")
-    private val annotationDef = """
-        package com.example.plugin
-        
-        import kotlin.annotation.AnnotationTarget.*
-        
-        @Target(
-            CLASS,
-            ANNOTATION_CLASS,
-            TYPE_PARAMETER,
-            PROPERTY,
-            FIELD,
-            LOCAL_VARIABLE,
-            VALUE_PARAMETER,
-            CONSTRUCTOR,
-            FUNCTION,
-            PROPERTY_GETTER,
-            PROPERTY_SETTER,
-            TYPE,
-            TYPEALIAS,
-            FILE,
-        )
-        annotation class ${ExcludeFromSources::class.simpleName}""".trimIndent()
-
     @Test
     fun `Simple interface exclusion test`() {
 
