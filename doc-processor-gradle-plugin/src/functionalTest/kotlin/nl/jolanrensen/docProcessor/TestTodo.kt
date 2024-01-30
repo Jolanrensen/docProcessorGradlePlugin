@@ -3,13 +3,14 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
+import nl.jolanrensen.docProcessor.defaultProcessors.TODO_DOC_PROCESSOR
 import org.intellij.lang.annotations.Language
 import org.junit.Test
 
 class TestTodo : DocProcessorFunctionalTest(name = "todo") {
 
     private val processors = listOf(
-        "TODO_DOC_PROCESSOR",
+        ::TODO_DOC_PROCESSOR.name,
     )
 
     @Test

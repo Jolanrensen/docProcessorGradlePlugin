@@ -3,14 +3,15 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
+import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
 import org.intellij.lang.annotations.Language
 import org.junit.Test
 
 class TestComment : DocProcessorFunctionalTest(name = "comment") {
 
     private val processors = listOf(
-        "COMMENT_DOC_PROCESSOR",
-    )
+        ::COMMENT_DOC_PROCESSOR,
+    ).map { it.name }
 
     @Test
     fun `Block comments`() {

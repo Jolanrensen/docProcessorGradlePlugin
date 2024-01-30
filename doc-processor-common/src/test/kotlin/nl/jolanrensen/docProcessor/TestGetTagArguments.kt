@@ -1,6 +1,7 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
+import nl.jolanrensen.docProcessor.defaultProcessors.findKeyAndValueFromDollarSign
 import org.junit.jupiter.api.Test
 
 class TestGetTagArguments {

@@ -2,6 +2,12 @@ package nl.jolanrensen.docProcessor.gradle
 
 
 import mu.KotlinLogging
+import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.NamedDomainObjectContainer
@@ -93,11 +99,28 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     /**
      * The processors to use. These must be fully qualified names, such as:
      * `"com.example.plugin.MyProcessor"`
+     *
+     * Defaults to:
+     * [[INCLUDE_DOC_PROCESSOR],
+     *  [INCLUDE_FILE_DOC_PROCESSOR],
+     *  [ARG_DOC_PROCESSOR],
+     *  [COMMENT_DOC_PROCESSOR],
+     *  [SAMPLE_DOC_PROCESSOR],
+     *  [REMOVE_ESCAPE_CHARS_PROCESSOR]]
      */
     @get:Input
     val processors: ListProperty<String> = factory
         .listProperty(String::class.java)
-        .convention(emptyList())
+        .convention(
+            listOf(
+                INCLUDE_DOC_PROCESSOR,
+                INCLUDE_FILE_DOC_PROCESSOR,
+                ARG_DOC_PROCESSOR,
+                COMMENT_DOC_PROCESSOR,
+                SAMPLE_DOC_PROCESSOR,
+                REMOVE_ESCAPE_CHARS_PROCESSOR,
+            )
+        )
 
     /**
      * The processors to use. These must be fully qualified names, such as:

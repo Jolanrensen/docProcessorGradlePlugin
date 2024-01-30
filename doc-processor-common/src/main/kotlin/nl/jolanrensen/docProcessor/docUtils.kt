@@ -9,13 +9,13 @@ import java.util.Comparator
 typealias DocContent = String
 
 // used to keep track of the current blocks
-private const val CURLY_BRACES = '{'
-private const val SQUARE_BRACKETS = '['
-private const val PARENTHESES = '('
-private const val ANGULAR_BRACKETS = '<'
-private const val BACKTICKS = '`'
-private const val DOUBLE_QUOTES = '"'
-private const val SINGLE_QUOTES = '\''
+internal const val CURLY_BRACES = '{'
+internal const val SQUARE_BRACKETS = '['
+internal const val PARENTHESES = '('
+internal const val ANGULAR_BRACKETS = '<'
+internal const val BACKTICKS = '`'
+internal const val DOUBLE_QUOTES = '"'
+internal const val SINGLE_QUOTES = '\''
 
 /**
  * Returns the actual content of the KDoc/Javadoc comment
@@ -163,6 +163,108 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
 }
 
 /**
+ * Can retrieve the arguments of an inline- or block-tag.
+ * Arguments are split by spaces, unless they are in a block of "{}", "[]", "()", "<>", "`", """, or "'".
+ * Blocks "marks" are ignored if "\" escaped.
+ *
+ * @param tag The tag name, without the "@", will be removed after removing optional surrounding {}'s
+ * @param numberOfArguments The number of arguments to retrieve. This will be the size of the @return list.
+ *   The last argument will contain all remaining content, no matter if it can be split or not.
+ * @param onRogueClosingChar Optional lambda that will be called when a '}', ']', ')', or '>' is found without respective
+ *   opening char. Won't be triggered if '\' escaped.
+ * @param isSplitter Defaults to `{ isWhitespace() }`. Can be used to change the splitting behavior.
+ */
+fun String.getTagArguments(
+    tag: String,
+    numberOfArguments: Int,
+    onRogueClosingChar: (closingChar: Char, argument: Int, indexInArg: Int) -> Unit,
+    isSplitter: Char.() -> Boolean,
+): List<String> {
+    require(numberOfArguments > 0) { "numberOfArguments must be greater than 0" }
+
+    var content = this
+
+    // remove inline tag stuff
+    if (content.startsWith("{") && content.endsWith("}")) {
+        content = content.removePrefix("{").removeSuffix("}")
+    }
+
+    // remove leading spaces
+    content = content.trimStart { it.isSplitter() }
+
+    // remove tag
+    content = content.removePrefix("@").removePrefix(tag).trimStart { it.isSplitter() }
+
+    val arguments = buildList {
+        var currentBlock = ""
+        val blocksIndicators = mutableListOf<Char>()
+
+        fun isDone(): Boolean = size >= numberOfArguments - 1
+        fun isInCodeBlock() = BACKTICKS in blocksIndicators
+
+        var escapeNext = false
+        for (char in content) {
+            when {
+                escapeNext -> {
+                    escapeNext = false
+                    continue
+                }
+
+                char == '\\' -> escapeNext = true
+
+                isDone() -> Unit
+
+                char.isSplitter() && blocksIndicators.isEmpty() -> {
+                    if (!currentBlock.all { it.isSplitter() }) add(currentBlock)
+                    currentBlock = ""
+                }
+
+                char == '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
+            }
+            if (!isInCodeBlock()) when (char) {
+                '{' -> blocksIndicators += CURLY_BRACES
+                '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
+                    .let { if (!it) onRogueClosingChar('}', this.size, currentBlock.length) }
+
+                '[' -> blocksIndicators += SQUARE_BRACKETS
+                ']' -> blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
+                    .let { if (!it) onRogueClosingChar(']', this.size, currentBlock.length) }
+
+                '(' -> blocksIndicators += PARENTHESES
+                ')' -> blocksIndicators.removeAllElementsFromLast(PARENTHESES)
+                    .let { if (!it) onRogueClosingChar(')', this.size, currentBlock.length) }
+
+                '<' -> blocksIndicators += ANGULAR_BRACKETS
+                '>' -> blocksIndicators.removeAllElementsFromLast(ANGULAR_BRACKETS)
+                    .let { if (!it) onRogueClosingChar('>', this.size, currentBlock.length) }
+
+                '"' -> if (!blocksIndicators.removeAllElementsFromLast(DOUBLE_QUOTES)) blocksIndicators += DOUBLE_QUOTES
+                '\'' -> if (blocksIndicators.removeAllElementsFromLast(SINGLE_QUOTES)) blocksIndicators += SINGLE_QUOTES
+
+                // TODO: issue #11: html tags
+            }
+            if (isDone() || !currentBlock.all { it.isSplitter() } || !char.isSplitter())
+                currentBlock += char
+        }
+
+        add(currentBlock)
+    }
+
+    val trimmedArguments = arguments.mapIndexed { i, it ->
+        when (i) {
+            arguments.lastIndex -> // last argument will be kept as is, removing one "splitting" space if it starts with one
+                if (it.first().isSplitter() && it.firstOrNull() != '\n') it.drop(1)
+                else it
+
+            else -> // other arguments will be trimmed. A newline counts as a space
+                it.removePrefix("\n").trimStart { it.isSplitter() }
+        }
+    }
+
+    return trimmedArguments
+}
+
+/**
  * Decodes something like `[Alias][Foo]` to `Foo`
  * But also `{@link Foo#main(String[])}` to `Foo.main`
  */
@@ -206,13 +308,13 @@ fun DocContent.getTagNameOrNull(): String? =
         ?.trimStart()
         ?.removePrefix("{")
         ?.removePrefix("@")
-        ?.takeWhile { !it.isWhitespace() }
+        ?.takeWhile { !it.isWhitespace() && it != '{' && it != '}' }
 
 /**
  * Split doc content in blocks of content and text belonging to tags.
  * The tag, if present, can be found with optional (up to max 2) leading spaces in the first line of the block.
  * You can get the name with [String.getTagNameOrNull].
- * Splitting takes triple backticks and `{@..}` into account.
+ * Splitting takes triple backticks and `{@..}` and `${..}` into account.
  * Block "marks" are ignored if "\" escaped.
  * Can be joint with '\n' to get the original content.
  */
@@ -275,7 +377,12 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
                 }
                 if (isInCodeBlock()) continue
                 when {
+                    // {@ detection
                     char == '{' && line.getOrNull(i + 1) == '@' ->
+                        blocksIndicators += CURLY_BRACES
+
+                    // ${ detection for ArgDocProcessor
+                    char == '{' && line.getOrNull(i - 1) == '$' && line.getOrNull(i - 2) != '\\' ->
                         blocksIndicators += CURLY_BRACES
 
                     char == '}' ->
@@ -307,35 +414,6 @@ fun DocContent.splitDocContentPerBlockWithRanges(): List<Pair<DocContent, IntRan
     }
 }
 
-/** Finds any inline tag with its depth, preferring the innermost one.
- * "{@}" marks are ignored if "\" escaped.
- */
-private fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
-    var depth = 0
-    var start: Int? = null
-    var escapeNext = false
-    for ((i, char) in this.withIndex()) {
-        // escape this char
-        when {
-            escapeNext -> escapeNext = false
-
-            char == '\\' -> escapeNext = true
-
-            char == '{' && this.getOrNull(i + 1) == '@' -> {
-                start = i
-                depth++
-            }
-
-            char == '}' -> {
-                if (start != null) {
-                    return Pair(start..i, depth)
-                }
-            }
-        }
-    }
-    return null
-}
-
 /**
  * Finds all inline tag names, including nested ones,
  * together with their respective range in the doc.
@@ -344,6 +422,36 @@ private fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>
  */
 fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, IntRange>> {
     var text = this
+
+    /*
+     * Finds any inline {@tag ...} with its depth, preferring the innermost one.
+     * "{@..}" marks are ignored if "\" escaped.
+     */
+    fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
+        var depth = 0
+        var start: Int? = null
+        var escapeNext = false
+        for ((i, char) in this.withIndex()) {
+            // escape this char
+            when {
+                escapeNext -> escapeNext = false
+
+                char == '\\' -> escapeNext = true
+
+                char == '{' && this.getOrNull(i + 1) == '@' -> {
+                    start = i
+                    depth++
+                }
+
+                char == '}' -> {
+                    if (start != null) {
+                        return Pair(start..i, depth)
+                    }
+                }
+            }
+        }
+        return null
+    }
 
     return buildMap<Int, MutableList<Pair<String, IntRange>>> {
         while (text.findInlineTagRangesWithDepthOrNull() != null) {
@@ -426,10 +534,12 @@ fun DocContent.replaceKdocLinks(process: (String) -> String): DocContent {
                     '`' -> insideCodeBlock = !insideCodeBlock
 
                     '[' -> if (!insideCodeBlock) {
-                        referenceState = if (previousChar() == ']')
-                            INSIDE_ALIASED_REFERENCE
-                        else
-                            INSIDE_REFERENCE
+                        referenceState =
+                            if (previousChar() == ']') {
+                                INSIDE_ALIASED_REFERENCE
+                            } else {
+                                INSIDE_REFERENCE
+                            }
                         appendCurrentBlock()
                     }
 
@@ -485,7 +595,7 @@ private fun StringBuilder.processReference(
 }
 
 /**
- * Finds removes the last occurrence of [element] from the list and, if found, all elements after it.
+ * Finds and removes the last occurrence of [element] from the list and, if found, all elements after it.
  * Returns true if [element] was found and removed, false otherwise.
  */
 fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {

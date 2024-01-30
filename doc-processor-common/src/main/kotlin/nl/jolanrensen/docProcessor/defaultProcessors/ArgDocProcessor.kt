@@ -15,27 +15,25 @@ const val ARG_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.Arg
  */
 const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
 
-@Deprecated("Use 'ARG_DOC_PROCESSOR' instead", ReplaceWith("ARG_DOC_PROCESSOR"))
-const val INCLUDE_ARG_DOC_PROCESSOR = ARG_DOC_PROCESSOR
-
-@Deprecated("Use 'ARG_DOC_PROCESSOR_LOG_NOT_FOUND' instead", ReplaceWith("ARG_DOC_PROCESSOR_LOG_NOT_FOUND"))
-const val INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND = ARG_DOC_PROCESSOR_LOG_NOT_FOUND
-
 /**
  * Adds two tags to your arsenal:
- * - `@setArg argument content` to declare an argument with content that can be used in the same doc.
- * - `@getArg argument` to get an argument from the same doc.
+ * - `@set key some content` / `{@set key some content}`
+ *   to declare a variable that can be used in the same doc.
+ * - `@get key default` / `{@get key default}`
+ *   to read a variable from the same doc (with an optional default for if no variable with that key is defined).
+ *    - `$key` / `${key}` can also be used instead of `{@get key}`.
+ *    - `$key=default` / `${key=default}` can also be used instead of `{@get key default}`.
  *
  * This can be useful to repeat the same content in multiple places in the same doc, but
  * more importantly, it can be used in conjunction with [IncludeDocProcessor].
  *
- * All `@setArg` tags are processed before `@getArg` tags.
+ * All `@set` tags are processed before `@get` tags.
  *
  * For example:
  *
  * File A:
  * ```kotlin
- * /** NOTE: The {@getArg operation} operation is part of the public API. */
+ * /** NOTE: The {@get operation} operation is part of the public API. */
  *  internal interface ApiNote
  * ```
  *
@@ -44,7 +42,7 @@ const val INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND = ARG_DOC_PROCESSOR_LOG_NOT_FO
  * /**
  *  * Some docs
  *  * @include [ApiNote]
- *  * @setArg operation update
+ *  * @set operation update
  *  */
  * fun update() {}
  * ```
@@ -58,7 +56,7 @@ const val INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND = ARG_DOC_PROCESSOR_LOG_NOT_FO
  * fun update() {}
  * ```
  *
- * NOTE: If there are multiple `@setArg` tags with the same name, the last one processed will be used.
+ * NOTE: If there are multiple `@set` tags with the same name, the last one processed will be used.
  * The order is: Inline tags: depth-first, left-to-right. Block tags: top-to-bottom.
  *
  * NOTE: Use `[References]` as keys if you want extra refactoring-safety.
@@ -66,22 +64,32 @@ const val INCLUDE_ARG_DOC_PROCESSOR_LOG_NOT_FOUND = ARG_DOC_PROCESSOR_LOG_NOT_FO
  */
 class ArgDocProcessor : TagDocProcessor() {
 
-    @Deprecated("")
-    private val oldUseArgumentTag = "includeArg"
+    internal companion object {
+        internal val OLD_RETRIEVE_ARGUMENT_TAGS = listOf(
+            "includeArg",
+            "getArg",
+        )
 
-    @Deprecated("")
-    private val oldDeclareArgumentTag = "arg"
+        internal val OLD_DECLARE_ARGUMENT_TAGS = listOf(
+            "arg",
+            "setArg",
+        )
 
-    private val useArgumentTag = "getArg"
-    private val declareArgumentTag = "setArg"
+        internal val RETRIEVE_ARGUMENT_TAGS = listOf(
+            "get",
+            // $, handled in process()
+        ) + OLD_RETRIEVE_ARGUMENT_TAGS
+
+        internal val DECLARE_ARGUMENT_TAGS = listOf(
+            "set",
+        ) + OLD_DECLARE_ARGUMENT_TAGS
+    }
 
     override fun tagIsSupported(tag: String): Boolean =
         tag in listOf(
-            oldUseArgumentTag,
-            oldDeclareArgumentTag,
-            useArgumentTag,
-            declareArgumentTag,
-        )
+            RETRIEVE_ARGUMENT_TAGS,
+            DECLARE_ARGUMENT_TAGS,
+        ).flatten()
 
     data class DocWrapperWithArgMap(
         val doc: DocumentableWrapper,
@@ -123,8 +131,8 @@ class ArgDocProcessor : TagDocProcessor() {
                         logger.warn {
                             buildString {
                                 val arguments = if (args.size == 1) "argument" else "arguments"
-                                appendLine("Could not find @setArg $arguments in doc (${documentable.file.absolutePath}:$line:$char):")
-                                appendLine(args.joinToString(",\n") { "  \"@$useArgumentTag $it\"" })
+                                appendLine("Could not find @$DECLARE_ARGUMENT_TAGS $arguments in doc (${documentable.file.absolutePath}:$line:$char):")
+                                appendLine(args.joinToString(",\n") { "  \"@$RETRIEVE_ARGUMENT_TAGS $it\"" })
                             }
                         }
                     }
@@ -137,10 +145,33 @@ class ArgDocProcessor : TagDocProcessor() {
         return super.shouldContinue(i, anyModifications, processLimit)
     }
 
-    // @setArg map for path -> arg name -> value
+    // @set map for path -> arg name -> value
     private val argMap: MutableMap<UUID, DocWrapperWithArgMap> = mutableMapOf()
 
     private val argsNotFound: MutableMap<UUID, DocWrapperWithArgSet> = mutableMapOf()
+
+    /**
+     * Preprocess all `${a}` and `$a` tags to `{@get a}`
+     * and all `${a=b}` and `$a=b` tags to `{@get a b}`
+     * before running the normal tag processor.
+     */
+    override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath {
+        val mutable = documentablesByPath.toMutable()
+        for ((_, docs) in mutable.documentablesToProcess) {
+            for (doc in docs) {
+                doc.apply {
+                    val newContent = docContent.replaceDollarNotation()
+                    if (newContent != docContent) {
+                        docContent = newContent
+                        tags = newContent.findTagNamesInDocContent().toSet()
+                        isModified = true
+                    }
+                }
+            }
+        }
+
+        return super.process(processLimit, mutable)
+    }
 
     // TODO remove if deprecation is gone
     private fun provideNewNameWarning(documentable: DocumentableWrapper) =
@@ -151,43 +182,33 @@ class ArgDocProcessor : TagDocProcessor() {
                     .getLineAndCharacterOffset(documentable.docFileTextRange.first)
 
                 appendLine("Old tag names used in doc: (${documentable.file.absolutePath}:$line:$char)")
-                appendLine("The tag name \"$oldUseArgumentTag\" is deprecated. Use \"$useArgumentTag\" instead.")
-                appendLine("The tag name \"$oldDeclareArgumentTag\" is deprecated. Use \"$declareArgumentTag\" instead.")
+                appendLine("The tag names \"$OLD_RETRIEVE_ARGUMENT_TAGS\" is deprecated. Use \"${RETRIEVE_ARGUMENT_TAGS.first()}\" or \$ instead.")
+                appendLine("The tag name \"$OLD_DECLARE_ARGUMENT_TAGS\" is deprecated. Use \"${DECLARE_ARGUMENT_TAGS.first()}\" instead.")
             }
         }
 
-    private fun process(
+    private fun processTag(
         tagWithContent: String,
         documentable: DocumentableWrapper,
     ): String {
         val tagName = tagWithContent.getTagNameOrNull()
-        val isOldArgDeclaration = tagName == oldDeclareArgumentTag
-        val isSetArgDeclaration = tagName == declareArgumentTag
+        val isDeclareArgumentDeclaration = tagName in DECLARE_ARGUMENT_TAGS
 
         val tagNames = documentable.docContent.findTagNamesInDocContent()
 
-        val oldDeclareArgTagsStillPresent = oldDeclareArgumentTag in tagNames
-        val declareArgTagsStillPresent = declareArgumentTag in tagNames
+        val declareArgTagsStillPresent = DECLARE_ARGUMENT_TAGS.any { it in tagNames }
+        val retrieveArgTagsPresent = RETRIEVE_ARGUMENT_TAGS.any { it in tagNames }
 
-        val oldUseArgTagsPresent = oldUseArgumentTag in tagNames
-        val useArgTagsPresent = useArgumentTag in tagNames
+        if (tagName in OLD_RETRIEVE_ARGUMENT_TAGS || tagName in OLD_DECLARE_ARGUMENT_TAGS)
+            provideNewNameWarning(documentable)
 
         return when {
-            isOldArgDeclaration || isSetArgDeclaration -> { // @setArg
-                val argArguments = run {
-                    if (isOldArgDeclaration) {
-                        provideNewNameWarning(documentable)
-                        tagWithContent.getTagArguments(
-                            tag = oldDeclareArgumentTag,
-                            numberOfArguments = 2,
-                        )
-                    } else {
-                        tagWithContent.getTagArguments(
-                            tag = declareArgumentTag,
-                            numberOfArguments = 2,
-                        )
-                    }
-                }
+            isDeclareArgumentDeclaration -> { // @set
+                val argArguments =
+                    tagWithContent.getTagArguments(
+                        tag = tagName!!,
+                        numberOfArguments = 2,
+                    )
 
                 val originalKey = argArguments.first()
                 var keys = listOf(originalKey)
@@ -209,26 +230,20 @@ class ArgDocProcessor : TagDocProcessor() {
                 argsNotFound.getOrPut(documentable.identifier) {
                     DocWrapperWithArgSet(documentable)
                 }.args -= keys.toSet()
+
                 ""
             }
 
-            declareArgTagsStillPresent || oldDeclareArgTagsStillPresent -> {
-                // skip @getArg tags if there are still @setArgs present
+            declareArgTagsStillPresent -> {
+                // skip @get tags if there are still @set's present
                 tagWithContent
             }
 
-            else -> { // @getArg
+            else -> { // @get
                 val includeArgArguments: List<String> = buildList {
-                    if (useArgTagsPresent) {
+                    if (retrieveArgTagsPresent) {
                         this += tagWithContent.getTagArguments(
-                            tag = useArgumentTag,
-                            numberOfArguments = 2,
-                        )
-                    }
-                    if (oldUseArgTagsPresent) {
-                        provideNewNameWarning(documentable)
-                        this += tagWithContent.getTagArguments(
-                            tag = oldUseArgumentTag,
+                            tag = tagName!!,
                             numberOfArguments = 2,
                         )
                     }
@@ -236,7 +251,7 @@ class ArgDocProcessor : TagDocProcessor() {
 
                 val originalKey = includeArgArguments.first()
 
-                // for stuff written after the @getArg tag, save and include it later
+                // for stuff written after the @get tag, save and include it later
                 val extraContent = includeArgArguments.getOrElse(1) { "" }
 
                 var keys = listOf(originalKey)
@@ -246,7 +261,7 @@ class ArgDocProcessor : TagDocProcessor() {
                     logger.warn {
                         "Java {@link statements} are not replaced by their fully qualified path. " +
                                 "Make sure to use fully qualified paths in {@link statements} when " +
-                                "using {@link statements} as a key in @setArg."
+                                "using {@link statements} as a key in @set."
                     }
                 }
 
@@ -257,22 +272,16 @@ class ArgDocProcessor : TagDocProcessor() {
                 val content = keys.firstNotNullOfOrNull { key ->
                     argMap[documentable.identifier]?.args?.get(key)
                 }
-                when {
-                    content == null -> {
-                        argsNotFound.getOrPut(documentable.identifier) {
-                            DocWrapperWithArgSet(documentable)
-                        }.args += keys
-                        tagWithContent
-                    }
 
-                    extraContent.isNotEmpty() -> buildString {
-                        append(content)
-                        if (!extraContent.first().isWhitespace())
-                            append(" ")
-                        append(extraContent)
-                    }
+                if (content == null) {
+                    argsNotFound.getOrPut(documentable.identifier) {
+                        DocWrapperWithArgSet(documentable)
+                    }.args += keys
 
-                    else -> content
+                    // if there is no content, we return the extra content (default), this can be empty
+                    extraContent
+                } else {
+                    content
                 }
             }
         }
@@ -282,7 +291,7 @@ class ArgDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = process(
+    ): String = processTag(
         tagWithContent = tagWithContent,
         documentable = documentable,
     )
@@ -291,7 +300,7 @@ class ArgDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = process(
+    ): String = processTag(
         tagWithContent = tagWithContent,
         documentable = documentable,
     )
@@ -316,3 +325,346 @@ class ArgDocProcessor : TagDocProcessor() {
         return keys
     }
 }
+
+/**
+ * Replaces all `${KEY}` and `$KEY` with `{@get KEY}`
+ * and all `${KEY=DEFAULT}` and `$KEY=DEFAULT` with `{@get KEY DEFAULT}`
+ * for some doc's content.
+ */
+fun DocContent.replaceDollarNotation(): DocContent {
+    var text = this
+
+    // First replacing all ${KEY} with {@get KEY}
+    // and ${KEY=DEFAULT} with {@get KEY DEFAULT}
+    text = text.`replace ${}'s`()
+
+    // Then replacing all "$KEY test" with "{@get KEY} test"
+    // and "$KEY=DEFAULT" with "{@get KEY DEFAULT}"
+    text = text.`replace $tags`()
+
+    return text
+}
+
+/**
+ * Replaces all `${KEY}` with `{@get KEY}`
+ * and `${KEY=DEFAULT}` with `{@set KEY DEFAULT}`
+ */
+fun DocContent.`replace ${}'s`(): DocContent {
+    val text = this
+    val locations = `find ${}'s`()
+    val locationsWithKeyValues = locations
+        .associateWith { text.substring(it).findKeyAndValueFromDollarSign() }
+
+    val nonOverlappingRangesWithReplacement = locationsWithKeyValues
+        .flatMap { (range, keyAndValue) ->
+            val (key, value) = keyAndValue
+            buildList {
+                // replacing "${" with "{@get "
+                this += range.first..range.first + 1 to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAGS.first()} "
+                if (value != null) {
+                    val equalsPosition = range.first + 2 + key.length
+
+                    // replacing "=" with " "
+                    this += equalsPosition..equalsPosition to " "
+                }
+            }
+        }
+
+    return text.replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+}
+
+/**
+ * Finds all inline ${} tags, including nested ones
+ * by their respective range in the doc.
+ * The list is sorted by depth, with the deepest tags first and then by order of appearance.
+ * "${}" marks are ignored if "\" escaped.
+ */
+private fun DocContent.`find ${}'s`(): List<IntRange> {
+    var text = this
+
+    /*
+     * Finds any inline ${...} with its depth, preferring the innermost one.
+     * "${}" marks are ignored if "\" escaped.
+     */
+    fun DocContent.findInlineDollarTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
+        var depth = 0
+        var start: Int? = null
+        var escapeNext = false
+        for ((i, char) in this.withIndex()) {
+            // escape this char
+            when {
+                escapeNext -> escapeNext = false
+
+                char == '\\' -> escapeNext = true
+
+                char == '$' && this.getOrNull(i + 1) == '{' -> {
+                    start = i
+                    depth++
+                }
+
+                char == '}' -> {
+                    if (start != null) {
+                        return Pair(start..i, depth)
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    return buildMap<Int, MutableList<IntRange>> {
+        while (text.findInlineDollarTagRangesWithDepthOrNull() != null) {
+            val (range, depth) = text.findInlineDollarTagRangesWithDepthOrNull()!!
+            val comment = text.substring(range)
+            getOrPut(depth) { mutableListOf() } += range
+
+            text = text.replaceRange(
+                range = range,
+                replacement = comment
+                    .replace('{', '<')
+                    .replace('}', '>'),
+            )
+        }
+    }.toSortedMap(Comparator.reverseOrder())
+        .flatMap { it.value }
+}
+
+/**
+ * Replaces all "$KEY" with "{@get KEY}"
+ * and "$KEY=DEFAULT" with "{@get KEY DEFAULT}"
+ */
+fun DocContent.`replace $tags`(): DocContent {
+    val text = this
+    val locations = `find $tags`()
+
+    val nonOverlappingRangesWithReplacement = locations.flatMap { (range, equalsPosition) ->
+        buildList {
+            // replacing "$" with "{@get "
+            this += range.first..range.first to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAGS.first()} "
+            if (equalsPosition != null) {
+                // replacing "=" with " "
+                this += equalsPosition..equalsPosition to " "
+            }
+
+            // adding "}" at the end
+            this += range.last + 1..range.last to "}"
+        }
+    }
+
+    return text.replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+}
+
+/**
+ * Finds all inline $ tags by their respective range in the doc.
+ * The function also returns the absolute index of the `=` sign if it exists
+ */
+private fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
+    val text = this
+
+    return buildList {
+        var escapeNext = false
+        for ((i, char) in text.withIndex()) {
+            when {
+                escapeNext -> escapeNext = false
+
+                char == '\\' -> escapeNext = true
+
+                char == '$' -> {
+                    val (key, value) = text.substring(startIndex = i).findKeyAndValueFromDollarSign()
+
+                    this += if (value == null) { // reporting "$key" range
+                        Pair(
+                            first = i..<i + key.length + 1,
+                            second = null,
+                        )
+                    } else { // reporting "$key=value" range
+                        Pair(
+                            first = i..<i + key.length + value.length + 2,
+                            second = i + 1 + key.length,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Given a "$[string starting with] dollar sign notation", it
+ * returns the first key of the notation, in this case
+ * ("[string starting with]", null).
+ *
+ * If the notation is "$[string starting with]=value something", it returns
+ * ("[string starting with]", "value").
+ *
+ * If the notation is "${[string starting with]=value something}", it returns
+ * ("[string starting with]", "value something").
+ *
+ * Semantics:
+ *
+ * key, value:
+ * - `anything ][}{}]` don't open inner []{} scopes
+ * - {[][`}`{}} anything but } (unless opened by {), unless in ``, don't open [] scopes
+ * - [ [] {]}`}[]][]]`] anything but ] unless opened or in {} or ``
+ * - [][] same as above, just twice
+ * - only first char can open some of these scopes from no-scope
+ * - { cannot be used as first char in key unless in brackets
+ *
+ * key:
+ * - letters, digits, or _, no whitespace
+ *
+ * '=' is splitter
+ *
+ * value (inside ${}):
+ * - anything but }, can open scopes
+ *
+ * value (outside $):
+ * - letters, digits, or _, no whitespace
+ *
+ */
+fun String.findKeyAndValueFromDollarSign(): KeyAndValue<String, String?> {
+    require(startsWith('$')) { "String must start with a dollar sign" }
+
+    val isInBrackets = startsWith("\${") && endsWith("}")
+    val content = when (isInBrackets) {
+        true -> removePrefix("\${").removeSuffix("}")
+        false -> removePrefix("$")
+    }
+
+    val blocksIndicators = mutableListOf<Char>()
+    fun isInQuoteBlock() = BACKTICKS in blocksIndicators
+    fun isInSquareBrackets() = SQUARE_BRACKETS in blocksIndicators
+    fun isInCurlyBraces() = CURLY_BRACES in blocksIndicators
+
+    var key = ""
+    var value: String? = null
+    var timesInSquareBrackets = 0
+    var readyForSecondSquareBracket = false
+    var escapeNext = false
+
+    fun isWritingValue() = value != null
+    fun isWritingKey() = value == null
+    fun appendChar(char: Char) {
+        if (isWritingValue()) value += char
+        else key += char
+    }
+
+    fun startWritingValue() {
+        require(isWritingKey()) { "Cannot start writing value twice" }
+        value = ""
+        timesInSquareBrackets = 0
+    }
+
+    for ((i, char) in content.withIndex()) {
+        // can be the first char of the key or value, this allows notations like $`hello there`=[something else]
+        val isFirstChar = i == 0 || value == ""
+        when {
+            escapeNext -> {
+                escapeNext = false
+                appendChar(char)
+            }
+
+            char == '\\' -> { // next character can be anything and will simply be added
+                escapeNext = true
+                appendChar(char)
+            }
+
+            isFirstChar && char == '`' -> {
+                blocksIndicators += BACKTICKS
+                appendChar(char)
+            }
+
+
+            isFirstChar && char == '[' -> {
+                blocksIndicators += SQUARE_BRACKETS
+                timesInSquareBrackets++
+                appendChar(char)
+            }
+
+            isFirstChar && char == '{' && (isWritingValue() || isInBrackets) -> {
+                blocksIndicators += CURLY_BRACES
+                appendChar(char)
+            }
+
+            isInQuoteBlock() -> {
+                if (char == '`') blocksIndicators.removeAllElementsFromLast(BACKTICKS)
+                appendChar(char)
+            }
+
+            isInCurlyBraces() -> {
+                when (char) {
+                    '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
+                    '{' -> blocksIndicators += CURLY_BRACES
+                    '`' -> blocksIndicators += BACKTICKS
+                }
+                appendChar(char)
+            }
+
+            isInSquareBrackets() -> {
+                when (char) {
+                    ']' -> {
+                        blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
+                        if (!isInSquareBrackets() && timesInSquareBrackets == 1) {
+                            readyForSecondSquareBracket = true
+                            appendChar(char)
+                            continue  // skip it being set to false again
+                        }
+                    }
+
+                    '[' -> blocksIndicators += SQUARE_BRACKETS
+                    '{' -> blocksIndicators += CURLY_BRACES
+                    '`' -> blocksIndicators += BACKTICKS
+                }
+                appendChar(char)
+            }
+
+            char == '[' && readyForSecondSquareBracket -> {
+                timesInSquareBrackets++
+                blocksIndicators += SQUARE_BRACKETS
+                appendChar(char)
+            }
+
+            isWritingKey() -> {
+                when {
+                    // move to writing value
+                    char == '=' -> startWritingValue()
+                    // only letters, digits, or _, no whitespace are allowed
+                    Regex("[\\p{L}\\p{N}_]") in char.toString() -> appendChar(char)
+                    // stop otherwise
+                    else -> break
+                }
+            }
+
+            isWritingValue() && isInBrackets -> {
+                when (char) {
+                    '[' -> blocksIndicators += SQUARE_BRACKETS
+                    '{' -> blocksIndicators += CURLY_BRACES
+                    '`' -> blocksIndicators += BACKTICKS
+                    '}' -> break // rogue '}' closes the value writing
+                }
+                appendChar(char)
+            }
+
+            isWritingValue() && !isInBrackets -> {
+                when {
+                    // only letters, digits, or _, no whitespace are allowed
+                    Regex("[\\p{L}\\p{N}_]") in char.toString() -> appendChar(char)
+                    // stop otherwise
+                    else -> break
+                }
+            }
+
+            else -> {
+                error("should not happen")
+            }
+        }
+        readyForSecondSquareBracket = false
+    }
+
+    return KeyAndValue(key, value)
+}
+
+data class KeyAndValue<K, V>(
+    val key: K,
+    val value: V,
+)
