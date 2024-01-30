@@ -141,7 +141,7 @@ open class DocumentableWrapper(
     }
 
     /**
-     * Returns a list of paths that can be meant for the given [targetPath] in the context of this documentable.
+     * Returns a list of paths that match the given [targetPath] in the context of this documentable.
      * It takes the current [fullyQualifiedPath] and [imports][getPathsUsingImports] into account.
      */
     fun getAllFullPathsFromHereForTargetPath(
