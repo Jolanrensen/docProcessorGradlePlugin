@@ -183,6 +183,12 @@ errors or warnings for incorrect doc usage.
 
 The sky is the limit :).
 
+## `@ExcludeFromSources` annotation
+If you want to exclude any annotatable element from the `sources.jar`. Simply
+create an annotation class named exactly "`ExcludeFromSources`" and annotate the elements you want to exclude with it.
+This is especially useful for "temporary" documentation interfaces, only there
+to provide documentation for other elements.
+
 ## How to get it
 
 ### From Gradle Plugins

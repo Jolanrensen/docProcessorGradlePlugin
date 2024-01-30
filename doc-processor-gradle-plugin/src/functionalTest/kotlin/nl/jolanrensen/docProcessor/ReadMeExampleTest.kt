@@ -1,8 +1,12 @@
 package nl.jolanrensen.docProcessor
 
-import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-import nl.jolanrensen.docProcessor.defaultProcessors.*
+import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import org.intellij.lang.annotations.Language
 import kotlin.test.Test
 
@@ -173,8 +177,18 @@ class ReadMeExampleTest : DocProcessorFunctionalTest("readMe") {
             packageName = "com.example.plugin",
             processors = processors,
             additionals = listOf(
-                AdditionalFile("src/main/kotlin/com/example/plugin/Submitting.java", javaContent),
-                AdditionalFile("src/main/kotlin/com/example/plugin/submitted.json", jsonContent),
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/Submitting.java",
+                    content = javaContent,
+                ),
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/submitted.json",
+                    content = jsonContent,
+                ),
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
             ),
         ) shouldBe expected
     }
