@@ -2,15 +2,145 @@
 
 # KDoc / JavaDoc Preprocessor Gradle Plugin (Alpha)
 
-This Gradle plugin allows you to preprocess your KDoc / JavaDoc comments with custom preprocessors.
+This Gradle plugin allows you to preprocess your KDoc / JavaDoc comments with custom preprocessors and obtain modified
+sources.
+
 These preprocessors can be used to add custom tags to your KDoc / JavaDoc comments or change the entirety of the
 comment.
 This is not a Dokka plugin, meaning you can actually get a `sources.jar` file with the modified comments instead of just
 having the comments modified in a `javadoc.jar` or a Dokka HTML website.
 
-Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}` work too.
+Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}` are supported too.
 
-The processing order per processor is:
+## Example
+
+<table>
+<tr>
+<td> What you type: </td> <td> What ends up in the <code>sources.jar</code> file: </td>
+</tr>
+<tr>
+<td>
+
+````kotlin
+/**
+ * ## Submit Number
+ * Submits the given number.
+ *
+ * ### For example
+ * {@comment Giving an example of how the function can be called, default the argument to `5.0`}
+ * ```kotlin
+ * MyClass().submit(${[SubmitDocs.ExampleArg]=5.0}, File("file.json")) { println(it) }
+ * ```
+ *
+ * ### Result
+ * The number will be submitted to a JSON file like this:
+ * ```json
+ * {@includeFile (./submitted.json)}
+ * ```
+ * @get [ExtraInfoArg] {@comment Attempt to retrieve the [ExtraInfoArg] variable}
+ * $[ParamArg] {@comment Attempt to retrieve the [ParamArg] variable using shorter notation}
+ * @param location The file location to submit the number to.
+ * @param onException What to do when an exception occurs.
+ * @return `true` if the number was submitted successfully, `false` otherwise.
+ */
+@ExcludeFromSources
+private interface SubmitDocs {
+
+    /* Example argument, defaults to 5.0 */
+    interface ExampleArg
+
+    /* Optional extra info */
+    interface ExtraInfoArg
+
+    /* The param part */
+    interface ParamArg
+}
+
+/**
+ * @include [SubmitDocs]
+ * @set [SubmitDocs.ParamArg] @param [number] The [Int] to submit.
+ * @set [SubmitDocs.ExampleArg] 5{@comment Overriding the default example argument}
+ * @comment While You can use block tags for multiline comments, most of the time, inline tags are clearer:
+ * {@set [SubmitDocs.ExtraInfoArg]
+ *  ### This function can also be used from Java:
+ *  {@sample [Submitting.sample]}
+ * }
+ */
+public fun submit(number: Int, location: File, onException: (e: Exception) -> Unit): Boolean = TODO()
+
+/** @include [SubmitDocs] {@set [SubmitDocs.ParamArg] @param [number] The [Double] to submit.} */
+public fun submit(number: Double, location: File, onException: (e: Exception) -> Unit): Boolean = TODO()
+````
+
+</td>
+<td>
+
+````kotlin
+/**
+ * ## Submit Number
+ * Submits the given number.
+ *
+ * ### For example
+ *
+ * ```kotlin
+ * MyClass().submit(5, File("file.json")) { println(it) }
+ * ```
+ *
+ * ### Result
+ * The number will be submitted to a JSON file like this:
+ * ```json
+ * {
+ *   "number": 5.0
+ * }
+ * ```
+ * ### This function can also be used from Java:
+ *  ```java
+ * int number = 1;
+ * File file = new File("file.json");
+ * boolean result = TestKt.submit(number, file, e -> {
+ *     System.out.println(e.getMessage());
+ *     return Unit.INSTANCE;
+ * });
+ * ```
+ * @param [number] The [Int] to submit. 
+ * @param location The file location to submit the number to.
+ * @param onException What to do when an exception occurs.
+ * @return `true` if the number was submitted successfully, `false` otherwise.
+ */
+public fun submit(number: Int, location: File, onException: (e: Exception) -> Unit): Boolean = TODO()
+
+/** ## Submit Number
+ * Submits the given number.
+ *
+ * ### For example
+ *
+ * ```kotlin
+ * MyClass().submit(5.0, File("file.json")) { println(it) }
+ * ```
+ *
+ * ### Result
+ * The number will be submitted to a JSON file like this:
+ * ```json
+ * {
+ *   "number": 5.0
+ * }
+ * ```
+ *
+ * @param [number] The [Double] to submit. 
+ * @param location The file location to submit the number to.
+ * @param onException What to do when an exception occurs.
+ * @return `true` if the number was submitted successfully, `false` otherwise. */
+public fun submit(number: Double, location: File, onException: (e: Exception) -> Unit): Boolean = TODO()
+````
+
+</td>
+</tr>
+</table>
+
+## Preprocessors
+
+Preprocessors are run one at a time, in order, on all KDoc / JavaDoc comments in the sources.
+If a preprocessor is a tag processor, it will process only its own tags in the following order:
 
 - Inline tags
     - depth-first
@@ -21,16 +151,16 @@ The processing order per processor is:
 
 Included preprocessors are:
 
-| Description                                                                                                                     | Name                            |
-|---------------------------------------------------------------------------------------------------------------------------------|---------------------------------|
-| `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor).                | `INCLUDE_DOC_PROCESSOR`         |
-| `@includeFile` tag to include file content into your KDoc / JavaDoc                                                             | `INCLUDE_FILE_DOC_PROCESSOR`    |
-| `@setArg` / `@getArg` tags to define and include arguments within your KDoc / JavaDoc. Powerful in combination  with `@include` | `ARG_DOC_PROCESSOR`             |
-| `@comment` tag to comment out parts of your modified KDoc / JavaDoc                                                             | `COMMENT_DOC_PROCESSOR`         |
-| `@sample` / `@sampleNoComments` tags to include code samples into your KDoc / JavaDoc                                           | `SAMPLE_DOC_PROCESSOR`          |
-| A processor that removes all escape characters (`\`) from your KDoc / JavaDoc comments                                          | `REMOVE_ESCAPE_CHARS_PROCESSOR` |
-| A processor that removes all KDoc / JavaDoc comments                                                                            | `NO_DOC_PROCESSOR`              |
-| A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment                                       | `TODO_DOC_PROCESSOR`            |
+| Description                                                                                                                                                            | Name                            |
+|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------|
+| `@include` tag to include other comments into your KDoc / JavaDoc, see [@include Processor](#include-processor).                                                       | `INCLUDE_DOC_PROCESSOR`         |
+| `@includeFile` tag to include file content into your KDoc / JavaDoc.                                                                                                   | `INCLUDE_FILE_DOC_PROCESSOR`    |
+| `@set` / `@get` (or `$`) tags to define and retrieve variables within your KDoc / JavaDoc. Powerful in combination with `@include`.                                    | `ARG_DOC_PROCESSOR`             |
+| `@comment` tag to comment out parts of your modified KDoc / JavaDoc.                                                                                                   | `COMMENT_DOC_PROCESSOR`         |
+| `@sample` / `@sampleNoComments` tags to include code samples into your KDoc / JavaDoc. (If present, only code in between `// SampleStart` and `// SampleEnd` is taken) | `SAMPLE_DOC_PROCESSOR`          |
+| A processor that removes all escape characters (`\\`) from your KDoc / JavaDoc comments.                                                                               | `REMOVE_ESCAPE_CHARS_PROCESSOR` |
+| A processor that removes all KDoc / JavaDoc comments.                                                                                                                  | `NO_DOC_PROCESSOR`              |
+| A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment.                                                                             | `TODO_DOC_PROCESSOR`            |
 
 Of course, you can also try to make your own preprocessor (see [Custom Processors](#custom-processors)).
 For instance, you could make a processor that makes all KDoc / JavaDoc comments uppercase,
@@ -111,11 +241,11 @@ val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
     processors = listOf(
         INCLUDE_DOC_PROCESSOR, // The @include processor
         INCLUDE_FILE_DOC_PROCESSOR, // The @includeFile processor
-        ARG_DOC_PROCESSOR, // The @setArg and @getArg processor
+        ARG_DOC_PROCESSOR, // The @set and @get / $ processor
         COMMENT_DOC_PROCESSOR, // The @comment processor
         SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
         REMOVE_ESCAPE_CHARS_PROCESSOR, // The processor that removes escape characters
-      
+
         "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
     )
 
@@ -198,7 +328,7 @@ def processKdocMain = tasks.register('processKdocMain', ProcessDocTask) {
     processors(
             IncludeDocProcessorKt.INCLUDE_DOC_PROCESSOR, // The @include processor
             IncludeFileDocProcessorKt.INCLUDE_FILE_DOC_PROCESSOR, // The @includeFile processor
-            IncludeArgDocProcessorKt.ARG_DOC_PROCESSOR, // The @setArg and @getArg processor
+            ArgDocProcessorKt.ARG_DOC_PROCESSOR, // The @set and @get / $ processor
             CommentDocProcessorKt.COMMENT_DOC_PROCESSOR, // The @comment processor
             SampleDocProcessorKt.SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
             RemoveEscapeCharsProcessorKt.REMOVE_ESCAPE_CHARS_PROCESSOR, // The processor that removes escape characters
@@ -260,15 +390,16 @@ While you can use the processors in any order and leave out some or include othe
 
 - `INCLUDE_DOC_PROCESSOR`: The `@include` processor
 - `INCLUDE_FILE_DOC_PROCESSOR`: The `@includeFile` processor
-- `ARG_DOC_PROCESSOR`: The `@setArg` and `@getArg` processor
+- `ARG_DOC_PROCESSOR`: The `@set` and `@get` / `$` processor. This runs `@set` first and then `@get` / `$`.
 - `COMMENT_DOC_PROCESSOR`: The `@comment` processor
 - `SAMPLE_DOC_PROCESSOR`: The `@sample` and `@sampleNoComments` processor
 - `REMOVE_ESCAPE_CHARS_PROCESSOR`: The processor that removes escape characters
 
-This order ensures that `@setArg`/`@getArg` is processed after `@include` and `@includeFile` such that any arguments
-that appear by them are available for the `@setArg`/`@getArg` processor.
-The `@comment` processor is recommended to be after `@setArg`/`@getArg` too, as it can be used as a line break for
-tag blocks. `@sample` and `@sampleNoComments` are recommended to be last of the tag processors, as processing of inline tags inside comments of
+This order ensures that `@set`/`@get` are processed after `@include` and `@includeFile` such that any arguments
+that appear by them are available for the `@set`/`@get` processor.
+The `@comment` processor is recommended to be after `@set`/`@get` too, as it can be used as a line break for
+tag blocks. `@sample` and `@sampleNoComments` are recommended to be last of the tag processors, as processing of inline
+tags inside comments of
 `@sample` might not be desired. Finally, the `REMOVE_ESCAPE_CHARS_PROCESSOR` is recommended to be last to clean up
 any escape characters that might have been introduced by the user to evade some parts of the docs being processed.
 
@@ -281,7 +412,7 @@ Visibility modifiers are ignored for now. Import statements are taken into accou
 JavaDoc is also supported. Add the `"java"` extension to `fileExtensions` in the plugin setup to use it.
 You can even cross include between Java and Kotlin but no conversion whatsoever will be done at the moment.
 
-Example in conjunction with the `@setArg` / `@getArg` processor:
+Example in conjunction with the `@set` / `@get` processor:
 
 ```kotlin
 package com.example.plugin
@@ -289,18 +420,18 @@ package com.example.plugin
 /**
  * Hello World!
  *
- * This is a large example of how the plugin will work from {@getArg source}
+ * This is a large example of how the plugin will work from {@get source}
  *
  * @param name The name of the person to greet
  * @see [com.example.plugin.KdocIncludePlugin]
- * {@setArg source Test1}
+ * {@set source Test1}
  */
 private interface Test1
 
 /**
  * Hello World 2!
  * @include [Test1]
- * {@setArg source Test2}
+ * {@set source Test2}
  */
 @AnnotationTest(a = 24)
 private interface Test2
@@ -308,12 +439,12 @@ private interface Test2
 /**
  * Some extra text
  * @include [Test2]
- * {@setArg source someFun} */
+ * {@set source someFun} */
 fun someFun() {
     println("Hello World!")
 }
 
-/** {@include [com.example.plugin.Test2]}{@setArg source someMoreFun} */
+/** {@include [com.example.plugin.Test2]}{@set source someMoreFun} */
 fun someMoreFun() {
     println("Hello World!")
 }
@@ -406,7 +537,7 @@ will be split up in blocks as follows:
 
 This is also how tag processors receive their block-data. Note that any newlines after the `@tag`
 are also included as part of the tag data. Tag processors can then decide what to do with this extra data.
-However, `@include`, `@getArg`, `@sample`, and `@includeFile` all have systems in place that
+However, `@include`, `@sample`, and `@includeFile` all have systems in place that
 will keep the content after the tag and on the lines below the tag in place.
 Take this into account when writing your own processors.
 
