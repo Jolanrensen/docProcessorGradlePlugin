@@ -17,19 +17,23 @@ const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
 
 /**
  * Adds two tags to your arsenal:
- * - `@setArg argument content` to declare an argument with content that can be used in the same doc.
- * - `@getArg argument` to get an argument from the same doc.
+ * - `@set key some content` / `{@set key some content}`
+ *   to declare a variable that can be used in the same doc.
+ * - `@get key default` / `{@get key default}`
+ *   to read a variable from the same doc (with an optional default for if no variable with that key is defined).
+ *    - `$key` / `${key}` can also be used instead of `{@get key}`.
+ *    - `$key=default` / `${key=default}` can also be used instead of `{@get key default}`.
  *
  * This can be useful to repeat the same content in multiple places in the same doc, but
  * more importantly, it can be used in conjunction with [IncludeDocProcessor].
  *
- * All `@setArg` tags are processed before `@getArg` tags.
+ * All `@set` tags are processed before `@get` tags.
  *
  * For example:
  *
  * File A:
  * ```kotlin
- * /** NOTE: The {@getArg operation} operation is part of the public API. */
+ * /** NOTE: The {@get operation} operation is part of the public API. */
  *  internal interface ApiNote
  * ```
  *
@@ -38,7 +42,7 @@ const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
  * /**
  *  * Some docs
  *  * @include [ApiNote]
- *  * @setArg operation update
+ *  * @set operation update
  *  */
  * fun update() {}
  * ```
@@ -52,7 +56,7 @@ const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
  * fun update() {}
  * ```
  *
- * NOTE: If there are multiple `@setArg` tags with the same name, the last one processed will be used.
+ * NOTE: If there are multiple `@set` tags with the same name, the last one processed will be used.
  * The order is: Inline tags: depth-first, left-to-right. Block tags: top-to-bottom.
  *
  * NOTE: Use `[References]` as keys if you want extra refactoring-safety.
@@ -61,21 +65,24 @@ const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
 class ArgDocProcessor : TagDocProcessor() {
 
     internal companion object {
-        internal val RETRIEVE_ARGUMENT_TAGS = listOf(
+        internal val OLD_RETRIEVE_ARGUMENT_TAGS = listOf(
+            "includeArg",
             "getArg",
-            "get",
-            "obtain",
-            "retrieve",
-            // $, handled in process()
         )
-        internal val DECLARE_ARGUMENT_TAGS = listOf(
+
+        internal val OLD_DECLARE_ARGUMENT_TAGS = listOf(
+            "arg",
             "setArg",
-            "set",
-            "def",
-            "define",
-            "decl",
-            "declare",
         )
+
+        internal val RETRIEVE_ARGUMENT_TAGS = listOf(
+            "get",
+            // $, handled in process()
+        ) + OLD_RETRIEVE_ARGUMENT_TAGS
+
+        internal val DECLARE_ARGUMENT_TAGS = listOf(
+            "set",
+        ) + OLD_DECLARE_ARGUMENT_TAGS
     }
 
     override fun tagIsSupported(tag: String): Boolean =
@@ -138,14 +145,14 @@ class ArgDocProcessor : TagDocProcessor() {
         return super.shouldContinue(i, anyModifications, processLimit)
     }
 
-    // @setArg map for path -> arg name -> value
+    // @set map for path -> arg name -> value
     private val argMap: MutableMap<UUID, DocWrapperWithArgMap> = mutableMapOf()
 
     private val argsNotFound: MutableMap<UUID, DocWrapperWithArgSet> = mutableMapOf()
 
     /**
-     * Preprocess all `${a}` and `$a` tags to `{@getArg a}`
-     * and all `${a=b}` and `$a=b` tags to `{@setArg a b}`
+     * Preprocess all `${a}` and `$a` tags to `{@get a}`
+     * and all `${a=b}` and `$a=b` tags to `{@get a b}`
      * before running the normal tag processor.
      */
     override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath {
@@ -166,21 +173,37 @@ class ArgDocProcessor : TagDocProcessor() {
         return super.process(processLimit, mutable)
     }
 
+    // TODO remove if deprecation is gone
+    private fun provideNewNameWarning(documentable: DocumentableWrapper) =
+        logger.warn {
+            buildString {
+                val (line, char) = documentable.file
+                    .readText()
+                    .getLineAndCharacterOffset(documentable.docFileTextRange.first)
+
+                appendLine("Old tag names used in doc: (${documentable.file.absolutePath}:$line:$char)")
+                appendLine("The tag names \"$OLD_RETRIEVE_ARGUMENT_TAGS\" is deprecated. Use \"${RETRIEVE_ARGUMENT_TAGS.first()}\" or \$ instead.")
+                appendLine("The tag name \"$OLD_DECLARE_ARGUMENT_TAGS\" is deprecated. Use \"${DECLARE_ARGUMENT_TAGS.first()}\" instead.")
+            }
+        }
+
     private fun processTag(
         tagWithContent: String,
         documentable: DocumentableWrapper,
     ): String {
         val tagName = tagWithContent.getTagNameOrNull()
-        val isSetArgDeclaration = tagName in DECLARE_ARGUMENT_TAGS
+        val isDeclareArgumentDeclaration = tagName in DECLARE_ARGUMENT_TAGS
 
         val tagNames = documentable.docContent.findTagNamesInDocContent()
 
         val declareArgTagsStillPresent = DECLARE_ARGUMENT_TAGS.any { it in tagNames }
+        val retrieveArgTagsPresent = RETRIEVE_ARGUMENT_TAGS.any { it in tagNames }
 
-        val useArgTagsPresent = RETRIEVE_ARGUMENT_TAGS.any { it in tagNames }
+        if (tagName in OLD_RETRIEVE_ARGUMENT_TAGS || tagName in OLD_DECLARE_ARGUMENT_TAGS)
+            provideNewNameWarning(documentable)
 
         return when {
-            isSetArgDeclaration -> { // @setArg
+            isDeclareArgumentDeclaration -> { // @set
                 val argArguments =
                     tagWithContent.getTagArguments(
                         tag = tagName!!,
@@ -207,17 +230,18 @@ class ArgDocProcessor : TagDocProcessor() {
                 argsNotFound.getOrPut(documentable.identifier) {
                     DocWrapperWithArgSet(documentable)
                 }.args -= keys.toSet()
+
                 ""
             }
 
             declareArgTagsStillPresent -> {
-                // skip @getArg tags if there are still @setArgs present
+                // skip @get tags if there are still @set's present
                 tagWithContent
             }
 
-            else -> { // @getArg
+            else -> { // @get
                 val includeArgArguments: List<String> = buildList {
-                    if (useArgTagsPresent) {
+                    if (retrieveArgTagsPresent) {
                         this += tagWithContent.getTagArguments(
                             tag = tagName!!,
                             numberOfArguments = 2,
@@ -227,7 +251,7 @@ class ArgDocProcessor : TagDocProcessor() {
 
                 val originalKey = includeArgArguments.first()
 
-                // for stuff written after the @getArg tag, save and include it later
+                // for stuff written after the @get tag, save and include it later
                 val extraContent = includeArgArguments.getOrElse(1) { "" }
 
                 var keys = listOf(originalKey)
@@ -237,7 +261,7 @@ class ArgDocProcessor : TagDocProcessor() {
                     logger.warn {
                         "Java {@link statements} are not replaced by their fully qualified path. " +
                                 "Make sure to use fully qualified paths in {@link statements} when " +
-                                "using {@link statements} as a key in @setArg."
+                                "using {@link statements} as a key in @set."
                     }
                 }
 
@@ -248,22 +272,16 @@ class ArgDocProcessor : TagDocProcessor() {
                 val content = keys.firstNotNullOfOrNull { key ->
                     argMap[documentable.identifier]?.args?.get(key)
                 }
-                when {
-                    content == null -> {
-                        argsNotFound.getOrPut(documentable.identifier) {
-                            DocWrapperWithArgSet(documentable)
-                        }.args += keys
-                        tagWithContent
-                    }
 
-                    extraContent.isNotEmpty() -> buildString {
-                        append(content)
-                        if (!extraContent.first().isWhitespace())
-                            append(" ")
-                        append(extraContent)
-                    }
+                if (content == null) {
+                    argsNotFound.getOrPut(documentable.identifier) {
+                        DocWrapperWithArgSet(documentable)
+                    }.args += keys
 
-                    else -> content
+                    // if there is no content, we return the extra content (default), this can be empty
+                    extraContent
+                } else {
+                    content
                 }
             }
         }
@@ -309,27 +327,27 @@ class ArgDocProcessor : TagDocProcessor() {
 }
 
 /**
- * Replaces all `${CONTENT}` and `$CONTENT` with `{@getArg CONTENT}`
- * and all `${KEY=CONTENT}` and `$KEY=CONTENT` with `{@setArg KEY CONTENT}`
+ * Replaces all `${KEY}` and `$KEY` with `{@get KEY}`
+ * and all `${KEY=DEFAULT}` and `$KEY=DEFAULT` with `{@get KEY DEFAULT}`
  * for some doc's content.
  */
 fun DocContent.replaceDollarNotation(): DocContent {
     var text = this
 
-    // First replacing all ${CONTENT} with {@getArg CONTENT}
-    // and ${KEY=CONTENT} with {@setArg KEY CONTENT}
+    // First replacing all ${KEY} with {@get KEY}
+    // and ${KEY=DEFAULT} with {@get KEY DEFAULT}
     text = text.`replace ${}'s`()
 
-    // Then replacing all "$CONTENT test" with "{@getArg CONTENT} test"
-    // and "$KEY=CONTENT" with "{@setArg KEY CONTENT}"
+    // Then replacing all "$KEY test" with "{@get KEY} test"
+    // and "$KEY=DEFAULT" with "{@get KEY DEFAULT}"
     text = text.`replace $tags`()
 
     return text
 }
 
 /**
- * Replaces all `${CONTENT}` with `{@getArg CONTENT}`
- * and `${KEY=CONTENT}` with `{@setArg KEY CONTENT}`
+ * Replaces all `${KEY}` with `{@get KEY}`
+ * and `${KEY=DEFAULT}` with `{@set KEY DEFAULT}`
  */
 fun DocContent.`replace ${}'s`(): DocContent {
     val text = this
@@ -340,16 +358,11 @@ fun DocContent.`replace ${}'s`(): DocContent {
     val nonOverlappingRangesWithReplacement = locationsWithKeyValues
         .flatMap { (range, keyAndValue) ->
             val (key, value) = keyAndValue
-
             buildList {
-                if (value == null) {
-                    // replacing "${" with "{@getArg "
-                    this += range.first..range.first + 1 to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAGS.first()} "
-                } else {
+                // replacing "${" with "{@get "
+                this += range.first..range.first + 1 to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAGS.first()} "
+                if (value != null) {
                     val equalsPosition = range.first + 2 + key.length
-
-                    // replacing "${" with "{@setArg "
-                    this += range.first..range.first + 1 to "{@${ArgDocProcessor.DECLARE_ARGUMENT_TAGS.first()} "
 
                     // replacing "=" with " "
                     this += equalsPosition..equalsPosition to " "
@@ -417,8 +430,8 @@ private fun DocContent.`find ${}'s`(): List<IntRange> {
 }
 
 /**
- * Replaces all "$CONTENT" with "{@getArg CONTENT}"
- * and "$KEY=CONTENT" with "{@setArg KEY CONTENT}"
+ * Replaces all "$KEY" with "{@get KEY}"
+ * and "$KEY=DEFAULT" with "{@get KEY DEFAULT}"
  */
 fun DocContent.`replace $tags`(): DocContent {
     val text = this
@@ -426,14 +439,9 @@ fun DocContent.`replace $tags`(): DocContent {
 
     val nonOverlappingRangesWithReplacement = locations.flatMap { (range, equalsPosition) ->
         buildList {
-            if (equalsPosition == null) {
-
-                // replacing "$" with "{@getArg "
-                this += range.first..range.first to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAGS.first()} "
-            } else {
-                // replacing "$" with "{@setArg "
-                this += range.first..range.first to "{@${ArgDocProcessor.DECLARE_ARGUMENT_TAGS.first()} "
-
+            // replacing "$" with "{@get "
+            this += range.first..range.first to "{@${ArgDocProcessor.RETRIEVE_ARGUMENT_TAGS.first()} "
+            if (equalsPosition != null) {
                 // replacing "=" with " "
                 this += equalsPosition..equalsPosition to " "
             }
