@@ -14,7 +14,7 @@ plugins {
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "0.3.0-SNAPSHOT"
+version = "0.3.0"
 
 publishing {
     repositories {
@@ -39,7 +39,7 @@ dependencies {
     shadow(gradleKotlinDsl())
 
     // Dokka dependencies
-    val dokkaVersion = "1.8.10"
+    val dokkaVersion = "1.8.20"
     shadow("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
     shadow("org.jetbrains.dokka:dokka-base:$dokkaVersion")
     shadow("org.jetbrains.dokka:dokka-core:$dokkaVersion")
