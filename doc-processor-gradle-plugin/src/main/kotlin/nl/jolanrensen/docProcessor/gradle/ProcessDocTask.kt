@@ -157,7 +157,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     private fun Project.maybeCreateRuntimeConfiguration(): Configuration =
         project.configurations.maybeCreate("kotlinKdocIncludePluginRuntime") {
             isCanBeConsumed = true
-            val kotlinVersion = "1.8.10"
+            val kotlinVersion = "1.8.20"
             dependencies.add(project.dependencies.create("org.jetbrains.kotlin:kotlin-compiler:$kotlinVersion"))
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-analysis:$kotlinVersion")) // compileOnly in base plugin
             dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:$kotlinVersion"))
