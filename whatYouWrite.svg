@@ -1,14 +1,14 @@
-<svg fill="none" viewBox="0 0 850 910" width="850" height="910" xmlns="http://www.w3.org/2000/svg">
+<svg fill="none" viewBox="0 0 860 930" width="860" height="930" xmlns="http://www.w3.org/2000/svg">
     <foreignObject width="100%" height="100%">
         <div xmlns="http://www.w3.org/1999/xhtml">
             <style>
                 .container {
                     display: flex;
                     width: 100%;
-                    height: 910px;
+                    height: 930px;
                     background-color: #2B2B2B;
                     color: white;
-                    margin: 10px;
+                    padding: 10px;
                 }
                 .kdoc { color: #629755; font-style: italic }
                 .linkInKDoc { color: #8A653B }
@@ -18,7 +18,6 @@
                 .keyword { color: #CC7832; font-weight: bold }
                 .funDeclaration { color: #FFC66D; font-weight: bold }
                 .todo { color:#A8C023; }
-                
             </style>
 
             <pre class="container">
