@@ -16,7 +16,11 @@ Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}`
 
 ### What you write:
 
-<pre><code><style>
+<svg fill="none" viewBox="0 0 600 300" width="600" height="300" xmlns="http://www.w3.org/2000/svg">
+<foreignObject width="100%" height="100%">
+<div xmlns="http://www.w3.org/1999/xhtml">
+
+<style>
 .kdoc { color: #629755; font-style: italic }
 .linkInKDoc { color: #8A653B }
 .preprocessor { color: #93A629; font-weight: bold }
@@ -26,6 +30,7 @@ Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}`
 .funDeclaration { color: #FFC66D; font-weight: bold }
 .todo { color:#A8C023; }
 </style>
+<pre>
 <span class="kdoc">
 /**
  * ## Submit Number
@@ -77,7 +82,10 @@ Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}`
 
 <span class="kdoc">/** <span class="preprocessor">@include <span class="linkInKDoc">[SubmitDocs]</span> {@set <span class="linkInKDoc">[SubmitDocs.ParamArg]</span> </span>@param <span class="linkInKDoc">[number]</span> The <span class="linkInKDoc">[Double]</span> to submit.<span class="preprocessor">}</span> */</span>
 <span class="keyword">public fun</span> <span class="funDeclaration">submit</span>(number: Double<span class="keyword">,</span> location: File<span class="keyword">,</span> onException: (e: Exception) -> Unit): Boolean = <span class="todo">TODO()</span>
-</code></pre>
+</pre>
+</div>
+</foreignObject>
+</svg>
 
 ### What you get:
 
@@ -184,6 +192,7 @@ errors or warnings for incorrect doc usage.
 The sky is the limit :).
 
 ## `@ExcludeFromSources` annotation
+
 If you want to exclude any annotatable element from the `sources.jar`. Simply
 create an annotation class named exactly "`ExcludeFromSources`" and annotate the elements you want to exclude with it.
 This is especially useful for "temporary" documentation interfaces, only there
