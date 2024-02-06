@@ -1,6 +1,6 @@
 [![Maven metadata URL](https://img.shields.io/maven-metadata/v?label=Gradle%20Plugin&metadataUrl=https%3A%2F%2Fplugins.gradle.org%2Fm2%2Fnl%2Fjolanrensen%2FdocProcessor%2Fnl.jolanrensen.docProcessor.gradle.plugin%2Fmaven-metadata.xml)](https://plugins.gradle.org/plugin/nl.jolanrensen.docProcessor)
 
-# KDoc / JavaDoc Preprocessor Gradle Plugin (Alpha)
+# KDoc / JavaDoc Preprocessor Gradle Plugin (Beta)
 
 This Gradle plugin allows you to preprocess your KDoc / JavaDoc comments with custom preprocessors and obtain modified
 sources.
@@ -203,10 +203,10 @@ import org.gradle.jvm.tasks.Jar
 
 plugins {
     id "nl.jolanrensen.docProcessor" version "{ VERSION }"
-            ..
+    ..
 }
 
-        ..
+..
 
 // Backup the kotlin source files location
 def kotlinMainSources = kotlin.sourceSets.main.kotlin.sourceDirectories
@@ -267,16 +267,16 @@ tasks.withType(Jar).configureEach {
     }
 }
 
-        ..
+..
 
 // As a bonus, this will update dokka to use the processed files as sources as well.
-        tasks.withType(org.jetbrains.dokka.gradle.AbstractDokkaLeafTask).configureEach {
-            dokkaSourceSets.with {
-                configureEach {
-                    sourceRoot(processKdocMain.target.get())
-                }
-            }
+tasks.withType(org.jetbrains.dokka.gradle.AbstractDokkaLeafTask).configureEach {
+    dokkaSourceSets.with {
+        configureEach {
+            sourceRoot(processKdocMain.target.get())
         }
+    }
+}
 ```
 
 ### Recommended order of default processors
@@ -300,7 +300,7 @@ from being processed.
 
 ## Technicalities
 
-KDocs and JavaDocs are structured in a tree-like structure and are thus also parsed and processed like that.
+Regarding block-tags KDocs and JavaDocs are structured in a tree-like structure and are thus also parsed and processed like that.
 For example, the following KDoc:
 
 ```kotlin
@@ -327,10 +327,13 @@ will be split up in blocks as follows:
 ]
 ```
 
-This is also how tag processors receive their block-data. Note that any newlines after the `@tag`
-are also included as part of the tag data. Tag processors can then decide what to do with this extra data.
-However, `@include`, `@sample`, and `@includeFile` all have systems in place that
-will keep the content after the tag and on the lines below the tag in place.
+This is also how tag processors receive their block-data (note that any newlines after the `@tag`
+are also included as part of the tag data).
+
+Most tag processors only require a tiny number of arguments. They can decide what to do when they receive more arguments
+by the user.
+Most tag processors, like `@include`, `@sample`, and `@includeFile` all have systems in place that
+will preserve the content after the tag.
 Take this into account when writing your own processors.
 
 To avoid any confusion, it's usually easier to stick to `{@inline tags}` as then it's clear which part of the doc
@@ -345,11 +348,11 @@ If something weird happens, try to disable some processors to understand what's 
 - The sources provided to the plugin are read and analysed by
   [Dokka's default SourceToDocumentableTranslators](https://kotlin.github.io/dokka/1.6.0/developer_guide/extension_points/#creating-documentation-models).
 - All [Documentables](https://kotlin.github.io/dokka/1.6.0/developer_guide/data_model/#documentable-model) are
-  saved in a map by their path (e.g. `com.example.plugin.Class1.function1`).
+  saved in a map by their path (e.g. `com.example.plugin.Class1.function1`) and their extension path.
 - Next, the documentation contents, location in the file, and indents are collected from each documentable
   in the map.
-- All processors are then run in sequence on the collected documentables with their data.
-- All documentables are then iterated over and tag replacement processors, like @include, will replace the tag with new
+- All processors are run in sequence on the collected documentables with their data:
+   - All documentables are iterated over and tag replacement processors, like @include, will replace all tags with new
   content.
 - Finally, all files from the source are copied over to a destination folder and if there are any modifications that
   need to be made in a file, the specified ranges for each documentation are replaced with the new documentation.
@@ -402,7 +405,7 @@ class ExampleDocProcessor : TagDocProcessor() {
     // We can use the same function for both processInnerTagWithContent and processTagWithContent
     private fun processContent(tagWithContent: String): String {
 
-        // We can log stuff if we want to using https://github.com/oshai/kotlin-logging
+        // We can log stuff, if we want to, using https://github.com/oshai/kotlin-logging
         logger.info { "Hi from the example logs!" }
 
         // We can get the content after the @example tag.
@@ -410,7 +413,6 @@ class ExampleDocProcessor : TagDocProcessor() {
             .getTagArguments(tag = "example", numberOfArguments = 1)
             .single()
             .trimEnd() // remove trailing whitespaces/newlines
-            .removeEscapeCharacters() // remove escape character "\" from the content
 
         // While we can play with the other arguments, let's just return some simple modified content
         var newContent =
@@ -465,14 +467,16 @@ fun main() {
 
 See the `defaultProcessor` folder in the project for more examples!
 
-## Preview: IntelliJ plugin
+## IntelliJ Plugin (Alpha)
 
-I'm working on an IntelliJ plugin that will allow you to preview the documentation rendered directly in the IDE.
+Aside from a Gradle plugin, the project also contains an IntelliJ plugin that allows you to preview the rendered
+documentation directly in the IDE.
 Currently, the only way to try this is by building the plugin yourself from sources and installing it in IntelliJ.
 The plugin in its current state is unconfigurable and just uses the default processors as shown in the sample above.
 Also, it uses the IDE engine to resolve references.
 This is because it's a lot faster than my own engine + Dokka, but it does mean that there might be some differences
-with the preview and how it will look in the final docs. So, take this into account.
+with the preview and how it will look in the final docs (for instance, type aliases work in the IDE but not in the 
+Gradle plugin). So, take this into account.
 
 I'm still working on connecting it to the Gradle plugin somehow or provide a way to configure it correctly,
 but until then, you can use it as is and be more efficient in your documentation writing!
