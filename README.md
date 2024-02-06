@@ -22,75 +22,9 @@ Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}`
 
 ### What you get:
 
-<pre><code>
-<style>
-.kdoc { color: #629755; font-style: italic }
-.linkInKDoc { color: #8A653B }
-.preprocessor { color: #93A629; font-weight: bold }
-.comment { color: #808080 }
-.annotation { color: #BBB529 }
-.keyword { color: #CC7832; font-weight: bold }
-.funDeclaration { color: #FFC66D; font-weight: bold }
-.todo { color:#A8C023; }
-</style>
-<span class="kdoc">
-/**
- * ## Submit Number
- * Submits the given number.
- *
- * ### For example
- *
- * ```kotlin
- * MyClass().submit(5, File("file.json")) { println(it) }
- * ```
- *
- * ### Result
- * The number will be submitted to a JSON file like this:
- * ```json
- * {
- *   "number": 5.0
- * }
- * ```
- * ### This function can also be used from Java:
- *  ```java
- * int number = 1;
- * File file = new File("file.json");
- * boolean result = TestKt.submit(number, file, e -> {
- *     System.out.println(e.getMessage());
- *     return Unit.INSTANCE;
- * });
- * ```
- * <b>@param</b> <span class="linkInKDoc">[number]</span> The <span class="linkInKDoc">[Int]</span> to submit. 
- * <b>@param</b> <span class="linkInKDoc">location</span> The file location to submit the number to.
- * <b>@param</b> <span class="linkInKDoc">onException</span> What to do when an exception occurs.
- * <b>@return</b> `true` if the number was submitted successfully, `false` otherwise.
- */</span>
-<span class="keyword">public fun</span> <span class="funDeclaration">submit</span>(number: Int<span class="keyword">,</span> location: File<span class="keyword">,</span> onException: (e: Exception) -> Unit): Boolean = <span class="todo">TODO()</span>
-
-<span class="kdoc">
-/** ## Submit Number
- * Submits the given number.
- *
- * ### For example
- *
- * ```kotlin
- * MyClass().submit(5.0, File("file.json")) { println(it) }
- * ```
- *
- * ### Result
- * The number will be submitted to a JSON file like this:
- * ```json
- * {
- *   "number": 5.0
- * }
- * ```
- *
- * <b>@param</b> <span class="linkInKDoc">[number]</span> The <span class="linkInKDoc">[Double]</span> to submit. 
- * <b>@param</b> <span class="linkInKDoc">location</span> The file location to submit the number to.
- * <b>@param</b> <span class="linkInKDoc">onException</span> What to do when an exception occurs.
- * <b>@return</b> `true` if the number was submitted successfully, `false` otherwise. */</span>
-<span class="keyword">public fun</span> <span class="funDeclaration">submit</span>(number: Double<span class="keyword">,</span> location: File<span class="keyword">,</span> onException: (e: Exception) -> Unit): Boolean = <span class="todo">TODO()</span>
-</code></pre>
+<div style="width: 100%;">
+  <img src="whatYouGet.svg" style="width: 100%;" alt="Click to see the source">
+</div>
 
 ## Preprocessors
 
