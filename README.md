@@ -16,76 +16,9 @@ Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}`
 
 ### What you write:
 
-<svg fill="none" viewBox="0 0 600 300" width="600" height="300" xmlns="http://www.w3.org/2000/svg">
-<foreignObject width="100%" height="100%">
-<div xmlns="http://www.w3.org/1999/xhtml">
-
-<style>
-.kdoc { color: #629755; font-style: italic }
-.linkInKDoc { color: #8A653B }
-.preprocessor { color: #93A629; font-weight: bold }
-.comment { color: #808080 }
-.annotation { color: #BBB529 }
-.keyword { color: #CC7832; font-weight: bold }
-.funDeclaration { color: #FFC66D; font-weight: bold }
-.todo { color:#A8C023; }
-</style>
-<pre>
-<span class="kdoc">
-/**
- * ## Submit Number
- * Submits the given number.
- *
- * ### For example
- * <span class="preprocessor">{@comment Giving an example of how the function can be called, default the argument to `5.0`}</span>
- * ```kotlin
- * MyClass().submit(<span class="preprocessor">${<span class="linkInKDoc">[SubmitDocs.ExampleArg]</span>=</span>5.0<span class="preprocessor"
->}</span>, File("file.json")) { println(it) }
- * ```
- *
- * ### Result
- * The number will be submitted to a JSON file like this:
- * ```json
- * <span class="preprocessor">{@includeFile (./submitted.json)}</span>
- * ```
- * <span class="preprocessor">@get <span class="linkInKDoc">[ExtraInfoArg]</span> {@comment Attempt to retrieve the <span class="linkInKDoc">[ExtraInfoArg]</span> variable}</span>
- * <span class="preprocessor">$<span class="linkInKDoc">[ParamArg]</span> {@comment Attempt to retrieve the <span class="linkInKDoc">[ParamArg]</span> variable using shorter notation}</span>
- * <b>@param</b> <span class="linkInKDoc">location</span> The file location to submit the number to.
- * <b>@param</b> <span class="linkInKDoc">onException</span> What to do when an exception occurs.
- * <b>@return</b> `true` if the number was submitted successfully, `false` otherwise.
- */</span>
-<span class="annotation">@ExcludeFromSources</span>
-<span class="keyword">private interface</span> SubmitDocs <b>{</b>
-
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">/* Example argument, defaults to 5.0 */</span>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">interface</span> ExampleArg
-
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">/* Optional extra info */</span>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">interface</span> ExtraInfoArg
-
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">/* The param part */</span>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">interface</span> ParamArg
-<b>}</b>
-
-<span class="kdoc">
-/**
- * <span class="preprocessor">@include <span class="linkInKDoc">[SubmitDocs]</span></span>
- * <span class="preprocessor">@set <span class="linkInKDoc">[SubmitDocs.ParamArg]</span></span> @param <span class="linkInKDoc">[number]</span> The <span class="linkInKDoc">[Int]</span> to submit.
- * <span class="preprocessor">@set <span class="linkInKDoc">[SubmitDocs.ExampleArg]</span></span> 5<span class="preprocessor">{@comment Overriding the default example argument}</span>
- * <span class="preprocessor">@comment While You can use block tags for multiline comments, most of the time, inline tags are clearer:</span>
- * <span class="preprocessor">{@set <span class="linkInKDoc">[SubmitDocs.ExtraInfoArg]</span></span>
- *  ### This function can also be used from Java:
- *  <span class="preprocessor">{@sample <span class="linkInKDoc">[Submitting.sample]</span>}</span>
- * <span class="preprocessor">}</span>
- */</span>
-<span class="keyword">public fun</span> <span class="funDeclaration">submit</span>(number: Int<span class="keyword">,</span> location: File<span class="keyword">,</span> onException: (e: Exception) -> Unit): Boolean = <span class="todo">TODO()</span>
-
-<span class="kdoc">/** <span class="preprocessor">@include <span class="linkInKDoc">[SubmitDocs]</span> {@set <span class="linkInKDoc">[SubmitDocs.ParamArg]</span> </span>@param <span class="linkInKDoc">[number]</span> The <span class="linkInKDoc">[Double]</span> to submit.<span class="preprocessor">}</span> */</span>
-<span class="keyword">public fun</span> <span class="funDeclaration">submit</span>(number: Double<span class="keyword">,</span> location: File<span class="keyword">,</span> onException: (e: Exception) -> Unit): Boolean = <span class="todo">TODO()</span>
-</pre>
+<div style="width: 100%;">
+  <img src="whatYouWrite.svg" style="width: 100%;" alt="Click to see the source">
 </div>
-</foreignObject>
-</svg>
 
 ### What you get:
 
@@ -192,7 +125,6 @@ errors or warnings for incorrect doc usage.
 The sky is the limit :).
 
 ## `@ExcludeFromSources` annotation
-
 If you want to exclude any annotatable element from the `sources.jar`. Simply
 create an annotation class named exactly "`ExcludeFromSources`" and annotate the elements you want to exclude with it.
 This is especially useful for "temporary" documentation interfaces, only there
