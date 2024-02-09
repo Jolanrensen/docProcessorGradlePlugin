@@ -25,7 +25,9 @@ class RemoveEscapeCharsProcessor : DocProcessor() {
 
         mutableDocs.documentablesToProcess.forEach { (_, docs) ->
             docs.forEach {
-                it.docContent = it.docContent.removeEscapeCharacters(escapeChars)
+                it.modifyDocContentAndUpdate(
+                    it.docContent.removeEscapeCharacters(escapeChars)
+                )
             }
         }
         return mutableDocs

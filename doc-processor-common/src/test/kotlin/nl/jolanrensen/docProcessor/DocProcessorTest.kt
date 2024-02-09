@@ -30,6 +30,7 @@ abstract class DocProcessorTest(name: String) {
         documentableSourceNoDoc: String,
         fullyQualifiedPath: String,
         docFileTextRange: IntRange,
+        fileTextRange: IntRange,
         fullyQualifiedExtensionPath: String? = null,
         fullyQualifiedSuperPaths: List<String> = emptyList(),
         docIndent: Int = 0,
@@ -52,6 +53,8 @@ abstract class DocProcessorTest(name: String) {
         ),
         docFileTextRange = docFileTextRange,
         docIndent = docIndent,
+        annotationFullyQualifiedPaths = emptyList(),
+        fileTextRange = fileTextRange,
     )
 
     fun String.textRangeOf(text: String): IntRange = indexOf(text).let { start ->

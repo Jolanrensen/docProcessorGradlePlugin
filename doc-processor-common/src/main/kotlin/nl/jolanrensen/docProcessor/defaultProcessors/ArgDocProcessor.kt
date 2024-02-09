@@ -159,14 +159,9 @@ class ArgDocProcessor : TagDocProcessor() {
         val mutable = documentablesByPath.toMutable()
         for ((_, docs) in mutable.documentablesToProcess) {
             for (doc in docs) {
-                doc.apply {
-                    val newContent = docContent.replaceDollarNotation()
-                    if (newContent != docContent) {
-                        docContent = newContent
-                        tags = newContent.findTagNamesInDocContent().toSet()
-                        isModified = true
-                    }
-                }
+                doc.modifyDocContentAndUpdate(
+                    doc.docContent.replaceDollarNotation()
+                )
             }
         }
 
