@@ -471,6 +471,8 @@ See the `defaultProcessor` folder in the project for more examples!
 
 Aside from a Gradle plugin, the project also contains an IntelliJ plugin that allows you to preview the rendered
 documentation directly in the IDE.
+![image](https://github.com/Jolanrensen/docProcessorGradlePlugin/assets/17594275/7f051063-38c7-4e8b-aeb8-fa6cf14a2566)
+
 Currently, the only way to try this is by building the plugin yourself from sources and installing it in IntelliJ.
 The plugin in its current state is unconfigurable and just uses the default processors as shown in the sample above.
 Also, it uses the IDE engine to resolve references.
