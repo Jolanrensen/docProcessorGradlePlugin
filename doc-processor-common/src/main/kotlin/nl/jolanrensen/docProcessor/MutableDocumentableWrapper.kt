@@ -43,7 +43,19 @@ open class MutableDocumentableWrapper(
     identifier = identifier,
     annotationFullyQualifiedPaths = annotationFullyQualifiedPaths,
     fileTextRange = fileTextRange,
-)
+) {
+
+    /**
+     * Overwrites [docContent] and updates [isModified] and [tags] if
+     * it's different from the current [docContent].
+     */
+    fun modifyDocContentAndUpdate(newDocContent: DocContent) {
+        if (newDocContent == docContent) return
+        docContent = newDocContent
+        isModified = true
+        tags = docContent.findTagNamesInDocContent().toSet()
+    }
+}
 
 /** Cast or convert current [DocumentableWrapper] to [MutableDocumentableWrapper]. */
 fun DocumentableWrapper.toMutable(): MutableDocumentableWrapper =

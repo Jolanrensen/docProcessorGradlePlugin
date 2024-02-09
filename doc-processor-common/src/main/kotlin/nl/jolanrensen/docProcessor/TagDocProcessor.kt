@@ -164,16 +164,11 @@ abstract class TagDocProcessor : DocProcessor() {
                         processLimit = processLimit,
                     )
 
+
                     val wasModified = docContent != processedDoc
                     if (wasModified) {
                         anyModifications = true
-                        val tags = processedDoc.findTagNamesInDocContent().toSet()
-
-                        documentable.apply {
-                            this.docContent = processedDoc
-                            this.tags = tags
-                            this.isModified = true
-                        }
+                        documentable.modifyDocContentAndUpdate(processedDoc)
                     }
                 }
             }

@@ -49,6 +49,7 @@ class TestInclude : DocProcessorTest("include") {
             documentableSourceNoDoc = documentableSourceNoDocHelloWorld,
             fullyQualifiedPath = "com.example.plugin.helloWorld",
             docFileTextRange = file.textRangeOf(documentationHelloWorld),
+            fileTextRange = TODO(),
         )
 
         @Language("kt")
@@ -69,6 +70,7 @@ class TestInclude : DocProcessorTest("include") {
             documentableSourceNoDoc = documentableSourceNoDocHelloWorld2,
             fullyQualifiedPath = "com.example.plugin.helloWorld2",
             docFileTextRange = file.textRangeOf(documentationHelloWorld2),
+            fileTextRange = TODO(),
         )
 
         @Language("kt")

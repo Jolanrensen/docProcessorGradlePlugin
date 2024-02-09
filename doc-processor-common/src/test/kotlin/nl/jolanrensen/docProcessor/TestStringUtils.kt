@@ -6,6 +6,20 @@ import org.junit.jupiter.api.Test
 class TestStringUtils {
 
     @Test
+    fun `Remove escape chars`() {
+        val content = """
+            Simplistic JSON path implementation.
+            Supports just keys (in bracket notation), double quotes, arrays, and wildcards.
+            
+            Examples:
+            `\${'$'}["store"]["book"][*]["author"]`
+            
+            `\${'$'}[1]` will match `\${'$'}[*]`""".trimIndent()
+
+        println(content.removeEscapeCharacters())
+    }
+
+    @Test
     fun `Last index of not`() {
         val string = "Hello World!"
 
