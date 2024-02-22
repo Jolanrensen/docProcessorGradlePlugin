@@ -24,7 +24,6 @@ open class DocumentablesByPathFromMap(
 
     override fun query(path: String): List<DocumentableWrapper>? = docsToQuery[path]
 
-    @Suppress("UNCHECKED_CAST")
     override fun toMutable(): MutableDocumentablesByPath =
         this as? MutableDocumentablesByPath ?: MutableDocumentablesByPathFromMap(
             allDocs = allDocs.toMutable(),
@@ -119,7 +118,6 @@ class MutableDocumentablesByPathFromMap(
         when {
             queryFilter == this.queryFilter && docsToProcessFilter == this.documentablesToProcessFilter -> this
             else -> MutableDocumentablesByPathFromMap(
-                // todo slow
                 allDocs = allDocs,
                 queryFilter = queryFilter,
                 documentablesToProcessFilter = docsToProcessFilter,

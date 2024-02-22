@@ -76,7 +76,7 @@ interface MutableDocumentablesByPath : DocumentablesByPath {
 fun <T : DocumentablesByPath> T.withoutFilters(): T =
     when {
         queryFilter == NO_FILTER && documentablesToProcessFilter == NO_FILTER -> this
-        else -> this.withFilters(NO_FILTER, NO_FILTER) as T // todo very slow?
+        else -> this.withFilters(NO_FILTER, NO_FILTER) as T
     }
 
 fun Map<String, List<DocumentableWrapper>>.toDocumentablesByPath(): DocumentablesByPath = DocumentablesByPath.of(this)

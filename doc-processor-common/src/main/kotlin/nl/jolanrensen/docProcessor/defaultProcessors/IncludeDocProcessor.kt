@@ -117,7 +117,7 @@ class IncludeDocProcessor : TagDocProcessor() {
      * Queries the path targeted by the @include tag and returns the docs of that element to
      * overwrite the @include tag.
      */
-    private fun processContent( // TODO takes mildly long
+    private fun processContent(
         line: String,
         documentable: DocumentableWrapper,
     ): String {

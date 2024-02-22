@@ -183,7 +183,7 @@ class ArgDocProcessor : TagDocProcessor() {
             }
         }
 
-    private fun processTag( // TODO takes long
+    private fun processTag(
         tagWithContent: String,
         documentable: DocumentableWrapper,
     ): String {

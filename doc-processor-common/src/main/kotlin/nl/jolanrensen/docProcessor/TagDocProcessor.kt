@@ -97,7 +97,7 @@ abstract class TagDocProcessor : DocProcessor() {
      *  Can contain newlines, and does include tag.
      *  The block continues until the next tag block starts.
      * @param [path] The path of the doc where the tag is found.
-     * @param [documentable] The Documentable beloning to the current tag.
+     * @param [documentable] The Documentable belonging to the current tag.
      *
      * @return A [String] that will replace the tag with content entirely.
      */
@@ -164,7 +164,6 @@ abstract class TagDocProcessor : DocProcessor() {
                         processLimit = processLimit,
                     )
 
-
                     val wasModified = docContent != processedDoc
                     if (wasModified) {
                         anyModifications = true
@@ -184,7 +183,6 @@ abstract class TagDocProcessor : DocProcessor() {
         return mutableDocumentablesByPath
     }
 
-    // TODO function takes the longest time to run
     private fun processTagsInContent(
         docContent: DocContent,
         path: String,
@@ -194,7 +192,6 @@ abstract class TagDocProcessor : DocProcessor() {
         logger.info { "Processing inline tags in doc at '$path'" }
 
         // Process the inline tags first
-        // TODO here takes long
         val processedInlineTagsDoc: DocContent = run {
             var text = docContent
 
@@ -216,7 +213,7 @@ abstract class TagDocProcessor : DocProcessor() {
                     }
 
                     val newTagContent = try {
-                        processInlineTagWithContent( // TODO here
+                        processInlineTagWithContent(
                             tagWithContent = tagContent,
                             path = path,
                             documentable = documentable,
@@ -264,7 +261,7 @@ abstract class TagDocProcessor : DocProcessor() {
 
                 if (shouldProcess) {
                     try {
-                        processBlockTagWithContent( // TODO and here
+                        processBlockTagWithContent(
                             tagWithContent = split,
                             path = path,
                             documentable = documentable,
@@ -334,7 +331,17 @@ open class TagDocProcessorFailedException(
             appendLine("Doc processor $processorName failed processing doc:")
             appendLine("Doc location: ${documentable.file.absolutePath}:$docLine:$docChar")
             appendLine("Exception location: ${documentable.file.absolutePath}:$exceptionLine:$exceptionChar")
-            appendLine("Tag throwing the exception: ${highlightException(currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)))}")
+            appendLine(
+                "Tag throwing the exception: ${
+                    highlightException(
+                        currentDoc.substring(
+                            rangeInCurrentDoc.coerceAtMost(
+                                currentDoc.lastIndex
+                            )
+                        )
+                    )
+                }"
+            )
             cause?.message?.let {
                 appendLine("Reason for the exception: $it")
             }

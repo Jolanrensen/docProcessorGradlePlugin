@@ -237,8 +237,8 @@ fun PsiMethod.findSuperMethodsOrEmptyArray(logger: DokkaLogger): Array<PsiMethod
 
 fun findClosestDocComment(element: PsiNamedElement?, logger: DokkaLogger): DocComment? {
     if (element == null) return null
-    (element as? PsiDocCommentOwner)?.docComment?.run { return JavaDocComment(this) }
-    element.toKdocComment()?.run { return this }
+    (element as? PsiDocCommentOwner)?.docComment?.run { return@findClosestDocComment JavaDocComment(this) }
+    element.toKdocComment()?.run { return@findClosestDocComment this }
 
     if (element is PsiMethod) {
         val superMethods = element.findSuperMethodsOrEmptyArray(logger)
