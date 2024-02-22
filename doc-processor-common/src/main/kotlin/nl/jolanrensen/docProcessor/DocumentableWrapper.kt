@@ -146,10 +146,12 @@ open class DocumentableWrapper(
      */
     fun getAllFullPathsFromHereForTargetPath(
         targetPath: String,
-        documentables: DocumentablesByPath,
+        documentablesNoFilters: DocumentablesByPath,
         canBeExtension: Boolean = true,
     ): List<String> {
-        val documentablesNoFilters = documentables.withoutFilters()
+        require(documentablesNoFilters.run { queryFilter == NO_FILTER && documentablesToProcessFilter == NO_FILTER }) {
+            "DocumentablesByPath must not have any filters in `getAllFullPathsFromHereForTargetPath()`."
+        }
         val paths = getAllTypes(documentablesNoFilters).flatMap {
             listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath)
         }
@@ -185,8 +187,10 @@ open class DocumentableWrapper(
             }
 
             // if that is the case, we need to find the type of the receiver and get all full paths from there too
+            @Suppress("NamedArgsPositionMismatch")
             val targetType = queryDocumentables(
                 query = targetPathReceiver,
+                documentablesNoFilters = documentablesNoFilters,
                 documentables = documentablesNoFilters,
                 canBeExtension = false,
             ) { it != this@DocumentableWrapper }
@@ -208,18 +212,23 @@ open class DocumentableWrapper(
      */
     fun queryDocumentables(
         query: String,
-        documentables: DocumentablesByPath,
+        documentablesNoFilters: DocumentablesByPath,
+        documentables: DocumentablesByPath, // todo = documentablesNoFilters
         canBeExtension: Boolean = true,
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): DocumentableWrapper? {
-        val queries = getAllFullPathsFromHereForTargetPath(query, documentables, canBeExtension).toMutableList()
+        val queries = getAllFullPathsFromHereForTargetPath(
+            targetPath = query,
+            documentablesNoFilters = documentablesNoFilters,
+            canBeExtension = canBeExtension,
+        ).toMutableList()
 
         if (programmingLanguage == JAVA) { // support KotlinFileKt.Notation from java
             val splitQuery = query.split(".")
             if (splitQuery.firstOrNull()?.endsWith("Kt") == true) {
                 queries += getAllFullPathsFromHereForTargetPath(
                     targetPath = splitQuery.drop(1).joinToString("."),
-                    documentables = documentables,
+                    documentablesNoFilters = documentablesNoFilters,
                     canBeExtension = canBeExtension
                 )
             }
@@ -237,12 +246,19 @@ open class DocumentableWrapper(
      */
     fun queryDocumentablesForPath(
         query: String,
-        documentables: DocumentablesByPath,
+        documentablesNoFilters: DocumentablesByPath,
+        documentables: DocumentablesByPath, // todo = documentablesNoFilters
         canBeExtension: Boolean = true,
         pathIsValid: (String, DocumentableWrapper) -> Boolean = { _, _ -> true },
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): String? {
-        val docPath = queryDocumentables(query, documentables, canBeExtension, filter)?.let {
+        val docPath = queryDocumentables(
+            query = query,
+            documentablesNoFilters = documentablesNoFilters,
+            documentables = documentables,
+            canBeExtension = canBeExtension,
+            filter = filter,
+        )?.let {
             // take either the normal path to the doc or the extension path depending on which is valid and
             // causes the smallest number of collisions
             listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath)
@@ -252,7 +268,11 @@ open class DocumentableWrapper(
         if (docPath != null) return docPath
 
         // if there is no doc for the query, then we just return the first matching path
-        val queries = getAllFullPathsFromHereForTargetPath(query, documentables, canBeExtension)
+        val queries = getAllFullPathsFromHereForTargetPath(
+            targetPath = query,
+            documentablesNoFilters = documentablesNoFilters,
+            canBeExtension = canBeExtension,
+        )
 
         return queries.firstOrNull {
             documentables[it] != null

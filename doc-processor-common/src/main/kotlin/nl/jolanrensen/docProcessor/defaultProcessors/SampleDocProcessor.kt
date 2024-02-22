@@ -8,6 +8,7 @@ import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.docRegex
 import nl.jolanrensen.docProcessor.getTagArguments
+import nl.jolanrensen.docProcessor.withoutFilters
 import org.apache.commons.text.StringEscapeUtils
 
 /**
@@ -36,7 +37,9 @@ class SampleDocProcessor : TagDocProcessor() {
 
     private val sampleTag = "sample"
     private val sampleNoComments = "sampleNoComments"
-    override fun tagIsSupported(tag: String): Boolean = tag in listOf(sampleTag, sampleNoComments)
+    private val supportedTags = listOf(sampleTag, sampleNoComments)
+
+    override fun tagIsSupported(tag: String): Boolean = tag in supportedTags
 
     private val sampleStartRegex = Regex(" *// *SampleStart *\n")
     private val sampleEndRegex = Regex(" *// *SampleEnd *\n")
@@ -45,6 +48,7 @@ class SampleDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         documentable: DocumentableWrapper,
     ): String {
+        val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
         val noComments = tagWithContent.startsWith("{@$sampleNoComments") ||
                 tagWithContent.trimStart().startsWith("@$sampleNoComments ")
 
@@ -59,7 +63,10 @@ class SampleDocProcessor : TagDocProcessor() {
         // for stuff written after the @sample tag, save and include it later
         val extraContent = sampleArguments.getOrElse(1) { "" }
 
-        val queries = documentable.getAllFullPathsFromHereForTargetPath(samplePath, documentablesByPath)
+        val queries = documentable.getAllFullPathsFromHereForTargetPath(
+            targetPath = samplePath,
+            documentablesNoFilters = unfilteredDocumentablesByPath,
+        )
 
         // query all documents for the sample path
         val targetDocumentable = queries.firstNotNullOfOrNull { query ->

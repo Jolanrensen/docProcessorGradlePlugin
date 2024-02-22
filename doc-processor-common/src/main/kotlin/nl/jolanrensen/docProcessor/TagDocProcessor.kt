@@ -184,6 +184,7 @@ abstract class TagDocProcessor : DocProcessor() {
         return mutableDocumentablesByPath
     }
 
+    // TODO function takes the longest time to run
     private fun processTagsInContent(
         docContent: DocContent,
         path: String,
@@ -193,6 +194,7 @@ abstract class TagDocProcessor : DocProcessor() {
         logger.info { "Processing inline tags in doc at '$path'" }
 
         // Process the inline tags first
+        // TODO here takes long
         val processedInlineTagsDoc: DocContent = run {
             var text = docContent
 
@@ -214,7 +216,7 @@ abstract class TagDocProcessor : DocProcessor() {
                     }
 
                     val newTagContent = try {
-                        processInlineTagWithContent(
+                        processInlineTagWithContent( // TODO here
                             tagWithContent = tagContent,
                             path = path,
                             documentable = documentable,
@@ -262,7 +264,7 @@ abstract class TagDocProcessor : DocProcessor() {
 
                 if (shouldProcess) {
                     try {
-                        processBlockTagWithContent(
+                        processBlockTagWithContent( // TODO and here
                             tagWithContent = split,
                             path = path,
                             documentable = documentable,
@@ -332,7 +334,7 @@ open class TagDocProcessorFailedException(
             appendLine("Doc processor $processorName failed processing doc:")
             appendLine("Doc location: ${documentable.file.absolutePath}:$docLine:$docChar")
             appendLine("Exception location: ${documentable.file.absolutePath}:$exceptionLine:$exceptionChar")
-            appendLine("Tag throwing the exception: ${highlightException(currentDoc.substring(rangeInCurrentDoc))}")
+            appendLine("Tag throwing the exception: ${highlightException(currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)))}")
             cause?.message?.let {
                 appendLine("Reason for the exception: $it")
             }
@@ -342,8 +344,8 @@ open class TagDocProcessorFailedException(
             appendLine(
                 try {
                     currentDoc.replaceRange(
-                        range = rangeInCurrentDoc,
-                        replacement = highlightException(currentDoc.substring(rangeInCurrentDoc)),
+                        range = rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex),
+                        replacement = highlightException(currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex))),
                     )
                 } catch (e: Throwable) {
                     currentDoc

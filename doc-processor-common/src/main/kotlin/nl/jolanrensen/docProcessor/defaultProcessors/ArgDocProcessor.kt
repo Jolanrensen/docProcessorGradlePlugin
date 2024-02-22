@@ -85,11 +85,12 @@ class ArgDocProcessor : TagDocProcessor() {
         ) + OLD_DECLARE_ARGUMENT_TAGS
     }
 
-    override fun tagIsSupported(tag: String): Boolean =
-        tag in listOf(
-            RETRIEVE_ARGUMENT_TAGS,
-            DECLARE_ARGUMENT_TAGS,
-        ).flatten()
+    private val supportedTags = listOf(
+        RETRIEVE_ARGUMENT_TAGS,
+        DECLARE_ARGUMENT_TAGS,
+    ).flatten()
+
+    override fun tagIsSupported(tag: String): Boolean = tag in supportedTags
 
     data class DocWrapperWithArgMap(
         val doc: DocumentableWrapper,
@@ -182,10 +183,11 @@ class ArgDocProcessor : TagDocProcessor() {
             }
         }
 
-    private fun processTag(
+    private fun processTag( // TODO takes long
         tagWithContent: String,
         documentable: DocumentableWrapper,
     ): String {
+        val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
         val tagName = tagWithContent.getTagNameOrNull()
         val isDeclareArgumentDeclaration = tagName in DECLARE_ARGUMENT_TAGS
 
@@ -209,7 +211,7 @@ class ArgDocProcessor : TagDocProcessor() {
                 var keys = listOf(originalKey)
 
                 if (originalKey.startsWith('[') && originalKey.contains(']')) {
-                    keys = buildReferenceKeys(originalKey, documentable)
+                    keys = buildReferenceKeys(originalKey, documentable, unfilteredDocumentablesByPath)
                 }
 
                 val value = argArguments.getOrElse(1) { "" }
@@ -261,7 +263,7 @@ class ArgDocProcessor : TagDocProcessor() {
                 }
 
                 if (originalKey.startsWith('[') && originalKey.contains(']')) {
-                    keys = buildReferenceKeys(originalKey, documentable)
+                    keys = buildReferenceKeys(originalKey, documentable, unfilteredDocumentablesByPath)
                 }
 
                 val content = keys.firstNotNullOfOrNull { key ->
@@ -303,11 +305,13 @@ class ArgDocProcessor : TagDocProcessor() {
     private fun buildReferenceKeys(
         originalKey: String,
         documentable: DocumentableWrapper,
+        documentablesNoFilters: DocumentablesByPath,
     ): List<String> {
         var keys = listOf(originalKey)
         val reference = originalKey.decodeCallableTarget()
         val referencedDocumentable = documentable.queryDocumentables(
             query = reference,
+            documentablesNoFilters = documentablesNoFilters,
             documentables = documentablesByPath,
         )
 

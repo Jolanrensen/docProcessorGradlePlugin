@@ -1,7 +1,8 @@
 package nl.jolanrensen.docProcessor
 
 import nl.jolanrensen.docProcessor.ReferenceState.*
-import java.util.Comparator
+import java.util.*
+import kotlin.collections.ArrayDeque
 
 /**
  * Just the contents of the comment, without the `*`-stuff.
@@ -420,11 +421,12 @@ fun DocContent.splitDocContentPerBlockWithRanges(): List<Pair<DocContent, IntRan
  * The list is sorted by depth, with the deepest tags first and then by order of appearance.
  * "{@}" marks are ignored if "\" escaped.
  */
-fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, IntRange>> {
+// TODO slow
+fun DocContent.findInlineTagNamesInDocContentWithRangesOld(): List<Pair<String, IntRange>> {
     var text = this
 
     /*
-     * Finds any inline {@tag ...} with its depth, preferring the innermost one.
+     * Finds the first inline {@tag ...} with its depth, preferring the innermost one.
      * "{@..}" marks are ignored if "\" escaped.
      */
     fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
@@ -438,7 +440,7 @@ fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, Int
 
                 char == '\\' -> escapeNext = true
 
-                char == '{' && this.getOrNull(i + 1) == '@' -> {
+                char == '{' && this.getOrElse(i + 1) { ' ' } == '@' -> {
                     start = i
                     depth++
                 }
@@ -452,24 +454,61 @@ fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, Int
         }
         return null
     }
-
+    // todo mildly slow
     return buildMap<Int, MutableList<Pair<String, IntRange>>> {
-        while (text.findInlineTagRangesWithDepthOrNull() != null) {
-            val (range, depth) = text.findInlineTagRangesWithDepthOrNull()!!
+        var tagsRanges = text.findInlineTagRangesWithDepthOrNull()
+        while (tagsRanges != null) {
+            val (range, depth) = tagsRanges
             val comment = text.substring(range)
             comment.getTagNameOrNull()?.let { tagName ->
                 getOrPut(depth) { mutableListOf() } += Pair(tagName, range)
             }
-
+            val newComment = comment
+                .replace('{', '<')
+                .replace('}', '>')
             text = text.replaceRange(
                 range = range,
-                replacement = comment
-                    .replace('{', '<')
-                    .replace('}', '>'),
+                replacement = newComment,
             )
+            tagsRanges = text.findInlineTagRangesWithDepthOrNull()
         }
     }.toSortedMap(Comparator.reverseOrder())
         .flatMap { it.value }
+}
+
+fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, IntRange>> {
+    val text = this
+    val map: SortedMap<Int, MutableList<Pair<String, IntRange>>> = sortedMapOf(Comparator.reverseOrder())
+
+    val queue = ArrayDeque<Int>() // holds the current start indices of {@tags found
+
+    var escapeNext = false
+    for ((i, char) in this.withIndex()) {
+        when {
+            escapeNext -> escapeNext = false
+
+            char == '\\' -> escapeNext = true
+
+            char == '{' && this.getOrElse(i + 1) { ' ' } == '@' -> {
+                queue.addLast(i)
+            }
+
+            char == '}' -> {
+                if (queue.isNotEmpty()) {
+                    val start = queue.removeLast()
+                    val end = i
+                    val depth = queue.size
+                    val tag = text.substring(start..end)
+                    val tagName = tag.getTagNameOrNull()
+
+                    if (tagName != null) {
+                        map.getOrPut(depth) { mutableListOf() } += tagName to start..end
+                    }
+                }
+            }
+        }
+    }
+    return map.values.flatten()
 }
 
 /**
@@ -607,3 +646,9 @@ fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {
     }
     return true
 }
+
+fun IntRange.coerceIn(start: Int = Int.MIN_VALUE, endInclusive: Int = Int.MAX_VALUE) =
+    first.coerceAtLeast(start)..last.coerceAtMost(endInclusive)
+
+fun IntRange.coerceAtMost(endInclusive: Int) =
+    first.coerceAtMost(endInclusive)..last.coerceAtMost(endInclusive)
