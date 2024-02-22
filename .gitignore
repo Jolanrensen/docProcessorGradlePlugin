@@ -25,3 +25,4 @@ hs_err_pid*
 /kdoc-include-gradle-plugin/build/
 /build/
 /.idea/
+/doc-processor-gradle-plugin/src/functionalTest/resources/dataframe/

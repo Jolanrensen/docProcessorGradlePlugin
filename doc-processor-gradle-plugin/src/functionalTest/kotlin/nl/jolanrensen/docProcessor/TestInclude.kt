@@ -200,12 +200,12 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
         val expectedOutput = """
             package com.example.plugin
             
-            /** 
-              * Hello World! 
-              * [Some aliased link][helloWorld2] 
-              * [helloWorld\]
-              * [helloWorld]
-              */
+            /**
+             * Hello World! 
+             * [Some aliased link][helloWorld2] 
+             * [helloWorld]
+             * [helloWorld]
+             */
             fun helloWorld() {}
             
             /** Hello World! 

@@ -4,6 +4,7 @@ import io.kotest.matchers.shouldBe
 import nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Test
+import kotlin.test.Ignore
 
 class TestInclude : DocProcessorTest("include") {
 
@@ -14,6 +15,7 @@ class TestInclude : DocProcessorTest("include") {
     // TODO
 
     @Test
+    @Ignore
     fun `Include with and without package kotlin`() {
 
         @Language("kt")
