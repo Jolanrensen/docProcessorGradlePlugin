@@ -1,7 +1,8 @@
 package nl.jolanrensen.docProcessor
 
 import nl.jolanrensen.docProcessor.ReferenceState.*
-import java.util.Comparator
+import java.util.*
+import kotlin.collections.ArrayDeque
 
 /**
  * Just the contents of the comment, without the `*`-stuff.
@@ -421,55 +422,39 @@ fun DocContent.splitDocContentPerBlockWithRanges(): List<Pair<DocContent, IntRan
  * "{@}" marks are ignored if "\" escaped.
  */
 fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, IntRange>> {
-    var text = this
+    val text = this
+    val map: SortedMap<Int, MutableList<Pair<String, IntRange>>> = sortedMapOf(Comparator.reverseOrder())
 
-    /*
-     * Finds any inline {@tag ...} with its depth, preferring the innermost one.
-     * "{@..}" marks are ignored if "\" escaped.
-     */
-    fun DocContent.findInlineTagRangesWithDepthOrNull(): Pair<IntRange, Int>? {
-        var depth = 0
-        var start: Int? = null
-        var escapeNext = false
-        for ((i, char) in this.withIndex()) {
-            // escape this char
-            when {
-                escapeNext -> escapeNext = false
+    // holds the current start indices of {@tags found
+    val queue = ArrayDeque<Int>()
 
-                char == '\\' -> escapeNext = true
+    var escapeNext = false
+    for ((i, char) in this.withIndex()) {
+        when {
+            escapeNext -> escapeNext = false
 
-                char == '{' && this.getOrNull(i + 1) == '@' -> {
-                    start = i
-                    depth++
-                }
+            char == '\\' -> escapeNext = true
 
-                char == '}' -> {
-                    if (start != null) {
-                        return Pair(start..i, depth)
+            char == '{' && this.getOrElse(i + 1) { ' ' } == '@' -> {
+                queue.addLast(i)
+            }
+
+            char == '}' -> {
+                if (queue.isNotEmpty()) {
+                    val start = queue.removeLast()
+                    val end = i
+                    val depth = queue.size
+                    val tag = text.substring(start..end)
+                    val tagName = tag.getTagNameOrNull()
+
+                    if (tagName != null) {
+                        map.getOrPut(depth) { mutableListOf() } += tagName to start..end
                     }
                 }
             }
         }
-        return null
     }
-
-    return buildMap<Int, MutableList<Pair<String, IntRange>>> {
-        while (text.findInlineTagRangesWithDepthOrNull() != null) {
-            val (range, depth) = text.findInlineTagRangesWithDepthOrNull()!!
-            val comment = text.substring(range)
-            comment.getTagNameOrNull()?.let { tagName ->
-                getOrPut(depth) { mutableListOf() } += Pair(tagName, range)
-            }
-
-            text = text.replaceRange(
-                range = range,
-                replacement = comment
-                    .replace('{', '<')
-                    .replace('}', '>'),
-            )
-        }
-    }.toSortedMap(Comparator.reverseOrder())
-        .flatMap { it.value }
+    return map.values.flatten()
 }
 
 /**
@@ -487,7 +472,8 @@ fun DocContent.findBlockTagNamesInDocContent(): List<String> =
 
 /** Finds all tag names, including inline and block tags. */
 fun DocContent.findTagNamesInDocContent(): List<String> =
-    findInlineTagNamesInDocContent() + findBlockTagNamesInDocContent()
+    findInlineTagNamesInDocContent() +
+            findBlockTagNamesInDocContent()
 
 
 /** Is able to find an entire JavaDoc/KDoc comment including the starting indent. */
@@ -607,3 +593,9 @@ fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {
     }
     return true
 }
+
+fun IntRange.coerceIn(start: Int = Int.MIN_VALUE, endInclusive: Int = Int.MAX_VALUE) =
+    first.coerceAtLeast(start)..last.coerceAtMost(endInclusive)
+
+fun IntRange.coerceAtMost(endInclusive: Int) =
+    first.coerceAtMost(endInclusive)..last.coerceAtMost(endInclusive)

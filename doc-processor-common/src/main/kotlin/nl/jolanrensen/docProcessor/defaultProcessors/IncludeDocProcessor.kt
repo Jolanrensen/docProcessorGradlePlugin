@@ -131,19 +131,24 @@ class IncludeDocProcessor : TagDocProcessor() {
         val targetDocumentable = documentable.queryDocumentables(
             query = includePath,
             documentables = documentablesByPath,
+            documentablesNoFilters = unfilteredDocumentablesByPath,
         ) { it != documentable }
 
         if (targetDocumentable == null) {
             val targetDocumentableNoFilter = documentable.queryDocumentables(
                 query = includePath,
                 documentables = documentablesByPath,
+                documentablesNoFilters = unfilteredDocumentablesByPath,
             )
-            val attemptedQueries = documentable.getAllFullPathsFromHereForTargetPath(includePath, unfilteredDocumentablesByPath)
-                .joinToString("\n") { "|  $it" }
+            val attemptedQueries = documentable.getAllFullPathsFromHereForTargetPath(
+                targetPath = includePath,
+                documentablesNoFilters = unfilteredDocumentablesByPath,
+            ).joinToString("\n") { "|  $it" }
 
             val targetPath = documentable.queryDocumentablesForPath(
                 query = includePath,
                 documentables = unfilteredDocumentablesByPath,
+                documentablesNoFilters = unfilteredDocumentablesByPath,
             )
 
             error(
@@ -182,12 +187,14 @@ class IncludeDocProcessor : TagDocProcessor() {
                 targetDocumentable.queryDocumentablesForPath(
                     query = query,
                     documentables = unfilteredDocumentablesByPath,
+                    documentablesNoFilters = unfilteredDocumentablesByPath,
                     pathIsValid = { path, it ->
                         // ensure that the given path points to the same element in the destination place and
                         // that it's queryable
                         documentable.queryDocumentables(
                             query = path,
                             documentables = unfilteredDocumentablesByPath,
+                            documentablesNoFilters = unfilteredDocumentablesByPath,
                         ) == it
                     },
                 ) ?: query

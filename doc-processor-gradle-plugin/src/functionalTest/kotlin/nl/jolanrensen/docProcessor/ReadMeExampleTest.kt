@@ -108,7 +108,6 @@ class ReadMeExampleTest : DocProcessorFunctionalTest("readMe") {
             public fun submit(number: Double, location: File, onException: (e: Exception) -> Unit): Boolean = TODO()
         """.trimIndent()
 
-        // TODO @ExcludeFromSources
         @Language("kt")
         val expected = """
             package com.example.plugin

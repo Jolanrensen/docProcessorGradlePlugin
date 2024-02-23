@@ -97,7 +97,7 @@ abstract class TagDocProcessor : DocProcessor() {
      *  Can contain newlines, and does include tag.
      *  The block continues until the next tag block starts.
      * @param [path] The path of the doc where the tag is found.
-     * @param [documentable] The Documentable beloning to the current tag.
+     * @param [documentable] The Documentable belonging to the current tag.
      *
      * @return A [String] that will replace the tag with content entirely.
      */
@@ -163,7 +163,6 @@ abstract class TagDocProcessor : DocProcessor() {
                         documentable = documentable,
                         processLimit = processLimit,
                     )
-
 
                     val wasModified = docContent != processedDoc
                     if (wasModified) {
@@ -332,7 +331,17 @@ open class TagDocProcessorFailedException(
             appendLine("Doc processor $processorName failed processing doc:")
             appendLine("Doc location: ${documentable.file.absolutePath}:$docLine:$docChar")
             appendLine("Exception location: ${documentable.file.absolutePath}:$exceptionLine:$exceptionChar")
-            appendLine("Tag throwing the exception: ${highlightException(currentDoc.substring(rangeInCurrentDoc))}")
+            appendLine(
+                "Tag throwing the exception: ${
+                    highlightException(
+                        currentDoc.substring(
+                            rangeInCurrentDoc.coerceAtMost(
+                                currentDoc.lastIndex
+                            )
+                        )
+                    )
+                }"
+            )
             cause?.message?.let {
                 appendLine("Reason for the exception: $it")
             }
@@ -342,8 +351,8 @@ open class TagDocProcessorFailedException(
             appendLine(
                 try {
                     currentDoc.replaceRange(
-                        range = rangeInCurrentDoc,
-                        replacement = highlightException(currentDoc.substring(rangeInCurrentDoc)),
+                        range = rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex),
+                        replacement = highlightException(currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex))),
                     )
                 } catch (e: Throwable) {
                     currentDoc
