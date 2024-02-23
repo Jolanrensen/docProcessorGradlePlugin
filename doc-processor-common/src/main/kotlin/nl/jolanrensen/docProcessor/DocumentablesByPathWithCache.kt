@@ -8,10 +8,13 @@ open class DocumentablesByPathWithCache(
 ) : DocumentablesByPath {
 
     override val documentablesToProcess: Map<String, List<DocumentableWrapper>> =
-        unfilteredDocsToProcess
-            .mapValues { (_, documentables) ->
-                documentables.filter(documentablesToProcessFilter)
-            }
+        when (documentablesToProcessFilter) {
+            NO_FILTER -> unfilteredDocsToProcess
+            else -> unfilteredDocsToProcess
+                .mapValues { (_, documentables) ->
+                    documentables.filter(documentablesToProcessFilter)
+                }
+        }
 
     private val queryCache: MutableMap<String, List<DocumentableWrapper>> = mutableMapOf()
 
@@ -22,40 +25,49 @@ open class DocumentablesByPathWithCache(
                 ?: return@query null
         }
 
-    @Suppress("UNCHECKED_CAST")
-    override fun toMutable(): MutableDocumentablesByPath = MutableDocumentablesByPathWithCache(
-        unfilteredDocsToProcess = unfilteredDocsToProcess.toMutable(),
-        query = { query(it)?.map { it.toMutable() } },
-        queryFilter = queryFilter,
-        documentablesToProcessFilter = documentablesToProcessFilter,
-    )
-
-    override fun withQueryFilter(queryFilter: DocumentableWrapperFilter): DocumentablesByPath =
-        DocumentablesByPathWithCache(
-            unfilteredDocsToProcess = unfilteredDocsToProcess,
-            query = query,
+    override fun toMutable(): MutableDocumentablesByPath =
+        MutableDocumentablesByPathWithCache(
+            unfilteredDocsToProcess = unfilteredDocsToProcess.toMutable(),
+            query = { query(it)?.map { it.toMutable() } },
             queryFilter = queryFilter,
             documentablesToProcessFilter = documentablesToProcessFilter,
         )
 
+    override fun withQueryFilter(queryFilter: DocumentableWrapperFilter): DocumentablesByPath =
+        when {
+            queryFilter == this.queryFilter -> this
+            else -> DocumentablesByPathWithCache(
+                unfilteredDocsToProcess = unfilteredDocsToProcess,
+                query = query,
+                queryFilter = queryFilter,
+                documentablesToProcessFilter = documentablesToProcessFilter,
+            )
+        }
+
     override fun withDocsToProcessFilter(docsToProcessFilter: DocumentableWrapperFilter): DocumentablesByPath =
-        DocumentablesByPathWithCache(
-            unfilteredDocsToProcess = unfilteredDocsToProcess,
-            query = query,
-            queryFilter = queryFilter,
-            documentablesToProcessFilter = docsToProcessFilter,
-        )
+        when {
+            docsToProcessFilter == this.documentablesToProcessFilter -> this
+            else -> DocumentablesByPathWithCache(
+                unfilteredDocsToProcess = unfilteredDocsToProcess,
+                query = query,
+                queryFilter = queryFilter,
+                documentablesToProcessFilter = docsToProcessFilter,
+            )
+        }
 
     override fun withFilters(
         queryFilter: DocumentableWrapperFilter,
         docsToProcessFilter: DocumentableWrapperFilter,
     ): DocumentablesByPath =
-        DocumentablesByPathWithCache(
-            unfilteredDocsToProcess = unfilteredDocsToProcess,
-            query = query,
-            queryFilter = queryFilter,
-            documentablesToProcessFilter = docsToProcessFilter,
-        )
+        when {
+            queryFilter == this.queryFilter && docsToProcessFilter == this.documentablesToProcessFilter -> this
+            else -> DocumentablesByPathWithCache(
+                unfilteredDocsToProcess = unfilteredDocsToProcess,
+                query = query,
+                queryFilter = queryFilter,
+                documentablesToProcessFilter = docsToProcessFilter,
+            )
+        }
 }
 
 class MutableDocumentablesByPathWithCache(
@@ -66,10 +78,13 @@ class MutableDocumentablesByPathWithCache(
 ) : MutableDocumentablesByPath {
 
     override val documentablesToProcess: Map<String, List<MutableDocumentableWrapper>> =
-        unfilteredDocsToProcess
-            .mapValues { (_, documentables) ->
-                documentables.filter(documentablesToProcessFilter)
-            }
+        when (documentablesToProcessFilter) {
+            NO_FILTER -> unfilteredDocsToProcess
+            else -> unfilteredDocsToProcess
+                .mapValues { (_, documentables) ->
+                    documentables.filter(documentablesToProcessFilter)
+                }
+        }
 
     private val queryCache: MutableMap<String, List<MutableDocumentableWrapper>> = mutableMapOf()
 
@@ -83,29 +98,38 @@ class MutableDocumentablesByPathWithCache(
     override fun toMutable(): MutableDocumentablesByPath = this
 
     override fun withQueryFilter(queryFilter: DocumentableWrapperFilter): MutableDocumentablesByPath =
-        MutableDocumentablesByPathWithCache(
-            unfilteredDocsToProcess = unfilteredDocsToProcess,
-            query = query,
-            queryFilter = queryFilter,
-            documentablesToProcessFilter = documentablesToProcessFilter,
-        )
+        when {
+            queryFilter == this.queryFilter -> this
+            else -> MutableDocumentablesByPathWithCache(
+                unfilteredDocsToProcess = unfilteredDocsToProcess,
+                query = query,
+                queryFilter = queryFilter,
+                documentablesToProcessFilter = documentablesToProcessFilter,
+            )
+        }
 
     override fun withDocsToProcessFilter(docsToProcessFilter: DocumentableWrapperFilter): MutableDocumentablesByPath =
-        MutableDocumentablesByPathWithCache(
-            unfilteredDocsToProcess = unfilteredDocsToProcess,
-            query = query,
-            queryFilter = queryFilter,
-            documentablesToProcessFilter = docsToProcessFilter,
-        )
+        when {
+            docsToProcessFilter == this.documentablesToProcessFilter -> this
+            else -> MutableDocumentablesByPathWithCache(
+                unfilteredDocsToProcess = unfilteredDocsToProcess,
+                query = query,
+                queryFilter = queryFilter,
+                documentablesToProcessFilter = docsToProcessFilter,
+            )
+        }
 
     override fun withFilters(
         queryFilter: DocumentableWrapperFilter,
         docsToProcessFilter: DocumentableWrapperFilter,
     ): MutableDocumentablesByPath =
-        MutableDocumentablesByPathWithCache(
-            unfilteredDocsToProcess = unfilteredDocsToProcess,
-            query = query,
-            queryFilter = queryFilter,
-            documentablesToProcessFilter = docsToProcessFilter,
-        )
+        when {
+            queryFilter == this.queryFilter && docsToProcessFilter == this.documentablesToProcessFilter -> this
+            else -> MutableDocumentablesByPathWithCache(
+                unfilteredDocsToProcess = unfilteredDocsToProcess,
+                query = query,
+                queryFilter = queryFilter,
+                documentablesToProcessFilter = docsToProcessFilter,
+            )
+        }
 }
