@@ -71,7 +71,7 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
         }
     """.trimIndent()
 
-    private val projectDirectory = File("build/extension-plugin")
+    private val extProjectDirectory = File("build/extension-plugin")
 
     init {
         initializePluginProjectFiles()
@@ -99,7 +99,7 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
         GradleRunner.create()
             .forwardOutput()
             .withArguments("clean", "publishToMavenLocal")
-            .withProjectDir(projectDirectory)
+            .withProjectDir(extProjectDirectory)
             .withDebug(true)
             .build()
     }
@@ -109,13 +109,13 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
      */
     private fun initializePluginProjectFiles() {
         // Set up the test build
-        projectDirectory.deleteRecursively()
-        projectDirectory.mkdirs()
+        extProjectDirectory.deleteRecursively()
+        extProjectDirectory.mkdirs()
 
-        File(projectDirectory, "settings.gradle.kts")
+        File(extProjectDirectory, "settings.gradle.kts")
             .write(settingsFile)
 
-        File(projectDirectory, "build.gradle.kts")
+        File(extProjectDirectory, "build.gradle.kts")
             .write(buildFile)
     }
 
@@ -124,7 +124,7 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
      */
     private fun writeAdditionalPluginFiles(additionalFiles: List<Additional>) {
         for (additional in additionalFiles) {
-            with(File(projectDirectory, additional.relativePath)) {
+            with(File(extProjectDirectory, additional.relativePath)) {
                 when (additional) {
                     is AdditionalDirectory -> mkdirs()
                     is AdditionalFile -> write(additional.content)

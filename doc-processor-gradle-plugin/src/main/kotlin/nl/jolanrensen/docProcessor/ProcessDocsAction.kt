@@ -37,6 +37,7 @@ abstract class ProcessDocsAction {
         val sources: DokkaSourceSetImpl
         val sourceRoots: List<File>
         val target: File?
+        val exportAsHtmlDir: File?
         val processors: List<String>
         val processLimit: Int
         val arguments: Map<String, Any?>
@@ -74,6 +75,9 @@ abstract class ProcessDocsAction {
 
         // copy the sources to the target folder while replacing all docs in modified documentables
         copyAndModifySources(modifiedDocumentablesPerFile, documentablesToExcludeFromSourcesPerFile)
+
+        // export htmls
+        exportHtmls(modifiedDocumentables.values.flatten())
     }
 
     private fun analyseSourcesWithDokka(): DocumentablesByPath {
@@ -183,8 +187,8 @@ abstract class ProcessDocsAction {
             .entries
             .flatMap {
                 it.value.filter {
-                    it.annotationFullyQualifiedPaths.any {
-                        it.split('.').last() == ExcludeFromSources::class.simpleName
+                    it.annotations.any {
+                        it.simpleName == ExcludeFromSources::class.simpleName
                     }
                 }
             }
@@ -255,6 +259,30 @@ abstract class ProcessDocsAction {
                     throw IOException("Could not write to target file $targetFile", e)
                 }
             }
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun exportHtmls(documentables: List<DocumentableWrapper>) {
+        val htmlDir = parameters.exportAsHtmlDir?.also { it.mkdirs() }
+            ?: throw IOException("No exportAsHtmlDir specified")
+
+        for (doc in documentables) {
+            val exportHtmlAnnotation = doc.annotations.find {
+                it.simpleName == ExportAsHtml::class.simpleName
+            }
+            if (exportHtmlAnnotation == null) continue
+
+            val addTheme = exportHtmlAnnotation.arguments.firstOrNull { (it, _) ->
+                it == ExportAsHtml::theme.name
+            }?.second as? Boolean?
+                ?: true
+
+            val html = doc.docContent.renderToHtml(theme = addTheme)
+            val file = File(htmlDir, doc.fullyQualifiedPath + ".html")
+            file.writeText(html)
+
+            log.lifecycle { "Exported HTML for ${doc.fullyQualifiedPath} to ${file.absolutePath}" }
         }
     }
 

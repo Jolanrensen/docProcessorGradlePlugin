@@ -16,8 +16,7 @@ import java.io.File
 /**
  * Kotlin DSL-like wrapper around [ProcessDocTask].
  */
-@JvmInline
-value class ProcessDocTaskDsl private constructor(public val task: ProcessDocTask) {
+class ProcessDocTaskDsl private constructor(public val task: ProcessDocTask) {
 
     constructor(task: ProcessDocTask, sources: Iterable<File>) : this(task.also { it.sources.set(sources) })
 
@@ -49,6 +48,28 @@ value class ProcessDocTaskDsl private constructor(public val task: ProcessDocTas
         set(value) {
             task.target.set(value)
         }
+
+    inner class ExportAsHtmlDsl internal constructor() {
+        operator fun invoke(action: ExportAsHtmlDsl.() -> Unit): Unit = action()
+
+        /**
+         * Target folder of @ExportAsHtml Docs
+         *
+         * Defaults to $target/htmlExports
+         */
+        var dir: File
+            get() = task.exportAsHtmlDir.get()
+            set(value) {
+                task.exportAsHtmlDir.set(value)
+            }
+
+        // TODO more settings
+    }
+
+    /**
+     * DSL for configuring the @ExportAsHtml task.
+     */
+    val exportAsHtml = ExportAsHtmlDsl()
 
     /**
      * Where the generated sources are placed.

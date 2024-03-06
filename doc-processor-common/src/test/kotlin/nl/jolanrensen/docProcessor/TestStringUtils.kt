@@ -71,7 +71,8 @@ class TestStringUtils {
 
     @Test
     fun `Replace KDoc links difficult`() {
-        val someText = """`MyType::myColumn`[`[`][ColumnsContainer.get]`MyOtherType::myOtherColumn`[`]`][ColumnsContainer.get]"""
+        val someText =
+            """`MyType::myColumn`[`[`][ColumnsContainer.get]`MyOtherType::myOtherColumn`[`]`][ColumnsContainer.get]"""
 
         val res = someText.replaceKdocLinks { "NewPath" }
 
@@ -100,5 +101,4 @@ class TestStringUtils {
         string.indexOfLastOrNullWhile('l', 5) { true } shouldBe 3
         string.indexOfLastOrNullWhile('i', 0) { true } shouldBe null
     }
-
 }

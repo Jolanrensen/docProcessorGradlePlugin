@@ -12,6 +12,7 @@ version = "0.3.4-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven("https://www.jetbrains.com/intellij-repository/snapshots") {
         mavenContent { snapshotsOnly() }
     }
@@ -50,6 +51,6 @@ tasks.withType<KotlinCompile> {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }

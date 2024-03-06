@@ -27,6 +27,9 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.listProperty
+import org.gradle.kotlin.dsl.mapProperty
+import org.gradle.kotlin.dsl.property
 import org.gradle.workers.WorkerExecutor
 import org.jetbrains.dokka.DokkaSourceSetID
 import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
@@ -44,7 +47,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     /** Source root folders for preprocessing. This needs to be set! */
     @get:InputFiles
     val sources: ListProperty<File> = factory
-        .listProperty(File::class.java)
+        .listProperty(File::class)
 
     /** Source root folders for preprocessing. This needs to be set! */
     fun sources(files: Iterable<File>): Unit = sources.set(files)
@@ -55,7 +58,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
      */
     @get:Input
     val baseDir: Property<File> = factory
-        .property(File::class.java)
+        .property(File::class)
         .convention(project.projectDir)
 
     /**
@@ -69,13 +72,30 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
      */
     @get:Input
     val target: Property<File> = factory
-        .property(File::class.java)
+        .property(File::class)
         .convention(File(project.buildDir, "docProcessor${File.separatorChar}${taskIdentity.name}"))
 
     /**
      * Target folder to place the preprocessing results in.
      */
     fun target(file: File): Unit = target.set(file)
+
+    /**
+     * Target folder of @ExportAsHtml Docs
+     *
+     * Defaults to $target/htmlExports
+     */
+    @get:Input
+    val exportAsHtmlDir: Property<File> = factory
+        .property(File::class)
+        .convention(File(target.get(), "htmlExports"))
+
+    /**
+     * Target folder of @ExportAsHtml Docs
+     *
+     * Defaults to $target/htmlExports
+     */
+    fun exportAsHtmlDir(file: File): Unit = exportAsHtmlDir.set(file)
 
     /**
      * Where the generated sources are placed.
@@ -88,7 +108,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
      */
     @get:Input
     val processLimit: Property<Int> = factory
-        .property(Int::class.java)
+        .property(Int::class)
         .convention(10_000)
 
     /**
@@ -110,7 +130,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
      */
     @get:Input
     val processors: ListProperty<String> = factory
-        .listProperty(String::class.java)
+        .listProperty(String::class)
         .convention(
             listOf(
                 INCLUDE_DOC_PROCESSOR,
@@ -133,7 +153,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
      */
     @get:Input
     val arguments: MapProperty<String, Any?> = factory
-        .mapProperty(String::class.java, Any::class.java)
+        .mapProperty(String::class, Any::class)
         .convention(emptyMap())
 
     /**
@@ -276,6 +296,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
             it.processors = processors
             it.processLimit = processLimit.get()
             it.arguments = arguments.get()
+            it.exportAsHtmlDir = exportAsHtmlDir.get()
         }
     }
 }

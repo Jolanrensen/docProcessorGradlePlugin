@@ -33,7 +33,7 @@ import java.util.*
  * @property [docIndent] The amount of spaces the comment is indented with. `null` if the [doc comment][DocComment]
  *   could not be found (e.g. because the PSI/AST of the file is not found).
  * @property [identifier] A unique identifier for this documentable, will survive [copy] and [asMutable].
- * @property [annotationFullyQualifiedPaths] Fully qualified paths to any annotation present on this documentable.
+ * @property [annotations] A list of annotations present on this documentable.
  * @property [fileTextRange] The range in the file this documentable is defined in.
  *
  * @property [docContent] Just the contents of the comment, without the `*`-stuff. Can be modified with [copy] or via
@@ -57,7 +57,7 @@ open class DocumentableWrapper(
     val docFileTextRange: IntRange,
     val docIndent: Int,
     val identifier: UUID = UUID.randomUUID(),
-    val annotationFullyQualifiedPaths: List<String>,
+    val annotations: List<AnnotationWrapper>,
     val fileTextRange: IntRange,
 
     open val docContent: DocContent,
@@ -78,7 +78,7 @@ open class DocumentableWrapper(
         file: File,
         docFileTextRange: IntRange,
         docIndent: Int,
-        annotationFullyQualifiedPaths: List<String>,
+        annotations: List<AnnotationWrapper>,
         fileTextRange: IntRange,
     ) : this(
         programmingLanguage = programmingLanguage,
@@ -93,7 +93,7 @@ open class DocumentableWrapper(
         fileTextRange = fileTextRange,
         docIndent = docIndent,
         docContent = docContent,
-        annotationFullyQualifiedPaths = annotationFullyQualifiedPaths,
+        annotations = annotations,
         tags = docContent.findTagNamesInDocContent().toSet(),
         isModified = false,
     )
@@ -299,7 +299,7 @@ open class DocumentableWrapper(
             docContent = docContent,
             tags = tags,
             isModified = isModified,
-            annotationFullyQualifiedPaths = annotationFullyQualifiedPaths,
+            annotations = annotations,
             identifier = identifier,
             fileTextRange = fileTextRange,
         )

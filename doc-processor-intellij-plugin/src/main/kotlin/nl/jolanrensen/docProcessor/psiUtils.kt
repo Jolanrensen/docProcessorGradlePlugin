@@ -5,7 +5,6 @@ import com.intellij.psi.PsiDocCommentBase
 import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiJavaFile
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.idea.base.psi.copied
@@ -22,6 +21,14 @@ val PsiElement.docComment: PsiDocCommentBase?
     get() = when (this) {
         is KtDeclaration -> docComment
         is PsiDocCommentOwner -> docComment
+        else -> error("Documentable must be a KtDeclaration or PsiDocCommentOwner, but was ${this::class.simpleName}")
+    }
+
+@get:Throws(IllegalStateException::class)
+val PsiElement.annotationNames: List<String>
+    get() = when (this) {
+        is KtDeclaration -> annotationEntries.map { it.shortName!!.asString() }
+        is PsiDocCommentOwner -> annotations.map { it.kotlinFqName!!.shortName().asString() }
         else -> error("Documentable must be a KtDeclaration or PsiDocCommentOwner, but was ${this::class.simpleName}")
     }
 

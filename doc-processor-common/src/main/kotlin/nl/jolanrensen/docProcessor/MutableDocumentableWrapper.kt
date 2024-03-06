@@ -20,7 +20,7 @@ open class MutableDocumentableWrapper(
     docFileTextRange: IntRange,
     docIndent: Int,
     identifier: UUID,
-    annotationFullyQualifiedPaths: List<String>,
+    annotations: List<AnnotationWrapper>,
     fileTextRange: IntRange,
 
     override var docContent: DocContent,
@@ -41,7 +41,7 @@ open class MutableDocumentableWrapper(
     tags = tags,
     isModified = isModified,
     identifier = identifier,
-    annotationFullyQualifiedPaths = annotationFullyQualifiedPaths,
+    annotations = annotations,
     fileTextRange = fileTextRange,
 ) {
 
@@ -75,6 +75,6 @@ fun DocumentableWrapper.toMutable(): MutableDocumentableWrapper =
         tags = tags,
         isModified = isModified,
         identifier = identifier,
-        annotationFullyQualifiedPaths = annotationFullyQualifiedPaths,
+        annotations = annotations,
         fileTextRange = fileTextRange,
     )

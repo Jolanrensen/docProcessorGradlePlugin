@@ -1,5 +1,3 @@
-@file:Suppress("UNUSED_VARIABLE")
-
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
@@ -56,37 +54,38 @@ dependencies {
 
 tasks.withType(ShadowJar::class) {
     isZip64 = true
-    archiveClassifier.set("")
+    archiveClassifier = ""
+
+    // Avoid clashes with org.jetbrains:markdown-jvm:0.6.1 in :common
+    relocate("org.intellij.markdown", "nl.jolanrensen.docProcessor.markdown")
 }
 
 gradlePlugin {
-    website.set("https://github.com/Jolanrensen/docProcessorGradlePlugin")
-    vcsUrl.set("https://github.com/Jolanrensen/docProcessorGradlePlugin")
+    website = "https://github.com/Jolanrensen/docProcessorGradlePlugin"
+    vcsUrl = "https://github.com/Jolanrensen/docProcessorGradlePlugin"
     // Define the plugin
     val docProcessor by plugins.creating {
         id = "nl.jolanrensen.docProcessor"
         displayName = "KDoc/Javadoc processor Gradle Plugin"
         description = "KDoc/Javadoc processor Gradle Plugin"
-        tags.set(
-            listOf(
-                "kotlin",
-                "java",
-                "documentation",
-                "library",
-                "preprocessor",
-                "plugins",
-                "documentation-tool",
-                "javadoc",
-                "documentation-generator",
-                "library-management",
-                "kdoc",
-                "javadocs",
-                "preprocessors",
-                "kdocs",
-                "tags",
-                "tag",
-                "tag-processor",
-            )
+        tags = listOf(
+            "kotlin",
+            "java",
+            "documentation",
+            "library",
+            "preprocessor",
+            "plugins",
+            "documentation-tool",
+            "javadoc",
+            "documentation-generator",
+            "library-management",
+            "kdoc",
+            "javadocs",
+            "preprocessors",
+            "kdocs",
+            "tags",
+            "tag",
+            "tag-processor",
         )
         implementationClass = "nl.jolanrensen.docProcessor.gradle.DocProcessorPlugin"
     }
@@ -116,6 +115,6 @@ tasks.withType<KotlinCompile> {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(11))
+        languageVersion = JavaLanguageVersion.of(11)
     }
 }
