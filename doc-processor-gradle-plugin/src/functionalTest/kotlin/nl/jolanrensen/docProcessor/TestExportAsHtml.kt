@@ -199,4 +199,41 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
         outputFile.readText().shouldNotContain("<style type=\"text/css\">")
         outputFile.readText().shouldContain("<body><p>Hello World!</p></body>")
     }
+
+    @Test
+    fun `Simple Export as HTML test without theme unnamed without stripping`() {
+
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * [Hello World][HelloWorld]
+             */
+            interface HelloWorld
+            
+            /**
+             * {@include [HelloWorld]}!
+             */
+            @ExportAsHtml(false, false)
+            fun helloWorld() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            additionals = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
+            ),
+        )
+
+        val outputFile = outputDirectory.resolve("htmlExports/com.example.plugin.helloWorld.html")
+        outputFile.exists() shouldBe true
+        outputFile.readText().shouldNotContain("<style type=\"text/css\">")
+        outputFile.readText().shouldContain("<body><p>[Hello World][com.example.plugin.HelloWorld]!</p></body>")
+    }
 }

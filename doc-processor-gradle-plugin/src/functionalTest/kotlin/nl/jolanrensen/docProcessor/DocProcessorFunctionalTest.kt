@@ -39,7 +39,10 @@ abstract class DocProcessorFunctionalTest(name: String) {
             TYPEALIAS,
             FILE,
         )        
-        annotation class ${ExportAsHtml::class.simpleName}(val ${ExportAsHtml::theme.name}: Boolean)
+        annotation class ${ExportAsHtml::class.simpleName}(
+            val ${ExportAsHtml::theme.name}: Boolean = true,
+            val ${ExportAsHtml::stripReferences.name}: Boolean = true,
+        )
         
         @Target(
             CLASS,

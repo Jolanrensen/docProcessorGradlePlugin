@@ -173,11 +173,19 @@ class DocProcessorService(private val project: Project) {
 
                 val themeArg = annotationArgs.firstOrNull {
                     it.getArgumentName()?.asName?.toString() == ExportAsHtml::theme.name
-                } ?: annotationArgs.firstOrNull {
+                } ?: annotationArgs.getOrNull(0)?.takeIf {
                     !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
                 }
                 val theme = themeArg?.getArgumentExpression()?.text?.toBoolean() ?: true
-                val html = doc.docContent.renderToHtml(theme = theme)
+
+                val stripReferencesArg = annotationArgs.firstOrNull {
+                    it.getArgumentName()?.asName?.toString() == ExportAsHtml::stripReferences.name
+                } ?: annotationArgs.getOrNull(1)?.takeIf {
+                    !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
+                }
+                val stripReferences = stripReferencesArg?.getArgumentExpression()?.text?.toBoolean() ?: true
+
+                val html = doc.docContent.renderToHtml(theme = theme, stripReferences = stripReferences)
                 val file = File.createTempFile(doc.fullyQualifiedPath, ".html")
                 file.writeText(html)
 

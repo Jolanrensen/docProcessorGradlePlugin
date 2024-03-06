@@ -17,4 +17,7 @@ import kotlin.annotation.AnnotationTarget.*
     TYPEALIAS,
     FILE,
 )
-annotation class ExportAsHtml(val theme: Boolean = true)
+annotation class ExportAsHtml(
+    val theme: Boolean = true,
+    val stripReferences: Boolean = true,
+)

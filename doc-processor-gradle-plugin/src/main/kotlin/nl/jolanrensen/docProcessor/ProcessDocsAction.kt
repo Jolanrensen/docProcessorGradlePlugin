@@ -273,12 +273,17 @@ abstract class ProcessDocsAction {
             }
             if (exportHtmlAnnotation == null) continue
 
-            val addTheme = exportHtmlAnnotation.arguments.firstOrNull { (it, _) ->
-                it == ExportAsHtml::theme.name
-            }?.second as? Boolean?
+            val addTheme = exportHtmlAnnotation.arguments
+                .firstOrNull { (it, _) -> it == ExportAsHtml::theme.name }
+                ?.second as? Boolean?
                 ?: true
 
-            val html = doc.docContent.renderToHtml(theme = addTheme)
+            val stripReferences = exportHtmlAnnotation.arguments
+                .firstOrNull { (it, _) -> it == ExportAsHtml::stripReferences.name }
+                ?.second as? Boolean?
+                ?: true
+
+            val html = doc.docContent.renderToHtml(theme = addTheme, stripReferences = stripReferences)
             val file = File(htmlDir, doc.fullyQualifiedPath + ".html")
             file.writeText(html)
 
