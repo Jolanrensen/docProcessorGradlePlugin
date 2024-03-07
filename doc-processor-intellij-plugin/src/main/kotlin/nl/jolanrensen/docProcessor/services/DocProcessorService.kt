@@ -23,6 +23,7 @@ import nl.jolanrensen.docProcessor.createFromIntellijOrNull
 import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR_LOG_NOT_FOUND
 import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.EXPORT_AS_HTML_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
@@ -185,7 +186,9 @@ class DocProcessorService(private val project: Project) {
                 }
                 val stripReferences = stripReferencesArg?.getArgumentExpression()?.text?.toBoolean() ?: true
 
-                val html = doc.docContent.renderToHtml(theme = theme, stripReferences = stripReferences)
+                val html = doc
+                    .getDocContentForHtmlRange()
+                    .renderToHtml(theme = theme, stripReferences = stripReferences)
                 val file = File.createTempFile(doc.fullyQualifiedPath, ".html")
                 file.writeText(html)
 
@@ -238,17 +241,18 @@ class DocProcessorService(private val project: Project) {
     fun processDocumentablesByPath(sourceDocsByPath: DocumentablesByPath): DocumentablesByPath {
         // Find all processors
         Thread.currentThread().contextClassLoader = this.javaClass.classLoader
+        // TODO make customizable
         val processors = findProcessors(
             fullyQualifiedNames = listOf(
-                // TODO make customizable
                 INCLUDE_DOC_PROCESSOR,
                 INCLUDE_FILE_DOC_PROCESSOR,
                 ARG_DOC_PROCESSOR,
                 COMMENT_DOC_PROCESSOR,
                 SAMPLE_DOC_PROCESSOR,
+                EXPORT_AS_HTML_DOC_PROCESSOR,
                 REMOVE_ESCAPE_CHARS_PROCESSOR,
             ),
-            arguments = mapOf(ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false), // TODO
+            arguments = mapOf(ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false),
         )
 
         // Run all processors

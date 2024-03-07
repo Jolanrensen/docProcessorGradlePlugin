@@ -43,6 +43,11 @@ import java.util.*
  * @property [isModified] Whether the [docContent] was modified. Can be modified with [copy] or via
  *   [toMutable]. Must be updated manually if [docContent] is modified.
  *
+ * @property [htmlRangeStart] Optional begin marker used by [ExportAsHtmlDocProcessor] for the
+ *   [@ExportAsHtml][ExportAsHtml] annotation.
+ * @property [htmlRangeEnd] Optional end marker used by [ExportAsHtmlDocProcessor] for the
+ *   [@ExportAsHtml][ExportAsHtml] annotation.
+ *
  * @see [MutableDocumentableWrapper]
  */
 open class DocumentableWrapper(
@@ -63,6 +68,9 @@ open class DocumentableWrapper(
     open val docContent: DocContent,
     open val tags: Set<String>,
     open val isModified: Boolean,
+
+    open val htmlRangeStart: Int?,
+    open val htmlRangeEnd: Int?,
 ) {
 
     companion object;
@@ -80,6 +88,8 @@ open class DocumentableWrapper(
         docIndent: Int,
         annotations: List<AnnotationWrapper>,
         fileTextRange: IntRange,
+        htmlRangeStart: Int? = null,
+        htmlRangeEnd: Int? = null,
     ) : this(
         programmingLanguage = programmingLanguage,
         imports = imports,
@@ -96,6 +106,8 @@ open class DocumentableWrapper(
         annotations = annotations,
         tags = docContent.findTagNamesInDocContent().toSet(),
         isModified = false,
+        htmlRangeStart = htmlRangeStart,
+        htmlRangeEnd = htmlRangeEnd,
     )
 
     /** Query file for doc text range. */
@@ -279,6 +291,13 @@ open class DocumentableWrapper(
         }
     }
 
+    fun getDocContentForHtmlRange(): DocContent {
+        val lines = docContent.lines()
+        val start = htmlRangeStart ?: 0
+        val end = htmlRangeEnd ?: lines.lastIndex
+        return lines.subList(start, end + 1).joinToString("\n")
+    }
+
     /** Returns a copy of this [DocumentableWrapper] with the given parameters. */
     open fun copy(
         docContent: DocContent = this.docContent,
@@ -302,5 +321,7 @@ open class DocumentableWrapper(
             annotations = annotations,
             identifier = identifier,
             fileTextRange = fileTextRange,
+            htmlRangeStart = htmlRangeStart,
+            htmlRangeEnd = htmlRangeEnd,
         )
 }

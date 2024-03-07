@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("java")
     kotlin("jvm")
-    id("org.jetbrains.intellij") version "1.16.1"
+    id("org.jetbrains.intellij") version "1.17.3-SNAPSHOT"
     id("com.github.johnrengelman.shadow")
 }
 
@@ -24,9 +24,9 @@ repositories {
 }
 
 intellij {
-    version.set("2023.3")
-    type.set("IC")
-    pluginName.set("DocProcessor")
+    version = "LATEST-EAP-SNAPSHOT"
+    type = "IC"
+    pluginName = "DocProcessor"
     plugins.addAll(
         "org.jetbrains.kotlin",
         "com.intellij.java",

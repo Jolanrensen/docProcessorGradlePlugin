@@ -26,6 +26,9 @@ open class MutableDocumentableWrapper(
     override var docContent: DocContent,
     override var tags: Set<String>,
     override var isModified: Boolean,
+
+    override var htmlRangeEnd: Int?,
+    override var htmlRangeStart: Int?,
 ) : DocumentableWrapper(
     programmingLanguage = programmingLanguage,
     imports = imports,
@@ -43,6 +46,8 @@ open class MutableDocumentableWrapper(
     identifier = identifier,
     annotations = annotations,
     fileTextRange = fileTextRange,
+    htmlRangeStart = htmlRangeStart,
+    htmlRangeEnd = htmlRangeEnd,
 ) {
 
     /**
@@ -77,4 +82,6 @@ fun DocumentableWrapper.toMutable(): MutableDocumentableWrapper =
         identifier = identifier,
         annotations = annotations,
         fileTextRange = fileTextRange,
+        htmlRangeStart = htmlRangeStart,
+        htmlRangeEnd = htmlRangeEnd,
     )

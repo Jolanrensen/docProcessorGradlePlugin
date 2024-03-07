@@ -47,6 +47,7 @@ Included preprocessors are:
 | `@set` / `@get` (or `$`) tags to define and retrieve variables within a KDoc / JavaDoc. Powerful in combination with `@include`.<br/>Used like `@set KEY some content`, `@get KEY some default`.<br/>Shortcuts for `{@get .}` are `$KEY`, `$KEY=default`, `${KEY}`, and `${KEY=some default}`. | `ARG_DOC_PROCESSOR`             |
 | `@comment` tag to comment out parts of your modified KDoc / JavaDoc.<br/>Used like `@comment Some comment text`.                                                                                                                                                                               | `COMMENT_DOC_PROCESSOR`         |
 | `@sample` / `@sampleNoComments` tags to include code samples into your KDoc / JavaDoc.<br/>Used like `@sample [Reference.To.Element]`.<br/>If present, only code in between `// SampleStart` and `// SampleEnd` is taken. `@sampleNoComments` excludes KDoc / JavaDoc from the sample.         | `SAMPLE_DOC_PROCESSOR`          |
+| `@exportAsHtmlStart` / `@exportAsHtmlEnd` to mark a range of KDoc for the `@ExportAsHtml` annotation.                                                                                                                                                                                          | `EXPORT_AS_HTML_DOC_PROCESSOR`  |
 | A processor that removes all escape characters ("\\") from your KDoc / JavaDoc comments.                                                                                                                                                                                                       | `REMOVE_ESCAPE_CHARS_PROCESSOR` |
 | A processor that removes all KDoc / JavaDoc comments.                                                                                                                                                                                                                                          | `NO_DOC_PROCESSOR`              |
 | A processor that adds a `/** TODO */` comment wherever there is no KDoc / JavaDoc comment.                                                                                                                                                                                                     | `TODO_DOC_PROCESSOR`            |
@@ -59,10 +60,29 @@ errors or warnings for incorrect doc usage.
 The sky is the limit :).
 
 ## `@ExcludeFromSources` annotation
-If you want to exclude any annotatable element from the `sources.jar`. Simply
-create an annotation class named exactly "`ExcludeFromSources`" and annotate the elements you want to exclude with it.
+
+If you want to exclude any annotatable element from the `sources.jar`. 
+Create an annotation class named exactly "`ExcludeFromSources`" 
+(you can copy the code from [here](./doc-processor-common/src/main/kotlin/nl/jolanrensen/docProcessor/ExcludeFromSources.kt))
+and annotate the elements you want to exclude with it.
 This is especially useful for "temporary" documentation interfaces, only there
 to provide documentation for other elements.
+
+
+## `@ExportAsHtml` annotation
+
+To export a KDoc comment as HTML, you can use the `@ExportAsHtml` annotation.
+Create an annotation class named exactly "`ExportAsHtml`" and add the arguments `theme: Boolean` and 
+`stripReferences: Boolean` (default both to `true`)
+(you can copy the code from [here](./doc-processor-common/src/main/kotlin/nl/jolanrensen/docProcessor/ExportAsHtml.kt)).
+Then, add the annotation to the element you want to export as HTML.
+
+Inside the KDoc comment, you can mark a range of text to be exported as HTML by using the optional `@exportAsHtmlStart` 
+and `@exportAsHtmlEnd` tags.
+
+In the Gradle task the HTML will be generated in the folder specified in the `exportAsHtml` block of the
+`ProcessDocTask` (see below). In the IntelliJ plugin, a temporary file will be created that you can open in the
+browser by clicking on link at the bottom of the rendered KDoc.
 
 ## How to get it
 
@@ -139,6 +159,7 @@ val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
         ARG_DOC_PROCESSOR, // The @set and @get / $ processor
         COMMENT_DOC_PROCESSOR, // The @comment processor
         SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
+        EXPORT_AS_HTML_DOC_PROCESSOR, // The @exportAsHtmlStart and @exportAsHtmlEnd tags for @ExportAsHtml
         REMOVE_ESCAPE_CHARS_PROCESSOR, // The processor that removes escape characters
 
         "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
@@ -150,6 +171,11 @@ val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
     // Optional dependencies for this task. These dependencies can introduce custom processors.
     dependencies {
         plugin("com.example:plugin:SOME_VERSION")
+    }
+
+    // Optional, defines where @ExportAsHtml will put the generated HTML files. By default ${project.buildDir}/docProcessor/${taskName}/htmlExports.
+    exportAsHtml {
+      dir = file("../docs/StardustDocs/snippets")
     }
 }
 
@@ -203,10 +229,10 @@ import org.gradle.jvm.tasks.Jar
 
 plugins {
     id "nl.jolanrensen.docProcessor" version "{ VERSION }"
-    ..
+            ..
 }
 
-..
+        ..
 
 // Backup the kotlin source files location
 def kotlinMainSources = kotlin.sourceSets.main.kotlin.sourceDirectories
@@ -226,6 +252,7 @@ def processKdocMain = tasks.register('processKdocMain', ProcessDocTask) {
             ArgDocProcessorKt.ARG_DOC_PROCESSOR, // The @set and @get / $ processor
             CommentDocProcessorKt.COMMENT_DOC_PROCESSOR, // The @comment processor
             SampleDocProcessorKt.SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
+            ExportAsHtmlDocProcessorKt.EXPORT_AS_HTML_DOC_PROCESSOR, // The @exportAsHtmlStart and @exportAsHtmlEnd tags for @ExportAsHtml
             RemoveEscapeCharsProcessorKt.REMOVE_ESCAPE_CHARS_PROCESSOR, // The processor that removes escape characters
 
             "com.example.plugin.ExampleDocProcessor", // A custom processor if you have one, see below
@@ -238,6 +265,10 @@ def processKdocMain = tasks.register('processKdocMain', ProcessDocTask) {
     dependencies {
         plugin "com.example:plugin:SOME_VERSION"
     }
+
+    // Optional, defines where @ExportAsHtml will put the generated HTML files. By default ${project.buildDir}/docProcessor/${taskName}/htmlExports.
+    exportAsHtmlDir = file("../docs/StardustDocs/snippets")
+    
 }.get()
 
 // Modify all Jar tasks such that before running the Kotlin sources are set to 
@@ -267,16 +298,16 @@ tasks.withType(Jar).configureEach {
     }
 }
 
-..
+        ..
 
 // As a bonus, this will update dokka to use the processed files as sources as well.
-tasks.withType(org.jetbrains.dokka.gradle.AbstractDokkaLeafTask).configureEach {
-    dokkaSourceSets.with {
-        configureEach {
-            sourceRoot(processKdocMain.target.get())
+        tasks.withType(org.jetbrains.dokka.gradle.AbstractDokkaLeafTask).configureEach {
+            dokkaSourceSets.with {
+                configureEach {
+                    sourceRoot(processKdocMain.target.get())
+                }
+            }
         }
-    }
-}
 ```
 
 ### Recommended order of default processors
@@ -288,6 +319,7 @@ While you can use the processors in any order and leave out some or include othe
 - `ARG_DOC_PROCESSOR`: The `@set` and `@get` / `$` processor. This runs `@set` first and then `@get` / `$`.
 - `COMMENT_DOC_PROCESSOR`: The `@comment` processor
 - `SAMPLE_DOC_PROCESSOR`: The `@sample` and `@sampleNoComments` processor
+- `EXPORT_AS_HTML_DOC_PROCESSOR`: The `@exportAsHtmlStart` and `@exportAsHtmlEnd` tags for `@ExportAsHtml`
 - `REMOVE_ESCAPE_CHARS_PROCESSOR`: The processor that removes escape characters
 
 This order ensures that `@set`/`@get` are processed after `@include` and `@includeFile` such that any arguments
@@ -300,7 +332,8 @@ from being processed.
 
 ## Technicalities
 
-Regarding block-tags KDocs and JavaDocs are structured in a tree-like structure and are thus also parsed and processed like that.
+Regarding block-tags KDocs and JavaDocs are structured in a tree-like structure and are thus also parsed and processed
+like that.
 For example, the following KDoc:
 
 ```kotlin
@@ -352,8 +385,8 @@ If something weird happens, try to disable some processors to understand what's 
 - Next, the documentation contents, location in the file, and indents are collected from each documentable
   in the map.
 - All processors are run in sequence on the collected documentables with their data:
-   - All documentables are iterated over and tag replacement processors, like @include, will replace all tags with new
-  content.
+    - All documentables are iterated over and tag replacement processors, like @include, will replace all tags with new
+      content.
 - Finally, all files from the source are copied over to a destination folder and if there are any modifications that
   need to be made in a file, the specified ranges for each documentation are replaced with the new documentation.
 
@@ -477,7 +510,7 @@ Currently, the only way to try this is by building the plugin yourself from sour
 The plugin in its current state is unconfigurable and just uses the default processors as shown in the sample above.
 Also, it uses the IDE engine to resolve references.
 This is because it's a lot faster than my own engine + Dokka, but it does mean that there might be some differences
-with the preview and how it will look in the final docs (for instance, type aliases work in the IDE but not in the 
+with the preview and how it will look in the final docs (for instance, type aliases work in the IDE but not in the
 Gradle plugin). So, take this into account.
 
 I'm still working on connecting it to the Gradle plugin somehow or provide a way to configure it correctly,

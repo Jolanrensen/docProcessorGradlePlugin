@@ -283,7 +283,9 @@ abstract class ProcessDocsAction {
                 ?.second as? Boolean?
                 ?: true
 
-            val html = doc.docContent.renderToHtml(theme = addTheme, stripReferences = stripReferences)
+            val html = doc
+                .getDocContentForHtmlRange()
+                .renderToHtml(theme = addTheme, stripReferences = stripReferences)
             val file = File(htmlDir, doc.fullyQualifiedPath + ".html")
             file.writeText(html)
 

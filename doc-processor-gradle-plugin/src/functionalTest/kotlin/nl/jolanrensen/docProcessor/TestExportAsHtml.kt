@@ -3,6 +3,7 @@ package nl.jolanrensen.docProcessor
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
+import nl.jolanrensen.docProcessor.defaultProcessors.EXPORT_AS_HTML_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import org.intellij.lang.annotations.Language
@@ -12,6 +13,7 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
 
     private val processors = listOf(
         ::INCLUDE_DOC_PROCESSOR,
+        ::EXPORT_AS_HTML_DOC_PROCESSOR,
         ::REMOVE_ESCAPE_CHARS_PROCESSOR,
     ).map { it.name }
 
@@ -50,6 +52,50 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
         outputFile.exists() shouldBe true
         outputFile.readText().shouldContain("<style type=\"text/css\">")
         outputFile.readText().shouldContain("<body><p>Hello World!</p></body>")
+    }
+
+    @Test
+    fun `Simple Export as HTML with range`() {
+
+        @Language("kt")
+        val content = """
+            package com.example.plugin
+            
+            /**
+             * Hello World
+             */
+            interface HelloWorld
+            
+            /**
+             * @exportAsHtmlStart 
+             * {@include [HelloWorld]}!
+             * Hi this is a test
+             * @exportAsHtmlEnd
+             * Excluded  
+             */
+            @ExportAsHtml
+            fun helloWorld() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            additionals = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
+            ),
+        )
+
+        val outputFile = outputDirectory.resolve("htmlExports/com.example.plugin.helloWorld.html")
+        outputFile.exists() shouldBe true
+        outputFile.readText().shouldContain("<style type=\"text/css\">")
+        outputFile.readText().shouldContain("<body><p>Hello World!\nHi this is a test</p></body>")
+        outputFile.readText().shouldNotContain("Excluded")
+        outputFile.readText().shouldNotContain("exportAsHtmlStart")
+        outputFile.readText().shouldNotContain("exportAsHtmlEnd")
     }
 
     @Test

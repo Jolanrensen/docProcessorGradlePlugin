@@ -43,7 +43,12 @@ fun DocContent.renderToHtml(theme: Boolean, stripReferences: Boolean): String {
         markdownText = this,
         root = md,
         providers = providers,
-    ).generateHtml()
+    ).generateHtml().let {
+        when {
+            it.startsWith("<p>") -> it.replaceFirst("<p>", "<p style='margin-top:0;padding-top:0;'>")
+            else -> it
+        }
+    }
 
     return buildString {
         appendLine("<html>")
