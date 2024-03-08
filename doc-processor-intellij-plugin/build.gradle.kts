@@ -23,6 +23,11 @@ repositories {
     maven("https://www.myget.org/F/rd-snapshots/maven/")
 }
 
+tasks.patchPluginXml {
+    sinceBuild = "231"
+    untilBuild = "241.*"
+}
+
 intellij {
     version = "LATEST-EAP-SNAPSHOT"
     type = "IC"
