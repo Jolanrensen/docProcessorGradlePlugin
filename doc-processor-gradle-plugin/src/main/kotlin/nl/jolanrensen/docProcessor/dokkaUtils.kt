@@ -22,12 +22,7 @@ import org.jetbrains.dokka.links.JavaClassReference
 import org.jetbrains.dokka.links.Nullable
 import org.jetbrains.dokka.links.TypeConstructor
 import org.jetbrains.dokka.links.TypeReference
-import org.jetbrains.dokka.model.Callable
-import org.jetbrains.dokka.model.DClasslike
-import org.jetbrains.dokka.model.DParameter
-import org.jetbrains.dokka.model.DTypeAlias
-import org.jetbrains.dokka.model.Documentable
-import org.jetbrains.dokka.model.DocumentableSource
+import org.jetbrains.dokka.model.*
 import org.jetbrains.dokka.utilities.DokkaLogger
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
@@ -162,7 +157,7 @@ data class PsiDocumentationContent(val psiElement: PsiElement, override val tag:
 data class DescriptorDocumentationContent(
     val descriptor: DeclarationDescriptor?,
     val element: KDocTag,
-    override val tag: JavadocTag
+    override val tag: JavadocTag,
 ) : DocumentationContent
 
 fun PsiDocComment.hasTag(tag: JavadocTag): Boolean =
@@ -183,7 +178,8 @@ enum class JavadocTag {
     /**
      * Artificial tag created to handle tag-less section
      */
-    DESCRIPTION, ;
+    DESCRIPTION,
+    ;
 
     override fun toString(): String = super.toString().lowercase()
 
@@ -405,3 +401,25 @@ fun ImportPath.toSimpleImportPath(): SimpleImportPath = SimpleImportPath(
     isAllUnder = isAllUnder,
     alias = alias?.asString(),
 )
+
+fun AnnotationParameterValue.getValue(): Any? =
+    when (this) {
+        is StringValue -> value
+        is BooleanValue -> value
+        is NullValue -> null
+        is DoubleValue -> value
+        is FloatValue -> value
+        is LongValue -> value
+        is IntValue -> value
+        is LiteralValue -> text()
+        is ClassValue -> classDRI.fullyQualifiedPath
+        is EnumValue -> enumDri.fullyQualifiedPath
+        is ArrayValue -> value.map { it.getValue() }
+        is AnnotationValue -> AnnotationWrapper(
+            fullyQualifiedPath = annotation.dri.fullyQualifiedPath,
+            arguments = annotation.params.entries.map { (name, paramValue) ->
+                name to paramValue.getValue()
+            },
+        )
+        else -> error("Could not read Annotation parameter: $this")
+    }

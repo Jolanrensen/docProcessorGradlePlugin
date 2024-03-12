@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("java")
     kotlin("jvm")
-    id("org.jetbrains.intellij") version "1.16.1"
+    id("org.jetbrains.intellij") version "1.17.3-SNAPSHOT"
     id("com.github.johnrengelman.shadow")
 }
 
@@ -12,6 +12,7 @@ version = "0.3.4-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    mavenLocal()
     maven("https://www.jetbrains.com/intellij-repository/snapshots") {
         mavenContent { snapshotsOnly() }
     }
@@ -22,10 +23,15 @@ repositories {
     maven("https://www.myget.org/F/rd-snapshots/maven/")
 }
 
+tasks.patchPluginXml {
+    sinceBuild = "231"
+    untilBuild = "241.*"
+}
+
 intellij {
-    version.set("2023.3")
-    type.set("IC")
-    pluginName.set("DocProcessor")
+    version = "LATEST-EAP-SNAPSHOT"
+    type = "IC"
+    pluginName = "DocProcessor"
     plugins.addAll(
         "org.jetbrains.kotlin",
         "com.intellij.java",
@@ -50,6 +56,6 @@ tasks.withType<KotlinCompile> {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }

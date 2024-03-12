@@ -33,7 +33,7 @@ import java.util.*
  * @property [docIndent] The amount of spaces the comment is indented with. `null` if the [doc comment][DocComment]
  *   could not be found (e.g. because the PSI/AST of the file is not found).
  * @property [identifier] A unique identifier for this documentable, will survive [copy] and [asMutable].
- * @property [annotationFullyQualifiedPaths] Fully qualified paths to any annotation present on this documentable.
+ * @property [annotations] A list of annotations present on this documentable.
  * @property [fileTextRange] The range in the file this documentable is defined in.
  *
  * @property [docContent] Just the contents of the comment, without the `*`-stuff. Can be modified with [copy] or via
@@ -42,6 +42,11 @@ import java.util.*
  *   [toMutable]. Must be updated manually if [docContent] is modified.
  * @property [isModified] Whether the [docContent] was modified. Can be modified with [copy] or via
  *   [toMutable]. Must be updated manually if [docContent] is modified.
+ *
+ * @property [htmlRangeStart] Optional begin marker used by [ExportAsHtmlDocProcessor] for the
+ *   [@ExportAsHtml][ExportAsHtml] annotation.
+ * @property [htmlRangeEnd] Optional end marker used by [ExportAsHtmlDocProcessor] for the
+ *   [@ExportAsHtml][ExportAsHtml] annotation.
  *
  * @see [MutableDocumentableWrapper]
  */
@@ -57,12 +62,15 @@ open class DocumentableWrapper(
     val docFileTextRange: IntRange,
     val docIndent: Int,
     val identifier: UUID = UUID.randomUUID(),
-    val annotationFullyQualifiedPaths: List<String>,
+    val annotations: List<AnnotationWrapper>,
     val fileTextRange: IntRange,
 
     open val docContent: DocContent,
     open val tags: Set<String>,
     open val isModified: Boolean,
+
+    open val htmlRangeStart: Int?,
+    open val htmlRangeEnd: Int?,
 ) {
 
     companion object;
@@ -78,8 +86,10 @@ open class DocumentableWrapper(
         file: File,
         docFileTextRange: IntRange,
         docIndent: Int,
-        annotationFullyQualifiedPaths: List<String>,
+        annotations: List<AnnotationWrapper>,
         fileTextRange: IntRange,
+        htmlRangeStart: Int? = null,
+        htmlRangeEnd: Int? = null,
     ) : this(
         programmingLanguage = programmingLanguage,
         imports = imports,
@@ -93,9 +103,11 @@ open class DocumentableWrapper(
         fileTextRange = fileTextRange,
         docIndent = docIndent,
         docContent = docContent,
-        annotationFullyQualifiedPaths = annotationFullyQualifiedPaths,
+        annotations = annotations,
         tags = docContent.findTagNamesInDocContent().toSet(),
         isModified = false,
+        htmlRangeStart = htmlRangeStart,
+        htmlRangeEnd = htmlRangeEnd,
     )
 
     /** Query file for doc text range. */
@@ -279,6 +291,13 @@ open class DocumentableWrapper(
         }
     }
 
+    fun getDocContentForHtmlRange(): DocContent {
+        val lines = docContent.lines()
+        val start = htmlRangeStart ?: 0
+        val end = htmlRangeEnd ?: lines.lastIndex
+        return lines.subList(start, end + 1).joinToString("\n")
+    }
+
     /** Returns a copy of this [DocumentableWrapper] with the given parameters. */
     open fun copy(
         docContent: DocContent = this.docContent,
@@ -299,8 +318,10 @@ open class DocumentableWrapper(
             docContent = docContent,
             tags = tags,
             isModified = isModified,
-            annotationFullyQualifiedPaths = annotationFullyQualifiedPaths,
+            annotations = annotations,
             identifier = identifier,
             fileTextRange = fileTextRange,
+            htmlRangeStart = htmlRangeStart,
+            htmlRangeEnd = htmlRangeEnd,
         )
 }

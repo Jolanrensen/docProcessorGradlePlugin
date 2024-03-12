@@ -1,6 +1,19 @@
 package nl.jolanrensen.docProcessor
 
 import nl.jolanrensen.docProcessor.ReferenceState.*
+import org.intellij.lang.annotations.Language
+import org.intellij.markdown.MarkdownElementTypes
+import org.intellij.markdown.MarkdownTokenTypes
+import org.intellij.markdown.ast.ASTNode
+import org.intellij.markdown.ast.getParentOfType
+import org.intellij.markdown.ast.getTextInNode
+import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
+import org.intellij.markdown.flavours.gfm.GFMTokenTypes
+import org.intellij.markdown.html.GeneratingProvider
+import org.intellij.markdown.html.HtmlGenerator
+import org.intellij.markdown.html.entities.EntityConverter
+import org.intellij.markdown.parser.LinkMap
+import org.intellij.markdown.parser.MarkdownParser
 import java.util.*
 import kotlin.collections.ArrayDeque
 
@@ -596,6 +609,85 @@ fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {
 
 fun IntRange.coerceIn(start: Int = Int.MIN_VALUE, endInclusive: Int = Int.MAX_VALUE) =
     first.coerceAtLeast(start)..last.coerceAtMost(endInclusive)
+
+fun DocContent.removeKotlinLinks(): DocContent = buildString {
+    val kdoc = this@removeKotlinLinks
+    var escapeNext = false
+    var insideCodeBlock = false
+    var referenceState = NONE
+
+    var currentBlock = ""
+
+    fun appendBlock() {
+        append(currentBlock)
+        currentBlock = ""
+    }
+
+    for ((i, char) in kdoc.withIndex()) {
+        fun nextChar(): Char? = kdoc.getOrNull(i + 1)
+        fun previousChar(): Char? = kdoc.getOrNull(i - 1)
+
+        when {
+            escapeNext -> {
+                escapeNext = false
+                currentBlock += char
+            }
+
+            char == '\\' -> {
+                escapeNext = true
+            }
+
+            char == '`' -> {
+                insideCodeBlock = !insideCodeBlock
+                currentBlock += char
+            }
+
+            insideCodeBlock -> {
+                currentBlock += char
+            }
+
+            char == '[' -> {
+                referenceState = when {
+                    previousChar() == ']' -> {
+                        when (referenceState) {
+                            INSIDE_REFERENCE -> INSIDE_ALIASED_REFERENCE
+                            else -> INSIDE_REFERENCE
+                        }
+                    }
+
+                    else -> {
+                        appendBlock()
+                        INSIDE_REFERENCE
+                    }
+                }
+            }
+
+            char == ']' -> {
+                if (nextChar() !in listOf('[', '(') || referenceState == INSIDE_ALIASED_REFERENCE) {
+                    referenceState = NONE
+
+                    if (currentBlock.startsWith("**") && currentBlock.endsWith("**")) {
+                        val trimmed = currentBlock.removeSurrounding("**")
+                        currentBlock = "**`$trimmed`**"
+                    } else {
+                        currentBlock = "`$currentBlock`"
+                    }
+
+                    appendBlock()
+                }
+            }
+
+            referenceState == INSIDE_ALIASED_REFERENCE -> {}
+
+            else -> {
+                currentBlock += char
+            }
+        }
+    }
+    appendBlock()
+}
+    .replace("****", "")
+    .replace("``", "")
 
 fun IntRange.coerceAtMost(endInclusive: Int) =
     first.coerceAtMost(endInclusive)..last.coerceAtMost(endInclusive)

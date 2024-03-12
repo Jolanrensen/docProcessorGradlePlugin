@@ -18,6 +18,7 @@ abstract class ProcessDocsGradleAction : ProcessDocsAction(), WorkAction<Process
         override var sources: DokkaSourceSetImpl
         override var sourceRoots: List<File>
         override var target: File?
+        override var exportAsHtmlDir: File?
         override var processors: List<String>
         override var processLimit: Int
         override var arguments: Map<String, Any?>

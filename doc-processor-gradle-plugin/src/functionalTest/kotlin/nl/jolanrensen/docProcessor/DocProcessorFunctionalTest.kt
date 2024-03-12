@@ -38,6 +38,27 @@ abstract class DocProcessorFunctionalTest(name: String) {
             TYPE,
             TYPEALIAS,
             FILE,
+        )        
+        annotation class ${ExportAsHtml::class.simpleName}(
+            val ${ExportAsHtml::theme.name}: Boolean = true,
+            val ${ExportAsHtml::stripReferences.name}: Boolean = true,
+        )
+        
+        @Target(
+            CLASS,
+            ANNOTATION_CLASS,
+            TYPE_PARAMETER,
+            PROPERTY,
+            FIELD,
+            LOCAL_VARIABLE,
+            VALUE_PARAMETER,
+            CONSTRUCTOR,
+            FUNCTION,
+            PROPERTY_GETTER,
+            PROPERTY_SETTER,
+            TYPE,
+            TYPEALIAS,
+            FILE,
         )
         annotation class ${ExcludeFromSources::class.simpleName}""".trimIndent()
 
@@ -93,8 +114,8 @@ abstract class DocProcessorFunctionalTest(name: String) {
         }
     """.trimIndent()
 
-    private val projectDirectory = File("build/$name")
-    private val outputDirectory = File(projectDirectory, "build/docProcessor/processKdocMain")
+    protected val projectDirectory = File("build/$name")
+    protected val outputDirectory = File(projectDirectory, "build/docProcessor/processKdocMain")
 
     enum class FileLanguage {
         JAVA, KOTLIN

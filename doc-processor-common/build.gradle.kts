@@ -11,11 +11,14 @@ version = "0.3.4-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.apache.commons:commons-text:1.10.0")
+
+    implementation("org.jetbrains:markdown-jvm:0.6.1")
 
     // logging
     api("io.github.microutils:kotlin-logging:3.0.5")
@@ -35,7 +38,7 @@ tasks.withType<KotlinCompile> {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
+        languageVersion = JavaLanguageVersion.of(8)
     }
 }
 

@@ -5,5 +5,6 @@ nl.jolanrensen.docProcessor.defaultProcessors.SampleDocProcessor
 nl.jolanrensen.docProcessor.defaultProcessors.ExampleDocProcessor
 nl.jolanrensen.docProcessor.defaultProcessors.IncludeFileDocProcessor
 nl.jolanrensen.docProcessor.defaultProcessors.CommentDocProcessor
+nl.jolanrensen.docProcessor.defaultProcessors.ExportAsHtmlDocProcessor
 nl.jolanrensen.docProcessor.defaultProcessors.ArgDocProcessor
 nl.jolanrensen.docProcessor.defaultProcessors.RemoveEscapeCharsProcessor

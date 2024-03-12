@@ -13,14 +13,17 @@ import com.intellij.psi.PsiManager
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
+import nl.jolanrensen.docProcessor.ExportAsHtml
 import nl.jolanrensen.docProcessor.MessageBundle
 import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.TagDocProcessorFailedException
+import nl.jolanrensen.docProcessor.annotationNames
 import nl.jolanrensen.docProcessor.copiedWithFile
 import nl.jolanrensen.docProcessor.createFromIntellijOrNull
 import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR_LOG_NOT_FOUND
 import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.EXPORT_AS_HTML_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
@@ -28,6 +31,7 @@ import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.docComment
 import nl.jolanrensen.docProcessor.findProcessors
 import nl.jolanrensen.docProcessor.programmingLanguage
+import nl.jolanrensen.docProcessor.renderToHtml
 import nl.jolanrensen.docProcessor.toDoc
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.caches.resolve.safeAnalyzeNonSourceRootCode
@@ -37,7 +41,9 @@ import org.jetbrains.kotlin.idea.kdoc.resolveKDocLink
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.calls.util.getValueArgumentsInParentheses
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
+import java.io.File
 import java.util.concurrent.CancellationException
 
 @Service(Service.Level.PROJECT)
@@ -128,6 +134,7 @@ class DocProcessorService(private val project: Project) {
             return null
         }
 
+        var hasExportAsHtmlTag = false
         val docContent = try {
             // Create a DocumentableWrapper from the element
             val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
@@ -153,7 +160,42 @@ class DocProcessorService(private val project: Project) {
             // Retrieve the original DocumentableWrapper from the results
             val doc = results[documentableWrapper.identifier] ?: error("Something went wrong")
 
-            doc.docContent
+            // TODO replace with doc.annotations
+            hasExportAsHtmlTag = psiElement.annotationNames.any {
+                ExportAsHtml::class.simpleName!! in it
+            }
+
+            if (hasExportAsHtmlTag) {
+                val annotationArgs = (psiElement as? KtDeclaration)
+                    ?.annotationEntries
+                    ?.firstOrNull { ExportAsHtml::class.simpleName!! in it.shortName!!.asString() }
+                    ?.getValueArgumentsInParentheses()
+                    ?: emptyList()
+
+                val themeArg = annotationArgs.firstOrNull {
+                    it.getArgumentName()?.asName?.toString() == ExportAsHtml::theme.name
+                } ?: annotationArgs.getOrNull(0)?.takeIf {
+                    !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
+                }
+                val theme = themeArg?.getArgumentExpression()?.text?.toBoolean() ?: true
+
+                val stripReferencesArg = annotationArgs.firstOrNull {
+                    it.getArgumentName()?.asName?.toString() == ExportAsHtml::stripReferences.name
+                } ?: annotationArgs.getOrNull(1)?.takeIf {
+                    !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
+                }
+                val stripReferences = stripReferencesArg?.getArgumentExpression()?.text?.toBoolean() ?: true
+
+                val html = doc
+                    .getDocContentForHtmlRange()
+                    .renderToHtml(theme = theme, stripReferences = stripReferences)
+                val file = File.createTempFile(doc.fullyQualifiedPath, ".html")
+                file.writeText(html)
+
+                doc.docContent + "\n\n" + "Exported HTML: [${file.name}](file://${file.absolutePath})"
+            } else {
+                doc.docContent
+            }
         } catch (e: ProcessCanceledException) {
             return null
         } catch (e: CancellationException) {
@@ -199,17 +241,18 @@ class DocProcessorService(private val project: Project) {
     fun processDocumentablesByPath(sourceDocsByPath: DocumentablesByPath): DocumentablesByPath {
         // Find all processors
         Thread.currentThread().contextClassLoader = this.javaClass.classLoader
+        // TODO make customizable
         val processors = findProcessors(
             fullyQualifiedNames = listOf(
-                // TODO make customizable
                 INCLUDE_DOC_PROCESSOR,
                 INCLUDE_FILE_DOC_PROCESSOR,
                 ARG_DOC_PROCESSOR,
                 COMMENT_DOC_PROCESSOR,
                 SAMPLE_DOC_PROCESSOR,
+                EXPORT_AS_HTML_DOC_PROCESSOR,
                 REMOVE_ESCAPE_CHARS_PROCESSOR,
             ),
-            arguments = mapOf(ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false), // TODO
+            arguments = mapOf(ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false),
         )
 
         // Run all processors

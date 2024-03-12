@@ -53,7 +53,7 @@ abstract class DocProcessorTest(name: String) {
         ),
         docFileTextRange = docFileTextRange,
         docIndent = docIndent,
-        annotationFullyQualifiedPaths = emptyList(),
+        annotations = emptyList(),
         fileTextRange = fileTextRange,
     )
 

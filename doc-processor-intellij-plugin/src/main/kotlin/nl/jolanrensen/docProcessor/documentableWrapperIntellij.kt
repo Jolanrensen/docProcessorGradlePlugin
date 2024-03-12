@@ -94,7 +94,7 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
     val rawSource = documentable.text
 
     // TODO
-    val annotations = emptyList<String>()
+    val annotations: List<AnnotationWrapper> = emptyList()
 
     val fileTextRange = documentable.textRange!!.toIntRange()
 
@@ -109,7 +109,7 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
         file = file,
         docFileTextRange = docFileTextRange.toIntRange(),
         docIndent = docIndent,
-        annotationFullyQualifiedPaths = annotations,
+        annotations = annotations,
         fileTextRange = fileTextRange,
     )
 }
