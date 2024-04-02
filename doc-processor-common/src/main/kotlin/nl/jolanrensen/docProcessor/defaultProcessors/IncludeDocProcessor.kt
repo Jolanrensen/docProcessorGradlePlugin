@@ -4,11 +4,17 @@ import nl.jolanrensen.docProcessor.*
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import org.apache.commons.text.StringEscapeUtils
+import org.jgrapht.graph.SimpleDirectedGraph
+import org.jgrapht.traverse.NotDirectedAcyclicGraphException
+import org.jgrapht.traverse.TopologicalOrderIterator
+import java.util.*
 
 /**
  * @see IncludeDocProcessor
  */
 const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor"
+
+const val INCLUDE_DOC_PROCESSOR_PRE_SORT = "$INCLUDE_DOC_PROCESSOR.PRE_SORT"
 
 /**
  * Allows you to @include docs from other linkable elements.
@@ -76,9 +82,11 @@ const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  */
 class IncludeDocProcessor : TagDocProcessor() {
 
-    private val tag = "include"
+    companion object {
+        const val TAG = "include"
+    }
 
-    override fun tagIsSupported(tag: String): Boolean = tag == this.tag
+    override fun tagIsSupported(tag: String): Boolean = tag == TAG
 
     /**
      * Filter documentables to only include linkable elements (classes, functions, properties, etc) and
@@ -127,7 +135,7 @@ class IncludeDocProcessor : TagDocProcessor() {
         documentable: DocumentableWrapper,
     ): String {
         val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
-        val includeArguments = line.getTagArguments(tag = tag, numberOfArguments = 2)
+        val includeArguments = line.getTagArguments(tag = TAG, numberOfArguments = 2)
         val includePath = includeArguments.first().decodeCallableTarget()
         // for stuff written after the @include tag, save and include it later
         val extraContent = includeArguments.getOrElse(1) { "" }
@@ -137,7 +145,7 @@ class IncludeDocProcessor : TagDocProcessor() {
             query = includePath,
             documentables = documentablesByPath,
             documentablesNoFilters = unfilteredDocumentablesByPath,
-        ) { it != documentable }
+        ) { it.identifier != documentable.identifier }// todo test
 
         if (targetDocumentable == null) {
             val targetDocumentableNoFilter = documentable.queryDocumentables(
@@ -184,6 +192,11 @@ class IncludeDocProcessor : TagDocProcessor() {
         var targetContent: DocContent = targetDocumentable.docContent
             .removePrefix("\n")
             .removeSuffix("\n")
+
+        // update dependency graph for IntelliJ plugin
+        (documentable as? MutableDocumentableWrapper)?.apply {
+            dependsOn += targetDocumentable
+        }
 
         targetContent = when (documentable.programmingLanguage) {
             // if the content contains links to other elements, we need to expand the path
@@ -264,4 +277,92 @@ class IncludeDocProcessor : TagDocProcessor() {
         line = tagWithContent,
         documentable = documentable,
     )
+
+    override fun <T : DocumentableWrapper> sortDocumentables(
+        documentables: List<T>,
+        processLimit: Int,
+        documentablesByPath: DocumentablesByPath,
+    ): Iterable<T> {
+        val preSort = arguments[INCLUDE_DOC_PROCESSOR_PRE_SORT] as? Boolean ?: true
+        if (!preSort) return documentables
+
+        val orderedList = Analyzer.analyze(processLimit, documentablesByPath)
+            ?: return documentables
+
+        return documentables.sortedBy { doc ->
+            orderedList.indexOf(doc.identifier)
+        }
+    }
+
+    private class Analyzer : TagDocAnalyser<List<UUID>?>() {
+        companion object {
+            fun analyze(processLimit: Int, documentablesByPath: DocumentablesByPath): List<UUID>? =
+                Analyzer().analyze(processLimit, documentablesByPath)
+        }
+
+        override fun analyseBlockTagWithContent(
+            tagWithContent: String,
+            path: String,
+            documentable: DocumentableWrapper,
+        ) = analyseContent(tagWithContent, documentable)
+
+        override fun analyseInlineTagWithContent(
+            tagWithContent: String,
+            path: String,
+            documentable: DocumentableWrapper,
+        ) = analyseContent(tagWithContent, documentable)
+
+        private val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
+        private val dependencies: MutableSet<Edge<UUID>> = Collections.synchronizedSet(mutableSetOf())
+
+        private fun analyseContent(
+            line: String,
+            documentable: DocumentableWrapper,
+        ) {
+            val includeArguments = line.getTagArguments(tag = TAG, numberOfArguments = 2)
+            val includePath = includeArguments.first().decodeCallableTarget()
+
+            // query the filtered documentables for the @include paths
+            val targetDocumentable = documentable.queryDocumentables(
+                query = includePath,
+                documentables = documentablesByPath,
+                documentablesNoFilters = unfilteredDocumentablesByPath,
+            ) { it.identifier != documentable.identifier }
+
+            if (targetDocumentable != null) {
+                // this depends on target, so add an edge from target to this, that makes sure the target goes first
+                dependencies += Edge(
+                    from = targetDocumentable.identifier,
+                    to = documentable.identifier,
+                )
+            }
+        }
+
+        override fun analyze(
+            processLimit: Int,
+            documentablesByPath: DocumentablesByPath,
+        ): List<UUID>? {
+            this.process(processLimit, documentablesByPath)
+
+            val dag = SimpleDirectedGraph.createBuilder<UUID, _>(
+                Edge::class.java as Class<out Edge<UUID>>
+            )
+                .apply { for (dep in dependencies) addEdge(dep.from, dep.to, dep) }
+                .build()
+
+            return try {
+                TopologicalOrderIterator(dag).asSequence().toList()
+            } catch (e: NotDirectedAcyclicGraphException) {
+                null
+            }
+        }
+
+        override fun tagIsSupported(tag: String): Boolean = tag == TAG
+
+        override fun <T : DocumentableWrapper> filterDocumentablesToProcess(documentable: T): Boolean =
+            documentable.sourceHasDocumentation
+
+        override fun <T : DocumentableWrapper> filterDocumentablesToQuery(documentable: T): Boolean =
+            documentable.sourceHasDocumentation
+    }
 }

@@ -117,5 +117,6 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
         docIndent = docIndent,
         annotations = annotations,
         fileTextRange = fileTextRange,
+        dependsOn = emptyList(),
     )
 }

@@ -61,19 +61,35 @@ open class DocumentableWrapper(
     val file: File,
     val docFileTextRange: IntRange,
     val docIndent: Int,
-    val identifier: UUID = UUID.randomUUID(),
     val annotations: List<AnnotationWrapper>,
     val fileTextRange: IntRange,
+    val identifier: UUID = computeIdentifier(fullyQualifiedPath, fullyQualifiedExtensionPath, fileTextRange.first),
 
     open val docContent: DocContent,
     open val tags: Set<String>,
     open val isModified: Boolean,
+    open val dependsOn: List<DocumentableWrapper>,
 
     open val htmlRangeStart: Int?,
     open val htmlRangeEnd: Int?,
 ) {
 
-    companion object;
+    companion object {
+
+        /**
+         * Computes a unique identifier for a documentable based on its [fullyQualifiedPath] and
+         * its [fullyQualifiedExtensionPath].
+         */
+        fun computeIdentifier(
+            fullyQualifiedPath: String,
+            fullyQualifiedExtensionPath: String?,
+            textRangeStart: Int,
+        ): UUID = UUID.nameUUIDFromBytes(
+            listOf(fullyQualifiedPath, fullyQualifiedExtensionPath, textRangeStart)
+                .joinToString()
+                .toByteArray()
+        )
+    }
 
     constructor(
         docContent: DocContent,
@@ -88,6 +104,7 @@ open class DocumentableWrapper(
         docIndent: Int,
         annotations: List<AnnotationWrapper>,
         fileTextRange: IntRange,
+        dependsOn: List<DocumentableWrapper>,
         htmlRangeStart: Int? = null,
         htmlRangeEnd: Int? = null,
     ) : this(
@@ -104,6 +121,7 @@ open class DocumentableWrapper(
         docIndent = docIndent,
         docContent = docContent,
         annotations = annotations,
+        dependsOn = dependsOn,
         tags = docContent.findTagNamesInDocContent().toSet(),
         isModified = false,
         htmlRangeStart = htmlRangeStart,
@@ -298,6 +316,8 @@ open class DocumentableWrapper(
         return lines.subList(start, end + 1).joinToString("\n")
     }
 
+    fun getDocContentHashcode(): Int = docContent.hashCode()
+
     /** Returns a copy of this [DocumentableWrapper] with the given parameters. */
     open fun copy(
         docContent: DocContent = this.docContent,
@@ -321,6 +341,7 @@ open class DocumentableWrapper(
             annotations = annotations,
             identifier = identifier,
             fileTextRange = fileTextRange,
+            dependsOn = dependsOn,
             htmlRangeStart = htmlRangeStart,
             htmlRangeEnd = htmlRangeEnd,
         )

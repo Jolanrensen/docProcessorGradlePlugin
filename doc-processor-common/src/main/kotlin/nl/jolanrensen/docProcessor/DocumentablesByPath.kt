@@ -3,7 +3,11 @@ package nl.jolanrensen.docProcessor
 import java.util.*
 
 typealias DocumentableWrapperFilter = (DocumentableWrapper) -> Boolean
-internal val NO_FILTER: DocumentableWrapperFilter = { true }
+@Suppress("ClassName")
+internal data object NO_FILTER: DocumentableWrapperFilter {
+    override fun invoke(p1: DocumentableWrapper): Boolean = true
+
+}
 
 interface DocumentablesByPath {
 

@@ -32,7 +32,7 @@ abstract class TagDocProcessor : DocProcessor() {
         get() = tags.any(::tagIsSupported)
 
 
-    private lateinit var mutableDocumentablesByPath: MutableDocumentablesByPath
+    protected lateinit var mutableDocumentablesByPath: MutableDocumentablesByPath
 
     /**
      * Allows you to access the documentables to be processed as well as to gain
@@ -53,6 +53,15 @@ abstract class TagDocProcessor : DocProcessor() {
 
     open fun <T : DocumentableWrapper> filterDocumentablesToQuery(documentable: T): Boolean = true
 
+    /**
+     * You can optionally sort the documentables to optimize the order in which they are processed.
+     * [TagDocAnalyser] can be used for that.
+     */
+    open fun <T : DocumentableWrapper> sortDocumentables(
+        documentables: List<T>,
+        processLimit: Int,
+        documentablesByPath: DocumentablesByPath,
+    ): Iterable<T> = documentables
 
     /**
      * Whether this processor can process multiple documentables in parallel.
@@ -164,6 +173,7 @@ abstract class TagDocProcessor : DocProcessor() {
                 .flatMap { it.value }
                 .filter { it.hasSupportedTag }
                 .distinctBy { it.identifier }
+                .let { sortDocumentables(it, processLimit, documentablesByPath) }
 
             var anyModifications = false
             if (canProcessParallel) {
