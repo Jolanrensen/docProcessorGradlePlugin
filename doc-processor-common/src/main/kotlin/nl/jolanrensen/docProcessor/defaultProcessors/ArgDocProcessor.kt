@@ -1,5 +1,8 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import nl.jolanrensen.docProcessor.*
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import java.util.*
@@ -94,12 +97,12 @@ class ArgDocProcessor : TagDocProcessor() {
 
     data class DocWrapperWithArgMap(
         val doc: DocumentableWrapper,
-        val args: MutableMap<String, String> = mutableMapOf(),
+        val args: MutableMap<String, String> = Collections.synchronizedMap(mutableMapOf()),
     )
 
     data class DocWrapperWithArgSet(
         val doc: DocumentableWrapper,
-        val args: MutableSet<String> = mutableSetOf(),
+        val args: MutableSet<String> = Collections.synchronizedSet(mutableSetOf()),
     )
 
     override fun shouldContinue(
@@ -147,9 +150,9 @@ class ArgDocProcessor : TagDocProcessor() {
     }
 
     // @set map for path -> arg name -> value
-    private val argMap: MutableMap<UUID, DocWrapperWithArgMap> = mutableMapOf()
+    private val argMap: MutableMap<UUID, DocWrapperWithArgMap> = Collections.synchronizedMap(mutableMapOf())
 
-    private val argsNotFound: MutableMap<UUID, DocWrapperWithArgSet> = mutableMapOf()
+    private val argsNotFound: MutableMap<UUID, DocWrapperWithArgSet> = Collections.synchronizedMap(mutableMapOf())
 
     /**
      * Preprocess all `${a}` and `$a` tags to `{@get a}`
@@ -158,12 +161,16 @@ class ArgDocProcessor : TagDocProcessor() {
      */
     override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath {
         val mutable = documentablesByPath.toMutable()
-        for ((_, docs) in mutable.documentablesToProcess) {
-            for (doc in docs) {
-                doc.modifyDocContentAndUpdate(
-                    doc.docContent.replaceDollarNotation()
-                )
-            }
+        runBlocking {
+            mutable.documentablesToProcess.flatMap { (_, docs) ->
+                docs.map { doc ->
+                    async {
+                        doc.modifyDocContentAndUpdate(
+                            doc.docContent.replaceDollarNotation()
+                        )
+                    }
+                }
+            }.awaitAll()
         }
 
         return super.process(processLimit, mutable)

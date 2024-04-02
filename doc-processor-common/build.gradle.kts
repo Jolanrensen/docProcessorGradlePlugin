@@ -19,6 +19,8 @@ dependencies {
     implementation("org.apache.commons:commons-text:1.10.0")
 
     implementation("org.jetbrains:markdown-jvm:0.6.1")
+    
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1-Beta")
 
     // logging
     api("io.github.microutils:kotlin-logging:3.0.5")

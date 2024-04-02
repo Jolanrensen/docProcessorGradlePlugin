@@ -95,6 +95,11 @@ class IncludeDocProcessor : TagDocProcessor() {
         documentable.sourceHasDocumentation
 
     /**
+     * Documentables interact, so no parallel processing is possible.
+     */
+    override val canProcessParallel: Boolean = false
+
+    /**
      * Provides a helpful message when a circular reference is detected.
      */
     override fun onProcessError(): Nothing {
