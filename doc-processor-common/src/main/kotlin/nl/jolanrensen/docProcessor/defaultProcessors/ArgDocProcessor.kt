@@ -1,7 +1,7 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import nl.jolanrensen.docProcessor.*
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
@@ -164,13 +164,13 @@ class ArgDocProcessor : TagDocProcessor() {
         runBlocking {
             mutable.documentablesToProcess.flatMap { (_, docs) ->
                 docs.map { doc ->
-                    async {
+                    launch {
                         doc.modifyDocContentAndUpdate(
                             doc.docContent.replaceDollarNotation()
                         )
                     }
                 }
-            }.awaitAll()
+            }.joinAll()
         }
 
         return super.process(processLimit, mutable)

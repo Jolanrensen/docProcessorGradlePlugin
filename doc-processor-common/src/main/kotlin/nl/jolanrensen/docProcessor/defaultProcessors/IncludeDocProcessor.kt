@@ -145,7 +145,7 @@ class IncludeDocProcessor : TagDocProcessor() {
             query = includePath,
             documentables = documentablesByPath,
             documentablesNoFilters = unfilteredDocumentablesByPath,
-        ) { it.identifier != documentable.identifier }// todo test
+        ) { it.identifier != documentable.identifier }
 
         if (targetDocumentable == null) {
             val targetDocumentableNoFilter = documentable.queryDocumentables(

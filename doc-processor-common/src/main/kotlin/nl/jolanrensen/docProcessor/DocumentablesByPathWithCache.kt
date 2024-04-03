@@ -1,135 +1,179 @@
 package nl.jolanrensen.docProcessor
 
-open class DocumentablesByPathWithCache(
-    private val unfilteredDocsToProcess: Map<String, List<DocumentableWrapper>>,
-    private val query: (String) -> List<DocumentableWrapper>?,
-    override val queryFilter: DocumentableWrapperFilter = NO_FILTER,
-    override val documentablesToProcessFilter: DocumentableWrapperFilter = NO_FILTER,
-) : DocumentablesByPath {
+import org.jgrapht.graph.SimpleDirectedGraph
+import java.util.*
 
-    override val documentablesToProcess: Map<String, List<DocumentableWrapper>> =
-        when (documentablesToProcessFilter) {
-            NO_FILTER -> unfilteredDocsToProcess
-            else -> unfilteredDocsToProcess
-                .mapValues { (_, documentables) ->
-                    documentables.filter(documentablesToProcessFilter)
+
+open class DocumentablesByPathWithCache<C>(
+    val queryNew: (context: C, link: String) -> List<DocumentableWrapper>?,
+) : DocumentablesByPath, MutableDocumentablesByPath {
+
+    override var queryFilter: DocumentableWrapperFilter = NO_FILTER
+
+    override var documentablesToProcessFilter: DocumentableWrapperFilter = NO_FILTER
+
+    // graph representing the dependencies between documentables
+    private val dependencyGraph = SimpleDirectedGraph<UUID, _>(Edge::class.java as Class<out Edge<UUID>>)
+
+    // holds previous query results
+    private val fqNamesCache: MutableMap<UUID, Pair<String, String?>> = mutableMapOf()
+
+    // todo, also track imports, superPaths, now done by UUID, but
+    // todo might revert back to keep docContent
+
+    // holds the hashcodes of the source of the documentables, to be updated each time a documentable is queried
+    private val docContentSourceHashCodeCache: MutableMap<UUID, Int> = mutableMapOf()
+
+    // holds the resulting docs of the documentables, to be updated each time a documentable has been processed
+    // Can be deleted if needsRebuild is true
+    private val docContentResultCache: MutableMap<UUID, String> = mutableMapOf()
+
+    private var context: C? = null
+    private var docToProcess: MutableDocumentableWrapper? = null
+        set(value) {
+            field = value
+
+            docsToProcess = docToProcess?.let { docToProcess ->
+                listOfNotNull(
+                    docToProcess.fullyQualifiedPath,
+                    docToProcess.fullyQualifiedExtensionPath,
+                ).associateWith { listOf(docToProcess) }
+            } ?: emptyMap()
+        }
+
+    private var docsToProcess: Map<String, List<MutableDocumentableWrapper>> = emptyMap()
+
+    override val documentablesToProcess: Map<String, List<MutableDocumentableWrapper>>
+        get() = when {
+            docToProcess == null -> emptyMap()
+            documentablesToProcessFilter == NO_FILTER ||
+                    documentablesToProcessFilter(docToProcess!!) -> docsToProcess
+
+            else -> emptyMap()
+        }
+
+    fun getDocContentResult(docId: UUID): String? = docContentResultCache[docId]
+
+    // we set a context and a documentable to process
+    fun updatePreProcessing(context: C, docToProcess: DocumentableWrapper) {
+        this.context = context
+        this.docToProcess = docToProcess.toMutable()
+
+        fqNamesCache[docToProcess.identifier] = Pair(docToProcess.fullyQualifiedPath, docToProcess.fullyQualifiedExtensionPath)
+    }
+
+    override fun query(path: String): List<MutableDocumentableWrapper>? {
+        require(context != null) { "updatePreProcessing must be called before query" }
+        val queryRes = queryNew(context!!, path)
+            ?.map { it.toMutable() }
+
+        // load cached results directly into queries
+        // actually, we can't. The final documentable can override get/set args
+        // can be done with @include
+//        queryRes?.forEach {
+//            val needsRebuild = needsRebuild(it)
+//            val docContentResult = getDocContentResult(it.identifier)
+//            if (!needsRebuild && docContentResult != null) {
+//                it.modifyDocContentAndUpdate(docContentResult)
+//                println("loading cached ${it.fullyQualifiedPath}/${it.fullyQualifiedExtensionPath}")
+//            }
+//        }
+
+        return queryRes?.filter(queryFilter)
+    }
+
+    fun needsRebuild(): Boolean {
+        require(docToProcess != null) { "updatePreProcessing must be called before needsRebuild()" }
+        return needsRebuild(docToProcess!!)
+    }
+
+    private fun needsRebuild(doc: DocumentableWrapper): Boolean {
+        val context = context
+        require(context != null) { "updatePreProcessing must be called before needsRebuild" }
+
+        fqNamesCache[doc.identifier] = Pair(doc.fullyQualifiedPath, doc.fullyQualifiedExtensionPath)
+
+        // if source has changed, return true
+        val sourceHasChanged = doc.getDocHashcode() != docContentSourceHashCodeCache[doc.identifier]
+        val doesNotContainVertex = !dependencyGraph.containsVertex(doc.identifier)
+        val doesNotContainResultCache = docContentResultCache[doc.identifier] == null
+
+        if (doesNotContainVertex || doesNotContainResultCache || sourceHasChanged) {
+
+            // update the caches
+            docContentSourceHashCodeCache[doc.identifier] = doc.getDocHashcode()
+            dependencyGraph.addVertex(doc.identifier)
+            docContentResultCache.remove(doc.identifier)
+            return true
+        }
+        val dependencies = dependencyGraph.incomingEdgesOf(doc.identifier).map { it.from }
+        if (dependencies.isEmpty()) return false
+
+        // else, check all dependencies for modifications
+        val dependencyDocs = dependencies.map {
+            val fqNames = fqNamesCache[it]
+            if (fqNames == null) {
+                null
+            } else {
+                val (fqName, fqExtName) = fqNames
+
+                // query for a new doc
+                buildList {
+                    queryNew(context, fqName)?.forEach { add(it) }
+                    if (fqExtName != null) {
+                        queryNew(context, fqExtName)?.forEach { add(it) }
+                    }
+                }.firstOrNull {
+                    it.identifier != doc.identifier
                 }
+            }
         }
 
-    private val queryCache: MutableMap<String, List<DocumentableWrapper>> = mutableMapOf()
+        val needsRebuild = dependencyDocs
+            .map { it == null || needsRebuild(it) }
+            .any { it } // mapping first to increase the documentableWrapperCache
 
-    override fun query(path: String): List<DocumentableWrapper>? =
-        queryCache.getOrPut(path) { // should return null in SingleColumn.all case
-            (unfilteredDocsToProcess[path] ?: query.invoke(path))
-                ?.filter(queryFilter)
-                ?: return@query null
+        return needsRebuild
+    }
+
+    fun updatePostProcessing(resultDoc: DocumentableWrapper) {
+        // update dependency graph
+        val oldIncomingEdges = dependencyGraph.incomingEdgesOf(resultDoc.identifier)
+        val newIncomingEdges = resultDoc.dependsOn.map {
+            Edge(from = it.identifier, to = resultDoc.identifier)
+        }.toSet()
+
+        for (newEdge in (newIncomingEdges - oldIncomingEdges)) {
+            dependencyGraph.addVertex(newEdge.from)
+            dependencyGraph.addVertex(newEdge.to)
+            dependencyGraph.addEdge(newEdge.from, newEdge.to, newEdge)
+        }
+        for (removedEdge in (oldIncomingEdges - newIncomingEdges)) {
+            dependencyGraph.removeEdge(removedEdge)
         }
 
-    override fun toMutable(): MutableDocumentablesByPath =
-        MutableDocumentablesByPathWithCache(
-            unfilteredDocsToProcess = unfilteredDocsToProcess.toMutable(),
-            query = { query(it)?.map { it.toMutable() } },
-            queryFilter = queryFilter,
-            documentablesToProcessFilter = documentablesToProcessFilter,
-        )
-
-    override fun withQueryFilter(queryFilter: DocumentableWrapperFilter): DocumentablesByPath =
-        when {
-            queryFilter == this.queryFilter -> this
-            else -> DocumentablesByPathWithCache(
-                unfilteredDocsToProcess = unfilteredDocsToProcess,
-                query = query,
-                queryFilter = queryFilter,
-                documentablesToProcessFilter = documentablesToProcessFilter,
-            )
+        // and caches
+        docContentResultCache[resultDoc.identifier] = resultDoc.docContent
+        fqNamesCache[resultDoc.identifier] = Pair(resultDoc.fullyQualifiedPath, resultDoc.fullyQualifiedExtensionPath)
+        resultDoc.dependsOn.forEach {
+            updatePostProcessing(it)
         }
-
-    override fun withDocsToProcessFilter(docsToProcessFilter: DocumentableWrapperFilter): DocumentablesByPath =
-        when {
-            docsToProcessFilter == this.documentablesToProcessFilter -> this
-            else -> DocumentablesByPathWithCache(
-                unfilteredDocsToProcess = unfilteredDocsToProcess,
-                query = query,
-                queryFilter = queryFilter,
-                documentablesToProcessFilter = docsToProcessFilter,
-            )
-        }
-
-    override fun withFilters(
-        queryFilter: DocumentableWrapperFilter,
-        docsToProcessFilter: DocumentableWrapperFilter,
-    ): DocumentablesByPath =
-        when {
-            queryFilter == this.queryFilter && docsToProcessFilter == this.documentablesToProcessFilter -> this
-            else -> DocumentablesByPathWithCache(
-                unfilteredDocsToProcess = unfilteredDocsToProcess,
-                query = query,
-                queryFilter = queryFilter,
-                documentablesToProcessFilter = docsToProcessFilter,
-            )
-        }
-}
-
-class MutableDocumentablesByPathWithCache(
-    private val unfilteredDocsToProcess: Map<String, List<MutableDocumentableWrapper>>,
-    private val query: (String) -> List<MutableDocumentableWrapper>?,
-    override val queryFilter: DocumentableWrapperFilter = NO_FILTER,
-    override val documentablesToProcessFilter: DocumentableWrapperFilter = NO_FILTER,
-) : MutableDocumentablesByPath {
-
-    override val documentablesToProcess: Map<String, List<MutableDocumentableWrapper>> =
-        when (documentablesToProcessFilter) {
-            NO_FILTER -> unfilteredDocsToProcess
-            else -> unfilteredDocsToProcess
-                .mapValues { (_, documentables) ->
-                    documentables.filter(documentablesToProcessFilter)
-                }
-        }
-
-    private val queryCache: MutableMap<String, List<MutableDocumentableWrapper>> = mutableMapOf()
-
-    override fun query(path: String): List<MutableDocumentableWrapper>? =
-        queryCache.getOrPut(path) {
-            (unfilteredDocsToProcess[path] ?: query.invoke(path))
-                ?.filter(queryFilter)
-                ?: return@query null
-        }
+    }
 
     override fun toMutable(): MutableDocumentablesByPath = this
 
     override fun withQueryFilter(queryFilter: DocumentableWrapperFilter): MutableDocumentablesByPath =
-        when {
-            queryFilter == this.queryFilter -> this
-            else -> MutableDocumentablesByPathWithCache(
-                unfilteredDocsToProcess = unfilteredDocsToProcess,
-                query = query,
-                queryFilter = queryFilter,
-                documentablesToProcessFilter = documentablesToProcessFilter,
-            )
-        }
+        apply { this.queryFilter = queryFilter }
 
     override fun withDocsToProcessFilter(docsToProcessFilter: DocumentableWrapperFilter): MutableDocumentablesByPath =
-        when {
-            docsToProcessFilter == this.documentablesToProcessFilter -> this
-            else -> MutableDocumentablesByPathWithCache(
-                unfilteredDocsToProcess = unfilteredDocsToProcess,
-                query = query,
-                queryFilter = queryFilter,
-                documentablesToProcessFilter = docsToProcessFilter,
-            )
-        }
+        apply { this.documentablesToProcessFilter = docsToProcessFilter}
 
     override fun withFilters(
         queryFilter: DocumentableWrapperFilter,
         docsToProcessFilter: DocumentableWrapperFilter,
     ): MutableDocumentablesByPath =
-        when {
-            queryFilter == this.queryFilter && docsToProcessFilter == this.documentablesToProcessFilter -> this
-            else -> MutableDocumentablesByPathWithCache(
-                unfilteredDocsToProcess = unfilteredDocsToProcess,
-                query = query,
-                queryFilter = queryFilter,
-                documentablesToProcessFilter = docsToProcessFilter,
-            )
+        apply {
+            this.queryFilter = queryFilter
+            this.documentablesToProcessFilter = docsToProcessFilter
         }
 }

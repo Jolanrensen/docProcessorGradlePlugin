@@ -1,7 +1,7 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import nl.jolanrensen.docProcessor.DocProcessor
 import nl.jolanrensen.docProcessor.DocumentablesByPath
@@ -29,13 +29,13 @@ class RemoveEscapeCharsProcessor : DocProcessor() {
         runBlocking {
             mutableDocs.documentablesToProcess.flatMap { (_, docs) ->
                 docs.map {
-                    async {
+                    launch {
                         it.modifyDocContentAndUpdate(
                             it.docContent.removeEscapeCharacters(escapeChars)
                         )
                     }
                 }
-            }.awaitAll()
+            }.joinAll()
         }
 
         return mutableDocs

@@ -63,7 +63,13 @@ open class DocumentableWrapper(
     val docIndent: Int,
     val annotations: List<AnnotationWrapper>,
     val fileTextRange: IntRange,
-    val identifier: UUID = computeIdentifier(fullyQualifiedPath, fullyQualifiedExtensionPath, fileTextRange.first),
+    val identifier: UUID = computeIdentifier(
+        imports = imports,
+        fullyQualifiedPath = fullyQualifiedPath,
+        fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+        fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
+        textRangeStart = fileTextRange.first,
+    ),
 
     open val docContent: DocContent,
     open val tags: Set<String>,
@@ -81,13 +87,17 @@ open class DocumentableWrapper(
          * its [fullyQualifiedExtensionPath].
          */
         fun computeIdentifier(
+            imports: List<SimpleImportPath>,
             fullyQualifiedPath: String,
             fullyQualifiedExtensionPath: String?,
+            fullyQualifiedSuperPaths: List<String>,
             textRangeStart: Int,
         ): UUID = UUID.nameUUIDFromBytes(
-            listOf(fullyQualifiedPath, fullyQualifiedExtensionPath, textRangeStart)
-                .joinToString()
-                .toByteArray()
+            listOf(
+                fullyQualifiedPath,
+                fullyQualifiedExtensionPath,
+                textRangeStart,
+            ).plus(imports).plus(fullyQualifiedSuperPaths).joinToString().toByteArray()
         )
     }
 
@@ -104,7 +114,7 @@ open class DocumentableWrapper(
         docIndent: Int,
         annotations: List<AnnotationWrapper>,
         fileTextRange: IntRange,
-        dependsOn: List<DocumentableWrapper>,
+        dependsOn: List<DocumentableWrapper> = emptyList(),
         htmlRangeStart: Int? = null,
         htmlRangeEnd: Int? = null,
     ) : this(
@@ -217,19 +227,15 @@ open class DocumentableWrapper(
             }
 
             // if that is the case, we need to find the type of the receiver and get all full paths from there too
-            @Suppress("NamedArgsPositionMismatch")
-            val targetType = queryDocumentables(
+            @Suppress("NamedArgsPositionMismatch") val targetType = queryDocumentables(
                 query = targetPathReceiver,
                 documentablesNoFilters = documentablesNoFilters,
                 documentables = documentablesNoFilters,
                 canBeExtension = false,
-            ) { it != this@DocumentableWrapper }
-                ?: return@buildSet
+            ) { it != this@DocumentableWrapper } ?: return@buildSet
 
             val targetTypes = targetType.getAllTypes(documentablesNoFilters)
-            addAll(
-                targetTypes.map { "${it.fullyQualifiedPath}.$target" }
-            )
+            addAll(targetTypes.map { "${it.fullyQualifiedPath}.$target" })
         }
 
         return queries.toList()
@@ -243,7 +249,7 @@ open class DocumentableWrapper(
     fun queryDocumentables(
         query: String,
         documentablesNoFilters: DocumentablesByPath,
-        documentables: DocumentablesByPath, // todo = documentablesNoFilters
+        documentables: DocumentablesByPath,
         canBeExtension: Boolean = true,
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): DocumentableWrapper? {
@@ -291,9 +297,12 @@ open class DocumentableWrapper(
         )?.let {
             // take either the normal path to the doc or the extension path depending on which is valid and
             // causes the smallest number of collisions
-            listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath)
-                .filter { path -> pathIsValid(path, it) }
-                .minByOrNull { documentables[it]?.size ?: 0 }
+            listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath).filter { path ->
+                pathIsValid(
+                    path,
+                    it
+                )
+            }.minByOrNull { documentables[it]?.size ?: 0 }
         }
         if (docPath != null) return docPath
 
@@ -316,33 +325,32 @@ open class DocumentableWrapper(
         return lines.subList(start, end + 1).joinToString("\n")
     }
 
-    fun getDocContentHashcode(): Int = docContent.hashCode()
+    fun getDocHashcode(): Int = docContent.hashCode()
 
     /** Returns a copy of this [DocumentableWrapper] with the given parameters. */
     open fun copy(
         docContent: DocContent = this.docContent,
         tags: Set<String> = this.tags,
         isModified: Boolean = this.isModified,
-    ): DocumentableWrapper =
-        DocumentableWrapper(
-            programmingLanguage = programmingLanguage,
-            imports = imports,
-            rawSource = rawSource,
-            sourceHasDocumentation = sourceHasDocumentation,
-            fullyQualifiedPath = fullyQualifiedPath,
-            fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
-            fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
-            file = file,
-            docFileTextRange = docFileTextRange,
-            docIndent = docIndent,
-            docContent = docContent,
-            tags = tags,
-            isModified = isModified,
-            annotations = annotations,
-            identifier = identifier,
-            fileTextRange = fileTextRange,
-            dependsOn = dependsOn,
-            htmlRangeStart = htmlRangeStart,
-            htmlRangeEnd = htmlRangeEnd,
-        )
+    ): DocumentableWrapper = DocumentableWrapper(
+        programmingLanguage = programmingLanguage,
+        imports = imports,
+        rawSource = rawSource,
+        sourceHasDocumentation = sourceHasDocumentation,
+        fullyQualifiedPath = fullyQualifiedPath,
+        fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+        fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
+        file = file,
+        docFileTextRange = docFileTextRange,
+        docIndent = docIndent,
+        docContent = docContent,
+        tags = tags,
+        isModified = isModified,
+        annotations = annotations,
+        identifier = identifier,
+        fileTextRange = fileTextRange,
+        dependsOn = dependsOn,
+        htmlRangeStart = htmlRangeStart,
+        htmlRangeEnd = htmlRangeEnd,
+    )
 }
