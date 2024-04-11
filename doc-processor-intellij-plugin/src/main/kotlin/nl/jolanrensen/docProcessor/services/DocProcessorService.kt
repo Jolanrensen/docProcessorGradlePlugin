@@ -70,6 +70,7 @@ class DocProcessorService(private val project: Project) {
      * Helper function that queries the project for reference links and returns them as a list of DocumentableWrappers.
      */
     private fun query(context: PsiElement, link: String): List<DocumentableWrapper>? {
+        println("querying intellij for: $link")
         val psiManager = PsiManager.getInstance(project)
 
         val descriptors = when (val navElement = context.navigationElement) {
@@ -164,7 +165,10 @@ class DocProcessorService(private val project: Project) {
         return psiElement
     }
 
-    private val documentableCache = DocumentablesByPathWithCache(queryNew = ::query)
+    private val documentableCache = DocumentablesByPathWithCache(
+        processLimit = processLimit,
+        queryNew = ::query,
+    )
 
     private fun getDocContent(psiElement: PsiElement): String? {
         return try {
@@ -174,13 +178,13 @@ class DocProcessorService(private val project: Project) {
                 thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
                 return null
             }
-            documentableCache.updatePreProcessing(psiElement, documentableWrapper)
+            val needsRebuild = documentableCache.updatePreProcessing(psiElement, documentableWrapper)
 
             println()
             println()
 
-            if (!documentableCache.needsRebuild()) {
-                println("loading cached ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}")
+            if (!needsRebuild) {
+                println("loading fully cached ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}")
                 return documentableCache.getDocContentResult(documentableWrapper.identifier)!!
             }
             println("preprocessing ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}")
@@ -189,9 +193,9 @@ class DocProcessorService(private val project: Project) {
             val results = processDocumentablesByPath(documentableCache)
 
             // Retrieve the original DocumentableWrapper from the results
-            val doc = results[documentableWrapper.identifier] ?: error("Something went wrong")
+            val doc = results[documentableWrapper.identifier] ?: return null //error("Something went wrong")
 
-            documentableCache.updatePostProcessing(doc)
+            documentableCache.updatePostProcessing()
 
             // TODO replace with doc.annotations
             val hasExportAsHtmlTag = psiElement.annotationNames.any {
@@ -209,11 +213,11 @@ class DocProcessorService(private val project: Project) {
         } catch (e: CancellationException) {
             return null
         } catch (e: TagDocProcessorFailedException) {
-            e.printStackTrace()
+//            e.printStackTrace()
             // render fancy :)
             e.renderDoc()
         } catch (e: Throwable) {
-            e.printStackTrace()
+//            e.printStackTrace()
 
             // instead of throwing the exception, render it inside the kdoc
             "```\n$e\n```"
@@ -271,7 +275,10 @@ class DocProcessorService(private val project: Project) {
                 ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false,
                 INCLUDE_DOC_PROCESSOR_PRE_SORT to false,
             ),
-        )
+        ).toMutableList()
+
+        // for cache collecting after include doc processor
+        processors.add(1, PostIncludeDocProcessorCacheCollector(documentableCache))
 
         // Run all processors
         val modifiedDocumentables = processors.fold(sourceDocsByPath) { acc, processor ->

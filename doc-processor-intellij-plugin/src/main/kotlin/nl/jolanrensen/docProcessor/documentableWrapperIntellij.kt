@@ -111,6 +111,5 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
         docIndent = docIndent,
         annotations = annotations,
         fileTextRange = fileTextRange,
-        dependsOn = emptyList(),
     )
 }

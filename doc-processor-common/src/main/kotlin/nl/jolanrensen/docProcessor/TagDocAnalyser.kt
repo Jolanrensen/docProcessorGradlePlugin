@@ -18,8 +18,12 @@ abstract class TagDocAnalyser<out R> : TagDocProcessor() {
         documentable: DocumentableWrapper,
     )
 
-    // Needs to call process!
-    abstract fun analyze(processLimit: Int, documentablesByPath: DocumentablesByPath): R
+    abstract fun getAnalyzedResult(): R
+
+    fun analyzeSafely(processLimit: Int, documentablesByPath: DocumentablesByPath): TagDocAnalyser<R> {
+        processSafely(processLimit, documentablesByPath)
+        return this
+    }
 
     final override fun processBlockTagWithContent(
         tagWithContent: String,
@@ -38,6 +42,11 @@ abstract class TagDocAnalyser<out R> : TagDocProcessor() {
         analyseInlineTagWithContent(tagWithContent, path, documentable)
         return tagWithContent
     }
+
+    protected final fun analyzeDocumentable(
+        documentable: DocumentableWrapper,
+        processLimit: Int,
+    ): Boolean = processDocumentable(documentable.toMutable(), processLimit)
 
     final override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath =
         super.process(processLimit, documentablesByPath)

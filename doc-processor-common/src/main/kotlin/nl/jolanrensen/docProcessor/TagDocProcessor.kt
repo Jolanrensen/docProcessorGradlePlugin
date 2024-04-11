@@ -203,7 +203,7 @@ abstract class TagDocProcessor : DocProcessor() {
         return mutableDocumentablesByPath
     }
 
-    private fun processDocumentable(
+    protected fun processDocumentable(
         documentable: MutableDocumentableWrapper,
         processLimit: Int,
     ): Boolean {

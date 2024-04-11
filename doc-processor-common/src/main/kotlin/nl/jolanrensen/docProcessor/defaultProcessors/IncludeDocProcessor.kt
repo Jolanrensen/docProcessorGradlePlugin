@@ -4,7 +4,6 @@ import nl.jolanrensen.docProcessor.*
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import org.apache.commons.text.StringEscapeUtils
-import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.traverse.NotDirectedAcyclicGraphException
 import org.jgrapht.traverse.TopologicalOrderIterator
 import java.util.*
@@ -140,11 +139,15 @@ class IncludeDocProcessor : TagDocProcessor() {
         // for stuff written after the @include tag, save and include it later
         val extraContent = includeArguments.getOrElse(1) { "" }
 
+        // TODO remove
+        println("Running include processor for ${documentable.fullyQualifiedPath}/${documentable.fullyQualifiedExtensionPath}, line @include $includePath")
+
         // query the filtered documentables for the @include paths
         val targetDocumentable = documentable.queryDocumentables(
             query = includePath,
             documentables = documentablesByPath,
             documentablesNoFilters = unfilteredDocumentablesByPath,
+            canBeCache = true, // for IntelliJ plugin
         ) { it.identifier != documentable.identifier }
 
         if (targetDocumentable == null) {
@@ -192,11 +195,6 @@ class IncludeDocProcessor : TagDocProcessor() {
         var targetContent: DocContent = targetDocumentable.docContent
             .removePrefix("\n")
             .removeSuffix("\n")
-
-        // update dependency graph for IntelliJ plugin
-        (documentable as? MutableDocumentableWrapper)?.apply {
-            dependsOn += targetDocumentable
-        }
 
         targetContent = when (documentable.programmingLanguage) {
             // if the content contains links to other elements, we need to expand the path
@@ -286,83 +284,16 @@ class IncludeDocProcessor : TagDocProcessor() {
         val preSort = arguments[INCLUDE_DOC_PROCESSOR_PRE_SORT] as? Boolean ?: true
         if (!preSort) return documentables
 
-        val orderedList = Analyzer.analyze(processLimit, documentablesByPath)
-            ?: return documentables
+        val dag = IncludeDocAnalyzer.getAnalyzedResult(processLimit, documentablesByPath)
+        val orderedList = try {
+            TopologicalOrderIterator(dag).asSequence().mapTo(mutableListOf()) { it.identifier }
+        } catch (e: NotDirectedAcyclicGraphException) {
+            return documentables
+        }
 
         return documentables.sortedBy { doc ->
             orderedList.indexOf(doc.identifier)
         }
     }
-
-    private class Analyzer : TagDocAnalyser<List<UUID>?>() {
-        companion object {
-            fun analyze(processLimit: Int, documentablesByPath: DocumentablesByPath): List<UUID>? =
-                Analyzer().analyze(processLimit, documentablesByPath)
-        }
-
-        override fun analyseBlockTagWithContent(
-            tagWithContent: String,
-            path: String,
-            documentable: DocumentableWrapper,
-        ) = analyseContent(tagWithContent, documentable)
-
-        override fun analyseInlineTagWithContent(
-            tagWithContent: String,
-            path: String,
-            documentable: DocumentableWrapper,
-        ) = analyseContent(tagWithContent, documentable)
-
-        private val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
-        private val dependencies: MutableSet<Edge<UUID>> = Collections.synchronizedSet(mutableSetOf())
-
-        private fun analyseContent(
-            line: String,
-            documentable: DocumentableWrapper,
-        ) {
-            val includeArguments = line.getTagArguments(tag = TAG, numberOfArguments = 2)
-            val includePath = includeArguments.first().decodeCallableTarget()
-
-            // query the filtered documentables for the @include paths
-            val targetDocumentable = documentable.queryDocumentables(
-                query = includePath,
-                documentables = documentablesByPath,
-                documentablesNoFilters = unfilteredDocumentablesByPath,
-            ) { it.identifier != documentable.identifier }
-
-            if (targetDocumentable != null) {
-                // this depends on target, so add an edge from target to this, that makes sure the target goes first
-                dependencies += Edge(
-                    from = targetDocumentable.identifier,
-                    to = documentable.identifier,
-                )
-            }
-        }
-
-        override fun analyze(
-            processLimit: Int,
-            documentablesByPath: DocumentablesByPath,
-        ): List<UUID>? {
-            this.process(processLimit, documentablesByPath)
-
-            val dag = SimpleDirectedGraph.createBuilder<UUID, _>(
-                Edge::class.java as Class<out Edge<UUID>>
-            )
-                .apply { for (dep in dependencies) addEdge(dep.from, dep.to, dep) }
-                .build()
-
-            return try {
-                TopologicalOrderIterator(dag).asSequence().toList()
-            } catch (e: NotDirectedAcyclicGraphException) {
-                null
-            }
-        }
-
-        override fun tagIsSupported(tag: String): Boolean = tag == TAG
-
-        override fun <T : DocumentableWrapper> filterDocumentablesToProcess(documentable: T): Boolean =
-            documentable.sourceHasDocumentation
-
-        override fun <T : DocumentableWrapper> filterDocumentablesToQuery(documentable: T): Boolean =
-            documentable.sourceHasDocumentation
-    }
 }
+

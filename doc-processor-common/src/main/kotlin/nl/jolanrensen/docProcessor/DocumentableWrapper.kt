@@ -74,7 +74,6 @@ open class DocumentableWrapper(
     open val docContent: DocContent,
     open val tags: Set<String>,
     open val isModified: Boolean,
-    open val dependsOn: List<DocumentableWrapper>,
 
     open val htmlRangeStart: Int?,
     open val htmlRangeEnd: Int?,
@@ -114,7 +113,6 @@ open class DocumentableWrapper(
         docIndent: Int,
         annotations: List<AnnotationWrapper>,
         fileTextRange: IntRange,
-        dependsOn: List<DocumentableWrapper> = emptyList(),
         htmlRangeStart: Int? = null,
         htmlRangeEnd: Int? = null,
     ) : this(
@@ -131,7 +129,6 @@ open class DocumentableWrapper(
         docIndent = docIndent,
         docContent = docContent,
         annotations = annotations,
-        dependsOn = dependsOn,
         tags = docContent.findTagNamesInDocContent().toSet(),
         isModified = false,
         htmlRangeStart = htmlRangeStart,
@@ -245,12 +242,16 @@ open class DocumentableWrapper(
      * Queries the [documentables] map for a [DocumentableWrapper] that exists for
      * the given [query].
      * Returns `null` if no [DocumentableWrapper] is found for the given [query].
+     *
+     * @param canBeCache Whether the query can be a cache or not. Mosty only used by the
+     *   IntelliJ plugin and [IncludeDocProcessor].
      */
     fun queryDocumentables(
         query: String,
         documentablesNoFilters: DocumentablesByPath,
         documentables: DocumentablesByPath,
         canBeExtension: Boolean = true,
+        canBeCache: Boolean = false,
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): DocumentableWrapper? {
         val queries = getAllFullPathsFromHereForTargetPath(
@@ -271,7 +272,10 @@ open class DocumentableWrapper(
         }
 
         return queries.firstNotNullOfOrNull {
-            documentables[it]?.firstOrNull(filter)
+            documentables.query(
+                path = it,
+                canBeCache = canBeCache,
+            )?.firstOrNull(filter)
         }
     }
 
@@ -349,7 +353,6 @@ open class DocumentableWrapper(
         annotations = annotations,
         identifier = identifier,
         fileTextRange = fileTextRange,
-        dependsOn = dependsOn,
         htmlRangeStart = htmlRangeStart,
         htmlRangeEnd = htmlRangeEnd,
     )

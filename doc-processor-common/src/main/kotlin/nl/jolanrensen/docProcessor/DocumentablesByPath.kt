@@ -3,8 +3,9 @@ package nl.jolanrensen.docProcessor
 import java.util.*
 
 typealias DocumentableWrapperFilter = (DocumentableWrapper) -> Boolean
+
 @Suppress("ClassName")
-internal data object NO_FILTER: DocumentableWrapperFilter {
+internal data object NO_FILTER : DocumentableWrapperFilter {
     override fun invoke(p1: DocumentableWrapper): Boolean = true
 
 }
@@ -26,9 +27,9 @@ interface DocumentablesByPath {
      * Returns `null` if no [DocumentableWrapper] is found for the given [path] and [path]
      * does not exist in the project.
      */
-    fun query(path: String): List<DocumentableWrapper>?
+    fun query(path: String, canBeCache: Boolean = false): List<DocumentableWrapper>?
 
-    operator fun get(path: String): List<DocumentableWrapper>? = query(path)
+    operator fun get(path: String, canBeCache: Boolean = false): List<DocumentableWrapper>? = query(path, canBeCache)
 
     operator fun get(identifier: UUID): DocumentableWrapper? =
         documentablesToProcess
@@ -57,9 +58,13 @@ interface DocumentablesByPath {
 
 interface MutableDocumentablesByPath : DocumentablesByPath {
 
-    override fun query(path: String): List<MutableDocumentableWrapper>?
+    override fun query(path: String, canBeCache: Boolean): List<MutableDocumentableWrapper>?
 
-    override operator fun get(path: String): List<MutableDocumentableWrapper>? = query(path)
+    override operator fun get(path: String, canBeCache: Boolean): List<MutableDocumentableWrapper>? = query(path)
+
+    override operator fun get(identifier: UUID): MutableDocumentableWrapper? =
+        documentablesToProcess.values
+            .firstNotNullOfOrNull { it.firstOrNull { it.identifier == identifier } }
 
     override fun withQueryFilter(queryFilter: DocumentableWrapperFilter): MutableDocumentablesByPath
 
