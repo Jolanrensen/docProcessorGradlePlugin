@@ -32,6 +32,7 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
             ?.asString()
             ?.let { "$it.${documentable.name}" }
     } else null
+    val paths = listOfNotNull(path, extensionPath)
 
     val file = File(documentable.containingFile.originalFile.virtualFile.path)
 
@@ -53,14 +54,14 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
         require(startComment != -1) {
             """
                     |Could not find start of comment.
-                    |Paths: ${listOfNotNull(path, extensionPath)}
+                    |Paths: $paths
                     |Comment Content: "${docComment.text.getDocContentOrNull()}"
                     |Query: "$query"""".trimMargin()
         }
         require(endComment != -1) {
             """
                     |Could not find end of comment.
-                    |Paths: ${listOfNotNull(path, extensionPath)}
+                    |Paths: $paths
                     |Comment Content: "${docComment.text.getDocContentOrNull()}"
                     |Query: "$query"""".trimMargin()
         }
@@ -111,5 +112,8 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
         docIndent = docIndent,
         annotations = annotations,
         fileTextRange = fileTextRange,
+        origin = documentable,
     )
 }
+
+fun DocumentableWrapper.getOrigin(): PsiElement = origin as PsiElement

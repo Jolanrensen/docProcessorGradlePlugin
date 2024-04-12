@@ -55,6 +55,7 @@ abstract class DocProcessorTest(name: String) {
         docIndent = docIndent,
         annotations = emptyList(),
         fileTextRange = fileTextRange,
+        origin = Unit,
     )
 
     fun String.textRangeOf(text: String): IntRange = indexOf(text).let { start ->
@@ -77,9 +78,7 @@ abstract class DocProcessorTest(name: String) {
         if (additionals.any { it is AdditionalDirectory || it is AdditionalFile }) TODO()
 
         val documentablesPerPath = allDocumentables
-            .flatMap { doc ->
-                listOfNotNull(doc.fullyQualifiedPath, doc.fullyQualifiedExtensionPath).map { it to doc }
-            }
+            .flatMap { doc -> doc.paths.map { it to doc } }
             .groupBy { it.first }
             .mapValues { it.value.map { it.second } }
             .toMutableMap()
@@ -98,17 +97,16 @@ abstract class DocProcessorTest(name: String) {
             processor.processSafely(processLimit = processLimit, documentablesByPath = acc)
         }
 
-        val originalDoc =
-            listOfNotNull(documentableWrapper.fullyQualifiedPath, documentableWrapper.fullyQualifiedExtensionPath)
-                .mapNotNull { modifiedDocumentables[it] }
-                .flatten()
-                .firstOrNull {
-                    it.fullyQualifiedPath == documentableWrapper.fullyQualifiedPath
-                            && it.fullyQualifiedExtensionPath == documentableWrapper.fullyQualifiedExtensionPath
-                            && it.file == documentableWrapper.file
-                            && it.docFileTextRange == documentableWrapper.docFileTextRange
-                }
-                ?: error("Original doc not found for ${documentableWrapper.fullyQualifiedPath} or ${documentableWrapper.fullyQualifiedExtensionPath}")
+        val originalDoc = documentableWrapper.paths
+            .mapNotNull { modifiedDocumentables.query(it, documentableWrapper) }
+            .flatten()
+            .firstOrNull {
+                it.fullyQualifiedPath == documentableWrapper.fullyQualifiedPath
+                        && it.fullyQualifiedExtensionPath == documentableWrapper.fullyQualifiedExtensionPath
+                        && it.file == documentableWrapper.file
+                        && it.docFileTextRange == documentableWrapper.docFileTextRange
+            }
+            ?: error("Original doc not found for ${documentableWrapper.fullyQualifiedPath} or ${documentableWrapper.fullyQualifiedExtensionPath}")
 
         return originalDoc.docContent.toDoc(originalDoc.docIndent)
     }

@@ -6,6 +6,8 @@ open class DocumentablesByPathFromMap(
     final override val documentablesToProcessFilter: DocumentableWrapperFilter = NO_FILTER,
 ) : DocumentablesByPath {
 
+    override val needToQueryAllPaths: Boolean = true
+
     override val documentablesToProcess: Map<String, List<DocumentableWrapper>> =
         when (documentablesToProcessFilter) {
             NO_FILTER -> allDocs
@@ -22,7 +24,11 @@ open class DocumentablesByPathFromMap(
             }
         }
 
-    override fun query(path: String, canBeCache: Boolean): List<DocumentableWrapper>? = docsToQuery[path]
+    override fun query(
+        path: String,
+        queryContext: DocumentableWrapper,
+        canBeCache: Boolean,
+    ): List<DocumentableWrapper>? = docsToQuery[path]
 
     override fun toMutable(): MutableDocumentablesByPath =
         this as? MutableDocumentablesByPath ?: MutableDocumentablesByPathFromMap(
@@ -71,6 +77,8 @@ class MutableDocumentablesByPathFromMap(
     override val documentablesToProcessFilter: DocumentableWrapperFilter = NO_FILTER,
 ) : MutableDocumentablesByPath {
 
+    override val needToQueryAllPaths: Boolean = true
+
     override val documentablesToProcess: Map<String, List<MutableDocumentableWrapper>> =
         when (documentablesToProcessFilter) {
             NO_FILTER -> allDocs
@@ -87,7 +95,11 @@ class MutableDocumentablesByPathFromMap(
             }
         }
 
-    override fun query(path: String, canBeCache: Boolean): List<MutableDocumentableWrapper>? = docsToQuery[path]
+    override fun query(
+        path: String,
+        queryContext: DocumentableWrapper,
+        canBeCache: Boolean,
+    ): List<MutableDocumentableWrapper>? = docsToQuery[path]
 
     override fun toMutable(): MutableDocumentablesByPath = this
 

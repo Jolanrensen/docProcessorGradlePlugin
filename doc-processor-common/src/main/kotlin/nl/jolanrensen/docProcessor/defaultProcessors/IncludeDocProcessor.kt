@@ -139,8 +139,7 @@ class IncludeDocProcessor : TagDocProcessor() {
         // for stuff written after the @include tag, save and include it later
         val extraContent = includeArguments.getOrElse(1) { "" }
 
-        // TODO remove
-        println("Running include processor for ${documentable.fullyQualifiedPath}/${documentable.fullyQualifiedExtensionPath}, line @include $includePath")
+        logger.debug { "Running include processor for ${documentable.fullyQualifiedPath}/${documentable.fullyQualifiedExtensionPath}, line @include $includePath" }
 
         // query the filtered documentables for the @include paths
         val targetDocumentable = documentable.queryDocumentables(
@@ -211,7 +210,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                             query = path,
                             documentables = unfilteredDocumentablesByPath,
                             documentablesNoFilters = unfilteredDocumentablesByPath,
-                        ) == it
+                        ) == it // TODO? not sure why identifier check gets the wrong results here
                     },
                 ) ?: query
             }

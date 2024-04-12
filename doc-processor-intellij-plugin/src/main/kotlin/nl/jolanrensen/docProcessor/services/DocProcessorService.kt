@@ -3,6 +3,8 @@ package nl.jolanrensen.docProcessor.services
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.LogLevel
+import com.intellij.openapi.diagnostic.debug
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
@@ -31,6 +33,7 @@ import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESS
 import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.docComment
 import nl.jolanrensen.docProcessor.findProcessors
+import nl.jolanrensen.docProcessor.getOrigin
 import nl.jolanrensen.docProcessor.programmingLanguage
 import nl.jolanrensen.docProcessor.renderToHtml
 import nl.jolanrensen.docProcessor.toDoc
@@ -49,6 +52,8 @@ import java.util.concurrent.CancellationException
 
 @Service(Service.Level.PROJECT)
 class DocProcessorService(private val project: Project) {
+
+    private val logger = logger<DocProcessorService>()
 
     companion object {
         fun getInstance(project: Project): DocProcessorService = project.service()
@@ -70,7 +75,7 @@ class DocProcessorService(private val project: Project) {
      * Helper function that queries the project for reference links and returns them as a list of DocumentableWrappers.
      */
     private fun query(context: PsiElement, link: String): List<DocumentableWrapper>? {
-        println("querying intellij for: $link")
+        logger.debug { "querying intellij for: $link, from ${(context.navigationElement as? KtElement)?.name}" }
         val psiManager = PsiManager.getInstance(project)
 
         val descriptors = when (val navElement = context.navigationElement) {
@@ -167,7 +172,10 @@ class DocProcessorService(private val project: Project) {
 
     private val documentableCache = DocumentablesByPathWithCache(
         processLimit = processLimit,
-        queryNew = ::query,
+        logDebug = { logger.debug(null, it) },
+        queryNew = { context, link ->
+            query(context.getOrigin(), link)
+        },
     )
 
     private fun getDocContent(psiElement: PsiElement): String? {
@@ -178,16 +186,15 @@ class DocProcessorService(private val project: Project) {
                 thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
                 return null
             }
-            val needsRebuild = documentableCache.updatePreProcessing(psiElement, documentableWrapper)
+            val needsRebuild = documentableCache.updatePreProcessing(documentableWrapper)
 
-            println()
-            println()
+            logger.debug { "\n\n" }
 
             if (!needsRebuild) {
-                println("loading fully cached ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}")
+                logger.debug { "loading fully cached ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}" }
                 return documentableCache.getDocContentResult(documentableWrapper.identifier)!!
             }
-            println("preprocessing ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}")
+            logger.debug { "preprocessing ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}" }
 
             // Process the DocumentablesByPath
             val results = processDocumentablesByPath(documentableCache)

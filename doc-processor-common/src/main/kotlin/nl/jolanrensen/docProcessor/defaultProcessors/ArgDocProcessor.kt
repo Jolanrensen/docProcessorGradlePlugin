@@ -323,10 +323,7 @@ class ArgDocProcessor : TagDocProcessor() {
         )
 
         if (referencedDocumentable != null)
-            keys = listOfNotNull(
-                referencedDocumentable.fullyQualifiedPath,
-                referencedDocumentable.fullyQualifiedExtensionPath,
-            ).map { "[$it]" }
+            keys = referencedDocumentable.paths.map { "[$it]" }
 
         return keys
     }

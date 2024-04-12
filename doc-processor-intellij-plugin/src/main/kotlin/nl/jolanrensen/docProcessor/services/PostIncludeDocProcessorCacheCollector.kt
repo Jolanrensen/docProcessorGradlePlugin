@@ -1,12 +1,11 @@
 package nl.jolanrensen.docProcessor.services
 
-import com.intellij.psi.PsiElement
 import nl.jolanrensen.docProcessor.DocAnalyser
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
 
 class PostIncludeDocProcessorCacheCollector(
-    private val cacheHolder: DocumentablesByPathWithCache<PsiElement>,
+    private val cacheHolder: DocumentablesByPathWithCache,
 ) : DocAnalyser<Unit>() {
 
     override fun getAnalyzedResult() = Unit

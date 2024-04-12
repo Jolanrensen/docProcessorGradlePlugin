@@ -65,11 +65,13 @@ open class DocumentableWrapper(
     val fileTextRange: IntRange,
     val identifier: UUID = computeIdentifier(
         imports = imports,
+        file = file,
         fullyQualifiedPath = fullyQualifiedPath,
         fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
         fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
         textRangeStart = fileTextRange.first,
     ),
+    val origin: Any,
 
     open val docContent: DocContent,
     open val tags: Set<String>,
@@ -87,18 +89,24 @@ open class DocumentableWrapper(
          */
         fun computeIdentifier(
             imports: List<SimpleImportPath>,
+            file: File,
             fullyQualifiedPath: String,
             fullyQualifiedExtensionPath: String?,
             fullyQualifiedSuperPaths: List<String>,
             textRangeStart: Int,
         ): UUID = UUID.nameUUIDFromBytes(
-            listOf(
-                fullyQualifiedPath,
-                fullyQualifiedExtensionPath,
-                textRangeStart,
-            ).plus(imports).plus(fullyQualifiedSuperPaths).joinToString().toByteArray()
+            byteArrayOf(
+                file.path.hashCode().toByte(),
+                fullyQualifiedPath.hashCode().toByte(),
+                fullyQualifiedExtensionPath.hashCode().toByte(),
+                textRangeStart.hashCode().toByte(),
+                *imports.map { it.hashCode().toByte() }.toByteArray(),
+                *fullyQualifiedSuperPaths.map { it.hashCode().toByte() }.toByteArray(),
+            )
         )
     }
+
+    val paths = listOfNotNull(fullyQualifiedPath, fullyQualifiedExtensionPath)
 
     constructor(
         docContent: DocContent,
@@ -113,6 +121,7 @@ open class DocumentableWrapper(
         docIndent: Int,
         annotations: List<AnnotationWrapper>,
         fileTextRange: IntRange,
+        origin: Any,
         htmlRangeStart: Int? = null,
         htmlRangeEnd: Int? = null,
     ) : this(
@@ -133,6 +142,7 @@ open class DocumentableWrapper(
         isModified = false,
         htmlRangeStart = htmlRangeStart,
         htmlRangeEnd = htmlRangeEnd,
+        origin = origin,
     )
 
     /** Query file for doc text range. */
@@ -168,7 +178,7 @@ open class DocumentableWrapper(
                 this += this@DocumentableWrapper
 
                 for (path in fullyQualifiedSuperPaths) {
-                    documentablesNoFilters[path]?.forEach {
+                    documentablesNoFilters.query(path, this@DocumentableWrapper)?.forEach {
                         this += it.getAllTypes(documentablesNoFilters)
                     }
                 }
@@ -180,6 +190,17 @@ open class DocumentableWrapper(
     /**
      * Returns a list of paths that match the given [targetPath] in the context of this documentable.
      * It takes the current [fullyQualifiedPath] and [imports][getPathsUsingImports] into account.
+     *
+     * For example, given `bar` inside the documentable `Foo`, it would return
+     * - `bar`
+     * - `Foo.bar`
+     * - `FooSuperType.bar`
+     * - `package.full.path.bar`
+     * - `package.full.bar`
+     * - `package.bar`
+     * - `someImport.bar`
+     * - `someImport2.bar`
+     * etc.
      */
     fun getAllFullPathsFromHereForTargetPath(
         targetPath: String,
@@ -189,9 +210,7 @@ open class DocumentableWrapper(
         require(documentablesNoFilters.run { queryFilter == NO_FILTER && documentablesToProcessFilter == NO_FILTER }) {
             "DocumentablesByPath must not have any filters in `getAllFullPathsFromHereForTargetPath()`."
         }
-        val paths = getAllTypes(documentablesNoFilters).flatMap {
-            listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath)
-        }
+        val paths = getAllTypes(documentablesNoFilters).flatMap { it.paths }
         val subPaths = buildSet {
             for (path in paths) {
                 val current = path.split(".").toMutableList()
@@ -254,26 +273,33 @@ open class DocumentableWrapper(
         canBeCache: Boolean = false,
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): DocumentableWrapper? {
-        val queries = getAllFullPathsFromHereForTargetPath(
-            targetPath = query,
-            documentablesNoFilters = documentablesNoFilters,
-            canBeExtension = canBeExtension,
-        ).toMutableList()
-
-        if (programmingLanguage == JAVA) { // support KotlinFileKt.Notation from java
-            val splitQuery = query.split(".")
-            if (splitQuery.firstOrNull()?.endsWith("Kt") == true) {
-                queries += getAllFullPathsFromHereForTargetPath(
-                    targetPath = splitQuery.drop(1).joinToString("."),
-                    documentablesNoFilters = documentablesNoFilters,
-                    canBeExtension = canBeExtension
+        val queries: List<String> = buildList {
+            if (documentables.needToQueryAllPaths) {
+                this += getAllFullPathsFromHereForTargetPath(
+                        targetPath = query,
+                        documentablesNoFilters = documentablesNoFilters,
+                        canBeExtension = canBeExtension,
                 )
+
+                if (programmingLanguage == JAVA) { // support KotlinFileKt.Notation from java
+                    val splitQuery = query.split(".")
+                    if (splitQuery.firstOrNull()?.endsWith("Kt") == true) {
+                        this += getAllFullPathsFromHereForTargetPath(
+                            targetPath = splitQuery.drop(1).joinToString("."),
+                            documentablesNoFilters = documentablesNoFilters,
+                            canBeExtension = canBeExtension
+                        )
+                    }
+                }
+            } else {
+                this += query
             }
         }
 
         return queries.firstNotNullOfOrNull {
             documentables.query(
                 path = it,
+                queryContext = this,
                 canBeCache = canBeCache,
             )?.firstOrNull(filter)
         }
@@ -287,38 +313,43 @@ open class DocumentableWrapper(
     fun queryDocumentablesForPath(
         query: String,
         documentablesNoFilters: DocumentablesByPath,
-        documentables: DocumentablesByPath, // todo = documentablesNoFilters
+        documentables: DocumentablesByPath,
         canBeExtension: Boolean = true,
         pathIsValid: (String, DocumentableWrapper) -> Boolean = { _, _ -> true },
         filter: (DocumentableWrapper) -> Boolean = { true },
     ): String? {
-        val docPath = queryDocumentables(
+        val queryResult = queryDocumentables(
             query = query,
             documentablesNoFilters = documentablesNoFilters,
             documentables = documentables,
             canBeExtension = canBeExtension,
             filter = filter,
-        )?.let {
+        )
+        val docPath = queryResult?.let {
             // take either the normal path to the doc or the extension path depending on which is valid and
             // causes the smallest number of collisions
-            listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath).filter { path ->
-                pathIsValid(
-                    path,
-                    it
-                )
-            }.minByOrNull { documentables[it]?.size ?: 0 }
+            queryResult.paths
+                .filter { path -> pathIsValid(path, queryResult) }
+                .minByOrNull { documentables.query(it, this)?.size ?: 0 }
         }
+
         if (docPath != null) return docPath
 
         // if there is no doc for the query, then we just return the first matching path
+        // this can happen for function overloads with the same name.
+
+        if (queryResult != null) {
+            return queryResult.fullyQualifiedPath
+        }
+
         val queries = getAllFullPathsFromHereForTargetPath(
             targetPath = query,
             documentablesNoFilters = documentablesNoFilters,
             canBeExtension = canBeExtension,
         )
-
+        // todo fix for intellij?
         return queries.firstOrNull {
-            documentables[it] != null
+            documentables.query(it, this) != null
         }
     }
 
@@ -353,6 +384,7 @@ open class DocumentableWrapper(
         annotations = annotations,
         identifier = identifier,
         fileTextRange = fileTextRange,
+        origin = origin,
         htmlRangeStart = htmlRangeStart,
         htmlRangeEnd = htmlRangeEnd,
     )

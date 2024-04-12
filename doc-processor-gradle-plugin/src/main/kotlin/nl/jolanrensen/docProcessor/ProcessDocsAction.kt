@@ -159,9 +159,7 @@ abstract class ProcessDocsAction {
 
         // collect the documentables with sources per path
         val documentablesPerPath: MutableMap<String, List<DocumentableWrapper>> = documentables
-            .flatMap { doc ->
-                listOfNotNull(doc.fullyQualifiedPath, doc.fullyQualifiedExtensionPath).map { it to doc }
-            }
+            .flatMap { doc -> doc.paths.map { it to doc } }
             .groupBy { it.first }
             .mapValues { it.value.map { it.second } }
             .toMutableMap()

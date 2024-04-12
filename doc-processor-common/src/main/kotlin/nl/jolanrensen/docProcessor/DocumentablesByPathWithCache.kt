@@ -7,9 +7,10 @@ import org.jgrapht.traverse.TopologicalOrderIterator
 import java.util.*
 
 
-open class DocumentablesByPathWithCache<C>(
+open class DocumentablesByPathWithCache(
     val processLimit: Int,
-    val queryNew: (context: C, link: String) -> List<DocumentableWrapper>?,
+    val queryNew: (context: DocumentableWrapper, link: String) -> List<DocumentableWrapper>?,
+    val logDebug: (message: () -> String) -> Unit,
 ) : DocumentablesByPath, MutableDocumentablesByPath {
 
     override var queryFilter: DocumentableWrapperFilter = NO_FILTER
@@ -31,10 +32,9 @@ open class DocumentablesByPathWithCache<C>(
     // this is used on query
     private val postIncludeDocContentCache: MutableMap<UUID, String> = mutableMapOf()
 
-    private var context: C? = null
     private var docToProcess: MutableDocumentableWrapper? = null
     private var docsToProcess: MutableMap<String, MutableList<MutableDocumentableWrapper>> = mutableMapOf()
-    private var queryCache: MutableMap<String, MutableList<MutableDocumentableWrapper>> = mutableMapOf()
+    private var queryCache: MutableMap<Pair<UUID, String>, MutableList<MutableDocumentableWrapper>> = mutableMapOf()
 
     override val documentablesToProcess: Map<String, List<MutableDocumentableWrapper>>
         get() = when {
@@ -56,11 +56,10 @@ open class DocumentablesByPathWithCache<C>(
 
     // we set a context and a documentable to process
     // returns whether it needs a rebuild
-    fun updatePreProcessing(context: C, docToProcess: DocumentableWrapper): Boolean {
+    fun updatePreProcessing(docToProcess: DocumentableWrapper): Boolean {
         val doc = docToProcess.toMutable()
-        this.context = context
         this.docToProcess = doc
-        this.docsToProcess = listOfNotNull(doc.fullyQualifiedPath, doc.fullyQualifiedExtensionPath)
+        this.docsToProcess = doc.paths
             .associateWith { mutableListOf(doc) }
             .toMutableMap()
 
@@ -100,10 +99,12 @@ open class DocumentablesByPathWithCache<C>(
         for (dependencyDoc in orderedList) {
 
             // put doc into query cache
-            listOfNotNull(dependencyDoc.fullyQualifiedPath, dependencyDoc.fullyQualifiedExtensionPath)
-                .forEach {
-                    queryCache.getOrPut(it) { mutableListOf() }.add(dependencyDoc.toMutable())
-                }
+            dependencyDoc.paths.forEach {
+                queryCache.add(
+                    key = Pair(dependencyDoc.identifier, it),
+                    value = dependencyDoc.toMutable(),
+                )
+            }
         }
 
         var needsRebuild = false
@@ -113,9 +114,9 @@ open class DocumentablesByPathWithCache<C>(
             // put doc into process queue if it needs a rebuild
             if (needsRebuild(dependencyDoc)) {
                 needsRebuild = true
-                listOfNotNull(dependencyDoc.fullyQualifiedPath, dependencyDoc.fullyQualifiedExtensionPath)
+                dependencyDoc.paths
                     .forEach {
-                        docsToProcess.getOrPut(it) { mutableListOf() }.add(mutable)
+                        docsToProcess.add(it, mutable)
                     }
             }
         }
@@ -129,11 +130,15 @@ open class DocumentablesByPathWithCache<C>(
             .firstNotNullOfOrNull { it.firstOrNull { it.identifier == identifier } }
             ?: super<MutableDocumentablesByPath>.get(identifier)
 
+    override val needToQueryAllPaths: Boolean = false
 
-    override fun query(path: String, canBeCache: Boolean): List<MutableDocumentableWrapper>? {
-        require(context != null) { "updatePreProcessing must be called before query" }
-        val res = queryCache.getOrPut(path) {
-            queryNew(context!!, path)
+    override fun query(
+        path: String,
+        queryContext: DocumentableWrapper,
+        canBeCache: Boolean,
+    ): List<MutableDocumentableWrapper>? {
+        val res = queryCache.getOrPut(Pair(queryContext.identifier, path)) {
+            queryNew(queryContext, path)
                 ?.filter(queryFilter)
                 ?.map { it.toMutable() }
                 ?.toMutableList()
@@ -147,7 +152,7 @@ open class DocumentablesByPathWithCache<C>(
                 val docContentResult = postIncludeDocContentCache[doc.identifier]
                 if (docContentResult != null) {
                     doc.modifyDocContentAndUpdate(docContentResult)
-                    println("loading post-include cached ${doc.fullyQualifiedPath}/${doc.fullyQualifiedExtensionPath}: $docContentResult")
+                    logDebug { "loading post-include cached ${doc.fullyQualifiedPath}/${doc.fullyQualifiedExtensionPath}: $docContentResult" }
                 }
             }
         }
@@ -156,9 +161,6 @@ open class DocumentablesByPathWithCache<C>(
     }
 
     private fun needsRebuild(doc: DocumentableWrapper): Boolean {
-        val context = context
-        require(context != null) { "updatePreProcessing must be called before needsRebuild" }
-
         // if source has changed, return true
         val sourceHasChanged = doc.getDocHashcode() != docContentSourceHashCodeCache[doc.identifier]
         val doesNotContainResultCache = docContentResultCache[doc.identifier] == null

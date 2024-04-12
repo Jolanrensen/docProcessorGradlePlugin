@@ -44,6 +44,7 @@ internal class IncludeDocAnalyzer :
     private val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
     private val dependencies: MutableSet<Edge<DocumentableWrapper>> = Collections.synchronizedSet(mutableSetOf())
     internal var analyzeQueriesToo = false
+    private val analyzedDocumentables = mutableSetOf<UUID>()
 
     private fun analyseContent(
         line: String,
@@ -66,11 +67,11 @@ internal class IncludeDocAnalyzer :
                 to = documentable,
             )
 
-            if (analyzeQueriesToo) {
-                // todo check if already analyzed?
+            if (analyzeQueriesToo && targetDocumentable.identifier !in analyzedDocumentables) {
                 analyzeDocumentable(targetDocumentable, 10_000)
             }
         }
+        analyzedDocumentables += documentable.identifier
     }
 
     override fun getAnalyzedResult(): SimpleDirectedGraph<DocumentableWrapper, Edge<DocumentableWrapper>> {
