@@ -4,11 +4,16 @@ import nl.jolanrensen.docProcessor.*
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import org.apache.commons.text.StringEscapeUtils
+import org.jgrapht.traverse.NotDirectedAcyclicGraphException
+import org.jgrapht.traverse.TopologicalOrderIterator
+import java.util.*
 
 /**
  * @see IncludeDocProcessor
  */
 const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor"
+
+const val INCLUDE_DOC_PROCESSOR_PRE_SORT = "$INCLUDE_DOC_PROCESSOR.PRE_SORT"
 
 /**
  * Allows you to @include docs from other linkable elements.
@@ -76,9 +81,11 @@ const val INCLUDE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  */
 class IncludeDocProcessor : TagDocProcessor() {
 
-    private val tag = "include"
+    companion object {
+        const val TAG = "include"
+    }
 
-    override fun tagIsSupported(tag: String): Boolean = tag == this.tag
+    override fun tagIsSupported(tag: String): Boolean = tag == TAG
 
     /**
      * Filter documentables to only include linkable elements (classes, functions, properties, etc) and
@@ -93,6 +100,11 @@ class IncludeDocProcessor : TagDocProcessor() {
      */
     override fun <T : DocumentableWrapper> filterDocumentablesToQuery(documentable: T): Boolean =
         documentable.sourceHasDocumentation
+
+    /**
+     * Documentables interact, so no parallel processing is possible.
+     */
+    override val canProcessParallel: Boolean = false
 
     /**
      * Provides a helpful message when a circular reference is detected.
@@ -122,17 +134,20 @@ class IncludeDocProcessor : TagDocProcessor() {
         documentable: DocumentableWrapper,
     ): String {
         val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
-        val includeArguments = line.getTagArguments(tag = tag, numberOfArguments = 2)
+        val includeArguments = line.getTagArguments(tag = TAG, numberOfArguments = 2)
         val includePath = includeArguments.first().decodeCallableTarget()
         // for stuff written after the @include tag, save and include it later
         val extraContent = includeArguments.getOrElse(1) { "" }
+
+        logger.debug { "Running include processor for ${documentable.fullyQualifiedPath}/${documentable.fullyQualifiedExtensionPath}, line @include $includePath" }
 
         // query the filtered documentables for the @include paths
         val targetDocumentable = documentable.queryDocumentables(
             query = includePath,
             documentables = documentablesByPath,
             documentablesNoFilters = unfilteredDocumentablesByPath,
-        ) { it != documentable }
+            canBeCache = true, // for IntelliJ plugin
+        ) { it.identifier != documentable.identifier }
 
         if (targetDocumentable == null) {
             val targetDocumentableNoFilter = documentable.queryDocumentables(
@@ -195,7 +210,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                             query = path,
                             documentables = unfilteredDocumentablesByPath,
                             documentablesNoFilters = unfilteredDocumentablesByPath,
-                        ) == it
+                        ) == it // TODO? not sure why identifier check gets the wrong results here
                     },
                 ) ?: query
             }
@@ -259,4 +274,25 @@ class IncludeDocProcessor : TagDocProcessor() {
         line = tagWithContent,
         documentable = documentable,
     )
+
+    override fun <T : DocumentableWrapper> sortDocumentables(
+        documentables: List<T>,
+        processLimit: Int,
+        documentablesByPath: DocumentablesByPath,
+    ): Iterable<T> {
+        val preSort = arguments[INCLUDE_DOC_PROCESSOR_PRE_SORT] as? Boolean ?: true
+        if (!preSort) return documentables
+
+        val dag = IncludeDocAnalyzer.getAnalyzedResult(processLimit, documentablesByPath)
+        val orderedList = try {
+            TopologicalOrderIterator(dag).asSequence().mapTo(mutableListOf()) { it.identifier }
+        } catch (e: NotDirectedAcyclicGraphException) {
+            return documentables
+        }
+
+        return documentables.sortedBy { doc ->
+            orderedList.indexOf(doc.identifier)
+        }
+    }
 }
+

@@ -31,8 +31,7 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
         logger = logger,
     )
 
-    val path = documentable.dri.fullyQualifiedPath
-    val extensionPath = documentable.dri.fullyQualifiedExtensionPath
+    val paths = documentable.dri.paths
     val file = File(source.path)
 
     if (!file.exists()) {
@@ -53,14 +52,14 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
         require(startComment != -1) {
             """
                     |Could not find start of comment.
-                    |Paths: ${listOfNotNull(path, extensionPath)}
+                    |Paths: $paths
                     |Comment Content: "${docComment.documentString}"
                     |Query: "$query"""".trimMargin()
         }
         require(endComment != -1) {
             """
                     |Could not find end of comment.
-                    |Paths: ${listOfNotNull(path, extensionPath)}
+                    |Paths: $paths
                     |Comment Content: "${docComment.documentString}"
                     |Query: "$query"""".trimMargin()
         }
@@ -93,9 +92,7 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
     val superPaths = (documentable as? WithSupertypes)
         ?.supertypes
         ?.flatMap { it.value }
-        ?.flatMap {
-            it.typeConstructor.dri.let { listOfNotNull(it.fullyQualifiedPath, it.fullyQualifiedExtensionPath) }
-        }
+        ?.flatMap { it.typeConstructor.dri.paths }
         ?: emptyList()
 
     val annotations = documentable.annotations().values.flatten().map {
@@ -109,13 +106,16 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
         programmingLanguage = source.programmingLanguage,
         imports = imports,
         rawSource = rawSource,
-        fullyQualifiedPath = path,
-        fullyQualifiedExtensionPath = extensionPath,
+        fullyQualifiedPath = paths[0],
+        fullyQualifiedExtensionPath = paths.getOrNull(1),
         fullyQualifiedSuperPaths = superPaths,
         file = file,
         docFileTextRange = docFileTextRange.toIntRange(),
         docIndent = docIndent,
         annotations = annotations,
         fileTextRange = fileTextRange,
+        origin = documentable,
     )
 }
+
+fun DocumentableWrapper.getOrigin(): Documentable = origin as Documentable

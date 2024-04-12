@@ -6,16 +6,26 @@ import com.intellij.lang.documentation.ExternalDocumentationProvider
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.*
+import com.intellij.psi.PsiDocCommentBase
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil.processElements
+import nl.jolanrensen.docProcessor.docComment
 import nl.jolanrensen.docProcessor.services.DocProcessorService
 import org.jetbrains.annotations.Nls
 import org.jetbrains.kotlin.idea.KotlinDocumentationProvider
-import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.KtDeclaration
+import org.jetbrains.kotlin.psi.KtFile
 import java.awt.Image
 import java.util.function.Consumer
 
+// TODO migrate to [DocumentationTarget]
 class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), ExternalDocumentationProvider {
+
+    init {
+        println("DocProcessorDocumentationProvider created")
+    }
 
     private val kotlin = KotlinDocumentationProvider()
 
@@ -44,8 +54,9 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
     }
 
     override fun generateDoc(element: PsiElement, originalElement: PsiElement?): String? {
-        if (!getService(element.project).isEnabled) return null
-        val modifiedElement = getService(element.project).getModifiedElement(element)
+        val service = getService(element.project)
+        if (!service.isEnabled) return null
+        val modifiedElement = service.getModifiedElement(element)
         return try {
             kotlin.generateDoc(modifiedElement ?: element, originalElement)
         } catch (e: Exception) {
@@ -57,8 +68,19 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
     override fun generateHoverDoc(element: PsiElement, originalElement: PsiElement?): String? =
         super.generateDoc(element, originalElement)
 
-    @Nls
-    override fun generateRenderedDoc(comment: PsiDocCommentBase): String? = kotlin.generateRenderedDoc(comment)
+    @Nls // todo takes about 5 minutes for a simple file XD
+    override fun generateRenderedDoc(comment: PsiDocCommentBase): String? {
+//        return kotlin.generateRenderedDoc(comment)
+        val service = getService(comment.project)
+        if (!service.isEnabled) return null
+        val modifiedElement = service.getModifiedElement(comment.owner ?: return null)
+        return try {
+            kotlin.generateRenderedDoc(modifiedElement?.docComment ?: comment)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 
     override fun findDocComment(file: PsiFile, range: TextRange): PsiDocCommentBase? =
         kotlin.findDocComment(file, range)
@@ -67,20 +89,23 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
         psiManager: PsiManager,
         `object`: Any?,
         element: PsiElement?,
-    ): PsiElement? = kotlin.getDocumentationElementForLookupItem(psiManager, `object`, element)
+    ): PsiElement? =
+        kotlin.getDocumentationElementForLookupItem(psiManager, `object`, element)
 
     override fun getDocumentationElementForLink(
         psiManager: PsiManager,
         link: String,
         context: PsiElement?,
-    ): PsiElement? = kotlin.getDocumentationElementForLink(psiManager, link, context)
+    ): PsiElement? =
+        kotlin.getDocumentationElementForLink(psiManager, link, context)
 
     @Deprecated("Deprecated in Java")
     override fun getCustomDocumentationElement(
         editor: Editor,
         file: PsiFile,
         contextElement: PsiElement?,
-    ): PsiElement? = kotlin.getCustomDocumentationElement(editor, file, contextElement)
+    ): PsiElement? =
+        kotlin.getCustomDocumentationElement(editor, file, contextElement)
 
     override fun getCustomDocumentationElement(
         editor: Editor,
@@ -106,5 +131,4 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
 
     override fun promptToConfigureDocumentation(element: PsiElement?): Unit =
         kotlin.promptToConfigureDocumentation(element)
-
 }

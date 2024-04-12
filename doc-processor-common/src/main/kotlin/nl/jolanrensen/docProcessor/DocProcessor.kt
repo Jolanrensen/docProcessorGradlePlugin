@@ -38,13 +38,13 @@ abstract class DocProcessor : Serializable {
      * @param documentablesByPath Documentables by path
      * @return modified docs by path
      */
-    abstract fun process(
+    protected abstract fun process(
         processLimit: Int,
         documentablesByPath: DocumentablesByPath,
     ): DocumentablesByPath
 
     // ensuring each doc processor instance is only run once
-    private var hasRun = false
+    protected var hasRun = false
 
     // ensuring each doc processor instance is only run once
     @Throws(DocProcessorFailedException::class)
@@ -83,7 +83,7 @@ fun findProcessors(fullyQualifiedNames: List<String>, arguments: Map<String, Any
         }.map {
             // create a new instance of the processor, so it can safely be used multiple times
             // also pass on the arguments
-            it::class.java.newInstance()
+            it::class.java.getDeclaredConstructor().newInstance()
                 .also { it.arguments = arguments }
         }
 

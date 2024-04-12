@@ -70,7 +70,7 @@ class SampleDocProcessor : TagDocProcessor() {
 
         // query all documents for the sample path
         val targetDocumentable = queries.firstNotNullOfOrNull { query ->
-            documentablesByPath[query]?.firstOrNull()
+            documentablesByPath.query(query, documentable)?.firstOrNull()
         } ?: throwError(samplePath, queries)
 
         // get the source text of the target documentable, optionally trimming to between the

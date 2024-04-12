@@ -1,5 +1,8 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import nl.jolanrensen.docProcessor.DocProcessor
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.removeEscapeCharacters
@@ -23,13 +26,18 @@ class RemoveEscapeCharsProcessor : DocProcessor() {
             .toMutable()
             .withDocsToProcessFilter { it.sourceHasDocumentation }
 
-        mutableDocs.documentablesToProcess.forEach { (_, docs) ->
-            docs.forEach {
-                it.modifyDocContentAndUpdate(
-                    it.docContent.removeEscapeCharacters(escapeChars)
-                )
-            }
+        runBlocking {
+            mutableDocs.documentablesToProcess.flatMap { (_, docs) ->
+                docs.map {
+                    launch {
+                        it.modifyDocContentAndUpdate(
+                            it.docContent.removeEscapeCharacters(escapeChars)
+                        )
+                    }
+                }
+            }.joinAll()
         }
+
         return mutableDocs
     }
 }

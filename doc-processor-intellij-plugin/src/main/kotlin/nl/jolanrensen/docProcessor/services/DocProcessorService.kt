@@ -3,6 +3,8 @@ package nl.jolanrensen.docProcessor.services
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.LogLevel
+import com.intellij.openapi.diagnostic.debug
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
@@ -25,11 +27,13 @@ import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR_LOG_NOT_F
 import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.EXPORT_AS_HTML_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
+import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR_PRE_SORT
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.docComment
 import nl.jolanrensen.docProcessor.findProcessors
+import nl.jolanrensen.docProcessor.getOrigin
 import nl.jolanrensen.docProcessor.programmingLanguage
 import nl.jolanrensen.docProcessor.renderToHtml
 import nl.jolanrensen.docProcessor.toDoc
@@ -48,6 +52,8 @@ import java.util.concurrent.CancellationException
 
 @Service(Service.Level.PROJECT)
 class DocProcessorService(private val project: Project) {
+
+    private val logger = logger<DocProcessorService>()
 
     companion object {
         fun getInstance(project: Project): DocProcessorService = project.service()
@@ -69,6 +75,7 @@ class DocProcessorService(private val project: Project) {
      * Helper function that queries the project for reference links and returns them as a list of DocumentableWrappers.
      */
     private fun query(context: PsiElement, link: String): List<DocumentableWrapper>? {
+        logger.debug { "querying intellij for: $link, from ${(context.navigationElement as? KtElement)?.name}" }
         val psiManager = PsiManager.getInstance(project)
 
         val descriptors = when (val navElement = context.navigationElement) {
@@ -89,7 +96,6 @@ class DocProcessorService(private val project: Project) {
             }
 
             else -> error("Java not supported yet.")
-
         }
 
         val targets = descriptors
@@ -119,6 +125,7 @@ class DocProcessorService(private val project: Project) {
      * If it didn't exist before, it will be created anew. Return `null` means it could not be modified and the original
      * rendering method should be used.
      */
+    @Synchronized
     fun getModifiedElement(originalElement: PsiElement): PsiElement? {
         // Create a copy of the element, so we can modify it
         val psiElement = try {
@@ -134,85 +141,10 @@ class DocProcessorService(private val project: Project) {
             return null
         }
 
-        var hasExportAsHtmlTag = false
-        val docContent = try {
-            // Create a DocumentableWrapper from the element
-            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
-            if (documentableWrapper == null) {
-                thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
-                return null
-            }
-
-            // Package the DocumentableWrapper in a DocumentablesByPath with the query function
-            val docsToProcess = listOfNotNull(
-                documentableWrapper.fullyQualifiedPath,
-                documentableWrapper.fullyQualifiedExtensionPath,
-            ).associateWith { listOf(documentableWrapper) }
-
-            val documentablesByPath = DocumentablesByPathWithCache(
-                unfilteredDocsToProcess = docsToProcess,
-                query = { link -> query(psiElement, link) },
-            )
-
-            // Process the DocumentablesByPath
-            val results = processDocumentablesByPath(documentablesByPath)
-
-            // Retrieve the original DocumentableWrapper from the results
-            val doc = results[documentableWrapper.identifier] ?: error("Something went wrong")
-
-            // TODO replace with doc.annotations
-            hasExportAsHtmlTag = psiElement.annotationNames.any {
-                ExportAsHtml::class.simpleName!! in it
-            }
-
-            if (hasExportAsHtmlTag) {
-                val annotationArgs = (psiElement as? KtDeclaration)
-                    ?.annotationEntries
-                    ?.firstOrNull { ExportAsHtml::class.simpleName!! in it.shortName!!.asString() }
-                    ?.getValueArgumentsInParentheses()
-                    ?: emptyList()
-
-                val themeArg = annotationArgs.firstOrNull {
-                    it.getArgumentName()?.asName?.toString() == ExportAsHtml::theme.name
-                } ?: annotationArgs.getOrNull(0)?.takeIf {
-                    !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
-                }
-                val theme = themeArg?.getArgumentExpression()?.text?.toBoolean() ?: true
-
-                val stripReferencesArg = annotationArgs.firstOrNull {
-                    it.getArgumentName()?.asName?.toString() == ExportAsHtml::stripReferences.name
-                } ?: annotationArgs.getOrNull(1)?.takeIf {
-                    !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
-                }
-                val stripReferences = stripReferencesArg?.getArgumentExpression()?.text?.toBoolean() ?: true
-
-                val html = doc
-                    .getDocContentForHtmlRange()
-                    .renderToHtml(theme = theme, stripReferences = stripReferences)
-                val file = File.createTempFile(doc.fullyQualifiedPath, ".html")
-                file.writeText(html)
-
-                doc.docContent + "\n\n" + "Exported HTML: [${file.name}](file://${file.absolutePath})"
-            } else {
-                doc.docContent
-            }
-        } catch (e: ProcessCanceledException) {
-            return null
-        } catch (e: CancellationException) {
-            return null
-        } catch (e: TagDocProcessorFailedException) {
-            e.printStackTrace()
-            // render fancy :)
-            e.renderDoc()
-        } catch (e: Throwable) {
-            e.printStackTrace()
-
-            // instead of throwing the exception, render it inside the kdoc
-            "```\n$e\n```"
-        }
+        val newDocContent = getDocContent(psiElement) ?: return null
 
         // If the new doc is empty, delete the comment
-        if (docContent.isEmpty()) {
+        if (newDocContent.isEmpty()) {
             psiElement.docComment?.delete()
             return psiElement
         }
@@ -221,11 +153,11 @@ class DocProcessorService(private val project: Project) {
         val newComment = when (originalElement.programmingLanguage) {
             ProgrammingLanguage.KOTLIN ->
                 KDocElementFactory(project)
-                    .createKDocFromText(docContent.toDoc())
+                    .createKDocFromText(newDocContent.toDoc())
 
             ProgrammingLanguage.JAVA ->
                 PsiElementFactory.getInstance(project)
-                    .createDocCommentFromText(docContent.toDoc())
+                    .createDocCommentFromText(newDocContent.toDoc())
         }
 
         // Replace the old doc element with the new one if it exists, otherwise add a new one
@@ -238,7 +170,101 @@ class DocProcessorService(private val project: Project) {
         return psiElement
     }
 
-    fun processDocumentablesByPath(sourceDocsByPath: DocumentablesByPath): DocumentablesByPath {
+    private val documentableCache = DocumentablesByPathWithCache(
+        processLimit = processLimit,
+        logDebug = { logger.debug(null, it) },
+        queryNew = { context, link ->
+            query(context.getOrigin(), link)
+        },
+    )
+
+    private fun getDocContent(psiElement: PsiElement): String? {
+        return try {
+            // Create a DocumentableWrapper from the element
+            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
+            if (documentableWrapper == null) {
+                thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
+                return null
+            }
+            val needsRebuild = documentableCache.updatePreProcessing(documentableWrapper)
+
+            logger.debug { "\n\n" }
+
+            if (!needsRebuild) {
+                logger.debug { "loading fully cached ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}" }
+                return documentableCache.getDocContentResult(documentableWrapper.identifier)!!
+            }
+            logger.debug { "preprocessing ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}" }
+
+            // Process the DocumentablesByPath
+            val results = processDocumentablesByPath(documentableCache)
+
+            // Retrieve the original DocumentableWrapper from the results
+            val doc = results[documentableWrapper.identifier] ?: return null //error("Something went wrong")
+
+            documentableCache.updatePostProcessing()
+
+            // TODO replace with doc.annotations
+            val hasExportAsHtmlTag = psiElement.annotationNames.any {
+                ExportAsHtml::class.simpleName!! in it
+            }
+
+            if (hasExportAsHtmlTag) {
+                val file = exportToHtmlFile(psiElement, doc)
+                doc.docContent + "\n\n" + "Exported HTML: [${file.name}](file://${file.absolutePath})"
+            } else {
+                doc.docContent
+            }
+        } catch (e: ProcessCanceledException) {
+            return null
+        } catch (e: CancellationException) {
+            return null
+        } catch (e: TagDocProcessorFailedException) {
+//            e.printStackTrace()
+            // render fancy :)
+            e.renderDoc()
+        } catch (e: Throwable) {
+//            e.printStackTrace()
+
+            // instead of throwing the exception, render it inside the kdoc
+            "```\n$e\n```"
+        }
+    }
+
+    private fun exportToHtmlFile(
+        psiElement: PsiElement,
+        doc: DocumentableWrapper,
+    ): File {
+        val annotationArgs = (psiElement as? KtDeclaration)
+            ?.annotationEntries
+            ?.firstOrNull { ExportAsHtml::class.simpleName!! in it.shortName!!.asString() }
+            ?.getValueArgumentsInParentheses()
+            ?: emptyList()
+
+        val themeArg = annotationArgs.firstOrNull {
+            it.getArgumentName()?.asName?.toString() == ExportAsHtml::theme.name
+        } ?: annotationArgs.getOrNull(0)?.takeIf {
+            !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
+        }
+        val theme = themeArg?.getArgumentExpression()?.text?.toBoolean() ?: true
+
+        val stripReferencesArg = annotationArgs.firstOrNull {
+            it.getArgumentName()?.asName?.toString() == ExportAsHtml::stripReferences.name
+        } ?: annotationArgs.getOrNull(1)?.takeIf {
+            !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
+        }
+        val stripReferences = stripReferencesArg?.getArgumentExpression()?.text?.toBoolean() ?: true
+
+        val html = doc
+            .getDocContentForHtmlRange()
+            .renderToHtml(theme = theme, stripReferences = stripReferences)
+        val file = File.createTempFile(doc.fullyQualifiedPath, ".html")
+        file.writeText(html)
+
+        return file
+    }
+
+    private fun processDocumentablesByPath(sourceDocsByPath: DocumentablesByPath): DocumentablesByPath {
         // Find all processors
         Thread.currentThread().contextClassLoader = this.javaClass.classLoader
         // TODO make customizable
@@ -252,8 +278,14 @@ class DocProcessorService(private val project: Project) {
                 EXPORT_AS_HTML_DOC_PROCESSOR,
                 REMOVE_ESCAPE_CHARS_PROCESSOR,
             ),
-            arguments = mapOf(ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false),
-        )
+            arguments = mapOf(
+                ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false,
+                INCLUDE_DOC_PROCESSOR_PRE_SORT to false,
+            ),
+        ).toMutableList()
+
+        // for cache collecting after include doc processor
+        processors.add(1, PostIncludeDocProcessorCacheCollector(documentableCache))
 
         // Run all processors
         val modifiedDocumentables = processors.fold(sourceDocsByPath) { acc, processor ->

@@ -1,5 +1,9 @@
 package nl.jolanrensen.docProcessor
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
+
 /**
  * Specific [DocProcessor] that processes just tags.
  *
@@ -28,7 +32,7 @@ abstract class TagDocProcessor : DocProcessor() {
         get() = tags.any(::tagIsSupported)
 
 
-    private lateinit var mutableDocumentablesByPath: MutableDocumentablesByPath
+    protected lateinit var mutableDocumentablesByPath: MutableDocumentablesByPath
 
     /**
      * Allows you to access the documentables to be processed as well as to gain
@@ -48,6 +52,23 @@ abstract class TagDocProcessor : DocProcessor() {
     open fun <T : DocumentableWrapper> filterDocumentablesToProcess(documentable: T): Boolean = true
 
     open fun <T : DocumentableWrapper> filterDocumentablesToQuery(documentable: T): Boolean = true
+
+    /**
+     * You can optionally sort the documentables to optimize the order in which they are processed.
+     * [TagDocAnalyser] can be used for that.
+     */
+    open fun <T : DocumentableWrapper> sortDocumentables(
+        documentables: List<T>,
+        processLimit: Int,
+        documentablesByPath: DocumentablesByPath,
+    ): Iterable<T> = documentables
+
+    /**
+     * Whether this processor can process multiple documentables in parallel.
+     * If `true`, the processor will be run in parallel for each documentable.
+     * If `false`, the processor will be run sequentially for each documentable.
+     */
+    open val canProcessParallel: Boolean = true
 
     /**
      * Provide a meaningful error message when the given process limit is reached.
@@ -149,26 +170,25 @@ abstract class TagDocProcessor : DocProcessor() {
         while (true) {
             val filteredDocumentablesWithTag = mutableDocumentablesByPath
                 .documentablesToProcess
-                .filter { it.value.any { it.hasSupportedTag } }
+                .flatMap { it.value }
+                .filter { it.hasSupportedTag }
+                .distinctBy { it.identifier }
+                .let { sortDocumentables(it, processLimit, documentablesByPath) }
 
             var anyModifications = false
-            for ((path, documentables) in filteredDocumentablesWithTag) {
-                for (documentable in documentables) {
+            if (canProcessParallel) {
+                runBlocking {
+                    anyModifications = filteredDocumentablesWithTag.mapNotNull { documentable ->
+                        if (!documentable.hasSupportedTag) null
+                        else async {
+                            processDocumentable(documentable, processLimit)
+                        }
+                    }.awaitAll().any { it }
+                }
+            } else {
+                for (documentable in filteredDocumentablesWithTag) {
                     if (!documentable.hasSupportedTag) continue
-
-                    val docContent = documentable.docContent
-                    val processedDoc = processTagsInContent(
-                        docContent = docContent,
-                        path = path,
-                        documentable = documentable,
-                        processLimit = processLimit,
-                    )
-
-                    val wasModified = docContent != processedDoc
-                    if (wasModified) {
-                        anyModifications = true
-                        documentable.modifyDocContentAndUpdate(processedDoc)
-                    }
+                    anyModifications = processDocumentable(documentable, processLimit)
                 }
             }
 
@@ -181,6 +201,25 @@ abstract class TagDocProcessor : DocProcessor() {
         }
 
         return mutableDocumentablesByPath
+    }
+
+    protected fun processDocumentable(
+        documentable: MutableDocumentableWrapper,
+        processLimit: Int,
+    ): Boolean {
+        val docContent = documentable.docContent
+        val processedDoc = processTagsInContent(
+            docContent = docContent,
+            path = documentable.fullyQualifiedPath,
+            documentable = documentable,
+            processLimit = processLimit,
+        )
+
+        val wasModified = docContent != processedDoc
+        if (wasModified) {
+            documentable.modifyDocContentAndUpdate(processedDoc)
+        }
+        return wasModified
     }
 
     private fun processTagsInContent(
@@ -395,7 +434,7 @@ open class TagDocProcessorFailedException(
         appendLine(lineBreak)
         appendLine("### Tag throwing the exception:")
         appendLine()
-        appendLine("**`" + currentDoc.substring(rangeInCurrentDoc) + "`**")
+        appendLine("**`" + currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)) + "`**")
         appendLine(lineBreak)
         appendLine("### Reason for the exception:")
         appendLine()
@@ -414,7 +453,7 @@ open class TagDocProcessorFailedException(
             try {
                 currentDoc.replaceRange(
                     range = rangeInCurrentDoc,
-                    replacement = highlightException(currentDoc.substring(rangeInCurrentDoc)),
+                    replacement = highlightException(currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex))),
                 )
             } catch (e: Throwable) {
                 currentDoc

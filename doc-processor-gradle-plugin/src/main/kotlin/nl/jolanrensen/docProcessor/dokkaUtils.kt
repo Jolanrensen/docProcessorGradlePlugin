@@ -317,6 +317,9 @@ val DRI.fullyQualifiedExtensionPath: String?
         ).flatten().joinToString(".")
     }
 
+val DRI.paths: List<String>
+    get() = listOfNotNull(fullyQualifiedPath, fullyQualifiedExtensionPath)
+
 val TypeReference.path: String
     get() = when (this) {
         is TypeConstructor -> fullyQualifiedName

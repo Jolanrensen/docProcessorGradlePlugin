@@ -14,6 +14,8 @@ import org.jetbrains.dokka.model.withDescendants
 import java.io.File
 import java.io.IOException
 import java.util.*
+import kotlin.time.DurationUnit
+import kotlin.time.measureTimedValue
 
 private val log = KotlinLogging.logger {}
 
@@ -47,7 +49,11 @@ abstract class ProcessDocsAction {
 
     protected fun process() {
         // analyse the sources with dokka to get the documentables
-        val sourceDocs = analyseSourcesWithDokka()
+        log.lifecycle { "Analyzing sources..." }
+        val (sourceDocs, time) = measureTimedValue {
+            analyseSourcesWithDokka()
+        }
+        log.lifecycle { "  - Finished in ${time.toString(DurationUnit.SECONDS)}." }
 
         // Find all processors
         val processors = findProcessors(parameters.processors, parameters.arguments)
@@ -60,8 +66,12 @@ abstract class ProcessDocsAction {
         // Run all processors
         val modifiedDocumentables =
             processors.fold(sourceDocs) { acc, processor ->
-                log.lifecycle { "Running processor: ${processor::class.qualifiedName}" }
-                processor.processSafely(processLimit = parameters.processLimit, documentablesByPath = acc)
+                log.lifecycle { "Running processor: ${processor::class.qualifiedName}..." }
+                val (docs, time) = measureTimedValue {
+                    processor.processSafely(processLimit = parameters.processLimit, documentablesByPath = acc)
+                }
+                log.lifecycle { "  - Finished in ${time.toString(DurationUnit.SECONDS)}." }
+                docs
             }.documentablesToProcess
 
         // filter to only include the modified documentables
@@ -149,9 +159,7 @@ abstract class ProcessDocsAction {
 
         // collect the documentables with sources per path
         val documentablesPerPath: MutableMap<String, List<DocumentableWrapper>> = documentables
-            .flatMap { doc ->
-                listOfNotNull(doc.fullyQualifiedPath, doc.fullyQualifiedExtensionPath).map { it to doc }
-            }
+            .flatMap { doc -> doc.paths.map { it to doc } }
             .groupBy { it.first }
             .mapValues { it.value.map { it.second } }
             .toMutableMap()
