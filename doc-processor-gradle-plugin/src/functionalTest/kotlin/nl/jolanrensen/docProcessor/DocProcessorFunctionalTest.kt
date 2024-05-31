@@ -11,7 +11,7 @@ import java.io.IOException
 
 abstract class DocProcessorFunctionalTest(name: String) {
 
-    protected val version = "0.3.5-SNAPSHOT"
+    protected val version = "0.3.6-SNAPSHOT"
 
     init {
         println("NOTE!! make sure you have the plugin installed in your local maven repo")
