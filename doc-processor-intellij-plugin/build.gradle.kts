@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "0.3.6-SNAPSHOT"
+version = "0.3.6"
 
 repositories {
     mavenCentral()
