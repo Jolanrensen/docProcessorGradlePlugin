@@ -263,11 +263,14 @@ abstract class ProcessDocsAction {
 
                 try {
                     targetFile.writeText(processedFileContent)
+                    require(targetFile.setReadOnly()) { "Could not set ${targetFile.path} to readonly" }
                 } catch (e: Exception) {
                     throw IOException("Could not write to target file $targetFile", e)
                 }
             }
         }
+
+        require(parameters.target?.setReadOnly() == true) { "Could not set ${parameters.target?.path} to readonly" }
     }
 
     @Throws(IOException::class)
@@ -294,11 +297,18 @@ abstract class ProcessDocsAction {
             val html = doc
                 .getDocContentForHtmlRange()
                 .renderToHtml(theme = addTheme, stripReferences = stripReferences)
-            val file = File(htmlDir, doc.fullyQualifiedPath + ".html")
-            file.writeText(html)
+            val targetFile = File(htmlDir, doc.fullyQualifiedPath + ".html")
+            try {
+                targetFile.writeText(html)
+                require(targetFile.setReadOnly()) { "Could not set ${targetFile.path} to readonly" }
+            } catch (e: Exception) {
+                throw IOException("Could not write to target file $targetFile", e)
+            }
 
-            log.lifecycle { "Exported HTML for ${doc.fullyQualifiedPath} to ${file.absolutePath}" }
+            log.lifecycle { "Exported HTML for ${doc.fullyQualifiedPath} to ${targetFile.absolutePath}" }
         }
+
+        require(parameters.exportAsHtmlDir?.setReadOnly() == true) { "Could not set ${parameters.exportAsHtmlDir?.path} to readonly" }
     }
 
     /**

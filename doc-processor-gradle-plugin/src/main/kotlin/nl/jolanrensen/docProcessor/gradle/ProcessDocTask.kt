@@ -242,7 +242,11 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     fun dependencies(action: Action<DependencySetPluginDsl>): Unit = action.execute(dependencies)
 
     init {
-        outputs.upToDateWhen { false }
+        outputs.upToDateWhen {
+            target.get().let {
+                it.exists() && it.listFiles()?.isNotEmpty() == true
+            }
+        }
     }
 
     @TaskAction
