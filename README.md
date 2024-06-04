@@ -26,6 +26,13 @@ Note: `{@inline tags}` work in KDoc comments too! Plus, `{@tags {@inside tags}}`
   <img src="whatYouGet.svg" style="width: 100%;" alt="Click to see the source">
 </div>
 
+## Used By
+
+This plugin is used by [Kotlin DataFrame](https://github.com/Kotlin/dataframe), to make it possible
+to document and update the wide range of function overloads present in the library due to its DSL-like nature.
+
+Let me know if you're using it in your project too!
+
 ## Preprocessors
 
 Preprocessors are run one at a time, in order, on all KDoc / JavaDoc comments in the sources.
