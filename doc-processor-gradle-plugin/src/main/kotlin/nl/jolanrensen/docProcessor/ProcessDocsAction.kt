@@ -262,15 +262,17 @@ abstract class ProcessDocsAction {
                 )
 
                 try {
-                    targetFile.writeText(processedFileContent)
-                    targetFile.setReadOnly()
+                    targetFile.apply {
+                        setWritable(true, false)
+                        delete()
+                        writeText(processedFileContent)
+                        setReadOnly()
+                    }
                 } catch (e: Exception) {
                     throw IOException("Could not write to target file $targetFile", e)
                 }
             }
         }
-
-        parameters.target?.setReadOnly()
     }
 
     @Throws(IOException::class)
@@ -299,16 +301,18 @@ abstract class ProcessDocsAction {
                 .renderToHtml(theme = addTheme, stripReferences = stripReferences)
             val targetFile = File(htmlDir, doc.fullyQualifiedPath + ".html")
             try {
-                targetFile.writeText(html)
-                targetFile.setReadOnly()
+                targetFile.apply {
+                    setWritable(true, false)
+                    delete()
+                    writeText(html)
+                    setReadOnly()
+                }
             } catch (e: Exception) {
                 throw IOException("Could not write to target file $targetFile", e)
             }
 
             log.lifecycle { "Exported HTML for ${doc.fullyQualifiedPath} to ${targetFile.absolutePath}" }
         }
-
-        parameters.exportAsHtmlDir?.setReadOnly()
     }
 
     /**
