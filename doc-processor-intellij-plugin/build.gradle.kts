@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("java")
     kotlin("jvm")
-    id("org.jetbrains.intellij") version "1.17.3-SNAPSHOT"
+    id("org.jetbrains.intellij") version "1.17.3"
     id("com.github.johnrengelman.shadow")
 }
 
@@ -25,11 +25,11 @@ repositories {
 
 tasks.patchPluginXml {
     sinceBuild = "231"
-    untilBuild = "241.*"
+    untilBuild = "242.*"
 }
 
 intellij {
-    version = "LATEST-EAP-SNAPSHOT"
+    version = "2023.2.6"
     type = "IC"
     pluginName = "DocProcessor"
     plugins.addAll(
