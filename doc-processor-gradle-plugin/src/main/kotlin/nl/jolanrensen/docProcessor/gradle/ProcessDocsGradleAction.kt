@@ -3,7 +3,7 @@ package nl.jolanrensen.docProcessor.gradle
 import nl.jolanrensen.docProcessor.ProcessDocsAction
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
-import org.jetbrains.dokka.DokkaSourceSetImpl
+//import org.jetbrains.dokka.DokkaSourceSetImpl
 import java.io.File
 
 /**
@@ -15,7 +15,7 @@ abstract class ProcessDocsGradleAction : ProcessDocsAction(), WorkAction<Process
 
     interface Parameters : ProcessDocsAction.Parameters, WorkParameters {
         override var baseDir: File
-        override var sources: DokkaSourceSetImpl
+//        override var sources: DokkaSourceSetImpl
         override var sourceRoots: List<File>
         override var target: File?
         override var exportAsHtmlDir: File?

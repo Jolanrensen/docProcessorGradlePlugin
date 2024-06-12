@@ -1,16 +1,17 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
+import com.lemonappdev.konsist.api.Konsist
 import mu.KotlinLogging
 import nl.jolanrensen.docProcessor.ProcessDocsAction.Parameters
 import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
 import nl.jolanrensen.docProcessor.gradle.lifecycle
-import org.jetbrains.dokka.*
-import org.jetbrains.dokka.base.DokkaBase
-import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
-import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
-import org.jetbrains.dokka.model.WithSources
-import org.jetbrains.dokka.model.withDescendants
+//import org.jetbrains.dokka.*
+//import org.jetbrains.dokka.base.DokkaBase
+//import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
+//import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
+//import org.jetbrains.dokka.model.WithSources
+//import org.jetbrains.dokka.model.withDescendants
 import java.io.File
 import java.io.IOException
 import java.util.*
@@ -36,7 +37,7 @@ abstract class ProcessDocsAction {
 
     interface Parameters {
         val baseDir: File
-        val sources: DokkaSourceSetImpl
+//        val sources: DokkaSourceSetImpl
         val sourceRoots: List<File>
         val target: File?
         val exportAsHtmlDir: File?
@@ -48,10 +49,21 @@ abstract class ProcessDocsAction {
     abstract val parameters: Parameters
 
     protected fun process() {
+
+        // TEMP
+        val konsist = Konsist.scopeFromExternalDirectories(parameters.sourceRoots.map { it.absolutePath })
+        val classes = konsist.classes()
+        val interfaces = konsist.interfaces()
+        val objects = konsist.objects()
+        val properties = konsist.properties()
+        val functions = konsist.functions()
+        val declarations = konsist.declarations()
+
         // analyse the sources with dokka to get the documentables
         log.lifecycle { "Analyzing sources..." }
         val (sourceDocs, time) = measureTimedValue {
-            analyseSourcesWithDokka()
+            DocumentablesByPath.of(emptyMap()) as DocumentablesByPath
+//            analyseSourcesWithDokka()
         }
         log.lifecycle { "  - Finished in ${time.toString(DurationUnit.SECONDS)}." }
 
@@ -90,91 +102,92 @@ abstract class ProcessDocsAction {
         exportHtmls(modifiedDocumentables.values.flatten())
     }
 
-    private fun analyseSourcesWithDokka(): DocumentablesByPath {
-        // initialize dokka with the sources
-        val configuration = DokkaConfigurationImpl(
-            sourceSets = listOf(parameters.sources),
-        )
-        val logger = DokkaBootstrapImpl.DokkaProxyLogger { level, message ->
-            with(log) {
-                when (level) {
-                    "debug" -> debug { message }
-                    "info" -> info { message }
-                    "progress" -> lifecycle { message }
-                    "warn" -> warn { message }
-                    "error" -> error { message }
-                    else -> info { message }
-                }
-            }
-        }
-        val dokkaGenerator = DokkaGenerator(configuration, logger)
-
-        // get the sourceToDocumentableTranslators from DokkaBase, both for java and kotlin files
-        val context = dokkaGenerator.initializePlugins(configuration, logger, listOf(DokkaBase()))
-        val translators = context[CoreExtensions.sourceToDocumentableTranslator]
-            .filter {
-                it is DefaultPsiToDocumentableTranslator || // java
-                        it is DefaultDescriptorToDocumentableTranslator // kotlin
-            }
-
-        require(translators.any { it is DefaultPsiToDocumentableTranslator }) {
-            "Could not find DefaultPsiToDocumentableTranslator"
-        }
-
-        require(translators.any { it is DefaultDescriptorToDocumentableTranslator }) {
-            "Could not find DefaultDescriptorToDocumentableTranslator"
-        }
-
-        // execute the translators on the sources to gather the modules
-        val modules = translators.map {
-            it.invoke(
-                sourceSet = parameters.sources,
-                context = context,
-            )
-        }
-
-        // collect the right documentables from the modules (only linkable elements with docs)
-        val pathsWithoutSources = mutableSetOf<String>()
-        val documentables = mutableListOf<DocumentableWrapper>()
-        modules.flatMap { it.withDescendants() }.let { rawDocs ->
-            // TODO: issue #12: support Type Aliases
-            // TODO: issue #13: support read-only docs
-            val (withSources, withoutSources) = rawDocs.partition { it is WithSources }
-
-            // paths without sources are likely generated files or external sources, such as dependencies
-            pathsWithoutSources += withoutSources.map { it.dri.fullyQualifiedPath }
-            pathsWithoutSources += withoutSources.mapNotNull { it.dri.fullyQualifiedExtensionPath }
-
-            documentables += withSources.mapNotNull {
-                val source = (it as WithSources).sources[parameters.sources]
-                    ?: return@mapNotNull null
-
-                DocumentableWrapper.createFromDokkaOrNull(
-                    documentable = it,
-                    source = source,
-                    logger = logger,
-                )
-            }
-        }
-
-        // collect the documentables with sources per path
-        val documentablesPerPath: MutableMap<String, List<DocumentableWrapper>> = documentables
-            .flatMap { doc -> doc.paths.map { it to doc } }
-            .groupBy { it.first }
-            .mapValues { it.value.map { it.second } }
-            .toMutableMap()
-
-        // add the paths for documentables without sources to the map
-        for (path in pathsWithoutSources) {
-            if (path !in documentablesPerPath) {
-                documentablesPerPath[path] = emptyList()
-            }
-        }
-
-        log.info { "Found ${documentablesPerPath.size} source docs: $documentablesPerPath" }
-
-        return DocumentablesByPath.of(documentablesPerPath)
-    }
+//    private fun analyseSourcesWithDokka(): DocumentablesByPath {
+//
+//        // initialize dokka with the sources
+//        val configuration = DokkaConfigurationImpl(
+//            sourceSets = listOf(parameters.sources),
+//        )
+//        val logger = DokkaBootstrapImpl.DokkaProxyLogger { level, message ->
+//            with(log) {
+//                when (level) {
+//                    "debug" -> debug { message }
+//                    "info" -> info { message }
+//                    "progress" -> lifecycle { message }
+//                    "warn" -> warn { message }
+//                    "error" -> error { message }
+//                    else -> info { message }
+//                }
+//            }
+//        }
+//        val dokkaGenerator = DokkaGenerator(configuration, logger)
+//
+//        // get the sourceToDocumentableTranslators from DokkaBase, both for java and kotlin files
+//        val context = dokkaGenerator.initializePlugins(configuration, logger, listOf(DokkaBase()))
+//        val translators = context[CoreExtensions.sourceToDocumentableTranslator]
+//            .filter {
+//                it is DefaultPsiToDocumentableTranslator || // java
+//                        it is DefaultDescriptorToDocumentableTranslator // kotlin
+//            }
+//
+//        require(translators.any { it is DefaultPsiToDocumentableTranslator }) {
+//            "Could not find DefaultPsiToDocumentableTranslator"
+//        }
+//
+//        require(translators.any { it is DefaultDescriptorToDocumentableTranslator }) {
+//            "Could not find DefaultDescriptorToDocumentableTranslator"
+//        }
+//
+//        // execute the translators on the sources to gather the modules
+//        val modules = translators.map {
+//            it.invoke(
+//                sourceSet = parameters.sources,
+//                context = context,
+//            )
+//        }
+//
+//        // collect the right documentables from the modules (only linkable elements with docs)
+//        val pathsWithoutSources = mutableSetOf<String>()
+//        val documentables = mutableListOf<DocumentableWrapper>()
+//        modules.flatMap { it.withDescendants() }.let { rawDocs ->
+//            // TODO: issue #12: support Type Aliases
+//            // TODO: issue #13: support read-only docs
+//            val (withSources, withoutSources) = rawDocs.partition { it is WithSources }
+//
+//            // paths without sources are likely generated files or external sources, such as dependencies
+//            pathsWithoutSources += withoutSources.map { it.dri.fullyQualifiedPath }
+//            pathsWithoutSources += withoutSources.mapNotNull { it.dri.fullyQualifiedExtensionPath }
+//
+//            documentables += withSources.mapNotNull {
+//                val source = (it as WithSources).sources[parameters.sources]
+//                    ?: return@mapNotNull null
+//
+//                DocumentableWrapper.createFromDokkaOrNull(
+//                    documentable = it,
+//                    source = source,
+//                    logger = logger,
+//                )
+//            }
+//        }
+//
+//        // collect the documentables with sources per path
+//        val documentablesPerPath: MutableMap<String, List<DocumentableWrapper>> = documentables
+//            .flatMap { doc -> doc.paths.map { it to doc } }
+//            .groupBy { it.first }
+//            .mapValues { it.value.map { it.second } }
+//            .toMutableMap()
+//
+//        // add the paths for documentables without sources to the map
+//        for (path in pathsWithoutSources) {
+//            if (path !in documentablesPerPath) {
+//                documentablesPerPath[path] = emptyList()
+//            }
+//        }
+//
+//        log.info { "Found ${documentablesPerPath.size} source docs: $documentablesPerPath" }
+//
+//        return DocumentablesByPath.of(documentablesPerPath)
+//    }
 
     private fun getModifiedDocumentablesPerFile(
         modifiedSourceDocs: Map<String, List<DocumentableWrapper>>,
@@ -242,7 +255,7 @@ abstract class ProcessDocsAction {
                     .map { (docTextRange, documentable) ->
                         getNewDocTextRangeAndDoc(
                             fileContent = fileContent,
-                            docTextRange = docTextRange,
+                            range = docTextRange.toIntRange(),
                             newDocContent = documentable.docContent,
                             docIndent = documentable.docIndent,
                             sourceHasDocumentation = documentable.sourceHasDocumentation,
@@ -322,12 +335,11 @@ abstract class ProcessDocsAction {
      */
     private fun getNewDocTextRangeAndDoc(
         fileContent: String,
-        docTextRange: TextRange,
+        range: IntRange,
         newDocContent: DocContent,
         docIndent: Int,
         sourceHasDocumentation: Boolean,
     ): Pair<IntRange, String> {
-        val range = docTextRange.toIntRange()
 
         return when {
             // don't create empty kdoc, just remove it altogether

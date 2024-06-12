@@ -44,6 +44,8 @@ dependencies {
     shadow("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
     shadow("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
+    shadow("com.lemonappdev:konsist:0.15.1")
+
     // logging
     api("io.github.microutils:kotlin-logging:3.0.5")
 

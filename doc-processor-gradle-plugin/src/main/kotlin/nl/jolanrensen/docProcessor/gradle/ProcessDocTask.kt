@@ -32,8 +32,6 @@ import org.gradle.kotlin.dsl.listProperty
 import org.gradle.kotlin.dsl.mapProperty
 import org.gradle.kotlin.dsl.property
 import org.gradle.workers.WorkerExecutor
-import org.jetbrains.dokka.DokkaSourceSetID
-import org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder
 import java.io.File
 import javax.inject.Inject
 
@@ -279,16 +277,16 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
         log.info { "Using target folders: ${targets.files.toList()}" }
         log.info { "Using runtime classpath: ${runtime.joinToString("\n")}" }
 
-        val sourceSetName = "sourceSet"
-        val sources = GradleDokkaSourceSetBuilder(
-            name = sourceSetName,
-            project = project,
-            sourceSetIdFactory = { DokkaSourceSetID(it, sourceSetName) },
-        ).apply {
-            sourceRoots.forEach {
-                if (it.exists()) sourceRoot(it)
-            }
-        }.build()
+//        val sourceSetName = "sourceSet"
+//        val sources = GradleDokkaSourceSetBuilder(
+//            name = sourceSetName,
+//            project = project,
+//            sourceSetIdFactory = { DokkaSourceSetID(it, sourceSetName) },
+//        ).apply {
+//            sourceRoots.forEach {
+//                if (it.exists()) sourceRoot(it)
+//            }
+//        }.build()
 
         val workQueue = workerExecutor.classLoaderIsolation {
             it.classpath.setFrom(runtime)
@@ -296,7 +294,7 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
 
         workQueue.submit(ProcessDocsGradleAction::class.java) {
             it.baseDir = baseDir.get()
-            it.sources = sources
+//            it.sources = sources
             it.sourceRoots = sourceRoots
             it.target = target
             it.processors = processors
