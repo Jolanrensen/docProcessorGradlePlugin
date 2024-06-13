@@ -1,20 +1,14 @@
 package nl.jolanrensen.docProcessor
 
-import com.intellij.openapi.util.TextRange
 import com.lemonappdev.konsist.api.Konsist
 import mu.KotlinLogging
 import nl.jolanrensen.docProcessor.ProcessDocsAction.Parameters
 import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
 import nl.jolanrensen.docProcessor.gradle.lifecycle
-//import org.jetbrains.dokka.*
-//import org.jetbrains.dokka.base.DokkaBase
-//import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
-//import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
-//import org.jetbrains.dokka.model.WithSources
-//import org.jetbrains.dokka.model.withDescendants
 import java.io.File
 import java.io.IOException
 import java.util.*
+import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 
@@ -61,7 +55,8 @@ abstract class ProcessDocsAction {
 
         // analyse the sources with dokka to get the documentables
         log.lifecycle { "Analyzing sources..." }
-        val (sourceDocs, time) = measureTimedValue {
+        val (sourceDocs: DocumentablesByPath, time: Duration) = measureTimedValue {
+//            TODO()
             DocumentablesByPath.of(emptyMap()) as DocumentablesByPath
 //            analyseSourcesWithDokka()
         }

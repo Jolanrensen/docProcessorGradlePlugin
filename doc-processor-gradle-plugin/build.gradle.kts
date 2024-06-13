@@ -37,12 +37,12 @@ dependencies {
     shadow(gradleKotlinDsl())
 
     // Dokka dependencies
-    val dokkaVersion = "1.8.10"
-    shadow("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
-    shadow("org.jetbrains.dokka:dokka-base:$dokkaVersion")
-    shadow("org.jetbrains.dokka:dokka-core:$dokkaVersion")
-    shadow("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
-    shadow("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
+//    val dokkaVersion = "1.8.10"
+//    shadow("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
+//    shadow("org.jetbrains.dokka:dokka-base:$dokkaVersion")
+//    shadow("org.jetbrains.dokka:dokka-core:$dokkaVersion")
+//    shadow("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
+//    shadow("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
     shadow("com.lemonappdev:konsist:0.15.1")
 
