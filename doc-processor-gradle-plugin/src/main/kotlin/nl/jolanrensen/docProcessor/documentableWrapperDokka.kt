@@ -119,3 +119,6 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
 }
 
 fun DocumentableWrapper.getOrigin(): Documentable = origin as Documentable
+
+fun TextRange.toIntRange(): IntRange = startOffset until endOffset
+fun IntRange.toTextRange(): TextRange = TextRange(start, endInclusive + 1)
