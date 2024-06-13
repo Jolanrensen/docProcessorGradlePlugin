@@ -1,6 +1,5 @@
 package nl.jolanrensen.docProcessor
 
-import com.intellij.openapi.util.TextRange
 import mu.KotlinLogging
 import nl.jolanrensen.docProcessor.ProcessDocsAction.Parameters
 import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
@@ -236,13 +235,13 @@ abstract class ProcessDocsAction {
 
                 val docModificationsByRange = modifications
                     .filter { it.identifier !in idsToExclude } // skip modification if entire documentable is excluded
-                    .groupBy { it.docFileTextRange.toTextRange() }
+                    .groupBy { it.docFileTextRange }
                     .mapValues { it.value.first() }
-                    .toSortedMap(compareBy { it.startOffset })
+                    .toSortedMap(compareBy { it.first })
                     .map { (docTextRange, documentable) ->
                         getNewDocTextRangeAndDoc(
                             fileContent = fileContent,
-                            docTextRange = docTextRange,
+                            range = docTextRange,
                             newDocContent = documentable.docContent,
                             docIndent = documentable.docIndent,
                             sourceHasDocumentation = documentable.sourceHasDocumentation,
@@ -250,11 +249,11 @@ abstract class ProcessDocsAction {
                     }
 
                 val exclusionModificationsByRange = documentablesToExclude
-                    .groupBy { it.fileTextRange.toTextRange() }
+                    .groupBy { it.fileTextRange }
                     .mapValues { it.value.first() }
-                    .toSortedMap(compareBy { it.startOffset })
+                    .toSortedMap(compareBy { it.first })
                     .map { (fileTextRange, _) ->
-                        fileTextRange.toIntRange() to ""
+                        fileTextRange to ""
                     }
 
                 val processedFileContent = fileContent.replaceNonOverlappingRanges(
@@ -322,58 +321,54 @@ abstract class ProcessDocsAction {
      */
     private fun getNewDocTextRangeAndDoc(
         fileContent: String,
-        docTextRange: TextRange,
+        range: IntRange,
         newDocContent: DocContent,
         docIndent: Int,
         sourceHasDocumentation: Boolean,
-    ): Pair<IntRange, String> {
-        val range = docTextRange.toIntRange()
+    ): Pair<IntRange, String> = when {
+        // don't create empty kdoc, just remove it altogether
+        newDocContent.isEmpty() && !sourceHasDocumentation -> range to ""
 
-        return when {
-            // don't create empty kdoc, just remove it altogether
-            newDocContent.isEmpty() && !sourceHasDocumentation -> range to ""
+        // don't create empty kdoc, just remove it altogether
+        // We need to expand the replace-range so that the newline is also removed
+        newDocContent.isEmpty() && sourceHasDocumentation -> {
+            val prependingNewlineIndex = fileContent
+                .indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
 
-            // don't create empty kdoc, just remove it altogether
-            // We need to expand the replace-range so that the newline is also removed
-            newDocContent.isEmpty() && sourceHasDocumentation -> {
-                val prependingNewlineIndex = fileContent
-                    .indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
+            val trailingNewlineIndex = fileContent
+                .indexOfFirstOrNullWhile('\n', range.last + 1) { it.isWhitespace() }
 
-                val trailingNewlineIndex = fileContent
-                    .indexOfFirstOrNullWhile('\n', range.last + 1) { it.isWhitespace() }
+            val newRange = when {
+                prependingNewlineIndex != null && trailingNewlineIndex != null ->
+                    prependingNewlineIndex..range.last
 
-                val newRange = when {
-                    prependingNewlineIndex != null && trailingNewlineIndex != null ->
-                        prependingNewlineIndex..range.last
+                trailingNewlineIndex != null ->
+                    range.first..trailingNewlineIndex
 
-                    trailingNewlineIndex != null ->
-                        range.first..trailingNewlineIndex
-
-                    else -> range
-                }
-
-                newRange to ""
+                else -> range
             }
 
-            // create a new kdoc at given range
-            newDocContent.isNotEmpty() && !sourceHasDocumentation -> {
-                val newKdoc = buildString {
-                    append(newDocContent.toDoc())
-                    append("\n")
-                    append(" ".repeat(docIndent))
-                }
-
-                range to newKdoc
-            }
-
-            // replace the existing kdoc with the new one
-            newDocContent.isNotEmpty() && sourceHasDocumentation -> {
-                val newKdoc = newDocContent.toDoc(docIndent).trimStart()
-
-                range to newKdoc
-            }
-
-            else -> error("Unreachable")
+            newRange to ""
         }
+
+        // create a new kdoc at given range
+        newDocContent.isNotEmpty() && !sourceHasDocumentation -> {
+            val newKdoc = buildString {
+                append(newDocContent.toDoc())
+                append("\n")
+                append(" ".repeat(docIndent))
+            }
+
+            range to newKdoc
+        }
+
+        // replace the existing kdoc with the new one
+        newDocContent.isNotEmpty() && sourceHasDocumentation -> {
+            val newKdoc = newDocContent.toDoc(docIndent).trimStart()
+
+            range to newKdoc
+        }
+
+        else -> error("Unreachable")
     }
 }
