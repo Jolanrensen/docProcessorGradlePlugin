@@ -1,16 +1,14 @@
 package nl.jolanrensen.docProcessor
 
-import com.intellij.openapi.util.TextRange
 import mu.KotlinLogging
 import nl.jolanrensen.docProcessor.ProcessDocsAction.Parameters
 import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
 import nl.jolanrensen.docProcessor.gradle.lifecycle
 import org.jetbrains.dokka.*
-import org.jetbrains.dokka.base.DokkaBase
-import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
-import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
-import org.jetbrains.dokka.model.WithSources
-import org.jetbrains.dokka.model.withDescendants
+import org.jetbrains.dokka.analysis.kotlin.KotlinAnalysisPlugin
+import org.jetbrains.dokka.analysis.kotlin.symbols.plugin.SymbolsAnalysisPlugin
+import org.jetbrains.dokka.base.transformers.documentables.InheritorsExtractorTransformer
+import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
 import java.io.File
 import java.io.IOException
 import java.util.*
@@ -110,70 +108,84 @@ abstract class ProcessDocsAction {
         val dokkaGenerator = DokkaGenerator(configuration, logger)
 
         // get the sourceToDocumentableTranslators from DokkaBase, both for java and kotlin files
-        val context = dokkaGenerator.initializePlugins(configuration, logger, listOf(DokkaBase()))
+        val context = dokkaGenerator.initializePlugins(
+            configuration = configuration,
+            logger = logger,
+            additionalPlugins = listOf(/*DokkaBase(), */KotlinAnalysisPlugin())
+        )
+
+//        val plugin = context.plugin(SymbolsAnalysisPlugin::class)!!
+//
+//        val transformer = context[CoreExtensions.documentableTransformer].firstIsInstance<InheritorsExtractorTransformer>()
+
+
+//        SourceToDocumentableTranslator
+//        plugin!!.externalDocumentableProvider
+
         val translators = context[CoreExtensions.sourceToDocumentableTranslator]
-            .filter {
-                it is DefaultPsiToDocumentableTranslator || // java
-                        it is DefaultDescriptorToDocumentableTranslator // kotlin
-            }
-
-        require(translators.any { it is DefaultPsiToDocumentableTranslator }) {
-            "Could not find DefaultPsiToDocumentableTranslator"
-        }
-
-        require(translators.any { it is DefaultDescriptorToDocumentableTranslator }) {
-            "Could not find DefaultDescriptorToDocumentableTranslator"
-        }
-
-        // execute the translators on the sources to gather the modules
-        val modules = translators.map {
-            it.invoke(
-                sourceSet = parameters.sources,
-                context = context,
-            )
-        }
-
-        // collect the right documentables from the modules (only linkable elements with docs)
-        val pathsWithoutSources = mutableSetOf<String>()
-        val documentables = mutableListOf<DocumentableWrapper>()
-        modules.flatMap { it.withDescendants() }.let { rawDocs ->
-            // TODO: issue #12: support Type Aliases
-            // TODO: issue #13: support read-only docs
-            val (withSources, withoutSources) = rawDocs.partition { it is WithSources }
-
-            // paths without sources are likely generated files or external sources, such as dependencies
-            pathsWithoutSources += withoutSources.map { it.dri.fullyQualifiedPath }
-            pathsWithoutSources += withoutSources.mapNotNull { it.dri.fullyQualifiedExtensionPath }
-
-            documentables += withSources.mapNotNull {
-                val source = (it as WithSources).sources[parameters.sources]
-                    ?: return@mapNotNull null
-
-                DocumentableWrapper.createFromDokkaOrNull(
-                    documentable = it,
-                    source = source,
-                    logger = logger,
-                )
-            }
-        }
-
-        // collect the documentables with sources per path
-        val documentablesPerPath: MutableMap<String, List<DocumentableWrapper>> = documentables
-            .flatMap { doc -> doc.paths.map { it to doc } }
-            .groupBy { it.first }
-            .mapValues { it.value.map { it.second } }
-            .toMutableMap()
-
-        // add the paths for documentables without sources to the map
-        for (path in pathsWithoutSources) {
-            if (path !in documentablesPerPath) {
-                documentablesPerPath[path] = emptyList()
-            }
-        }
-
-        log.info { "Found ${documentablesPerPath.size} source docs: $documentablesPerPath" }
-
-        return DocumentablesByPath.of(documentablesPerPath)
+//            .filter {
+//                it is DefaultPsiToDocumentableTranslator || // java
+//                        it is DefaultDescriptorToDocumentableTranslator // kotlin
+//            }
+//
+//        require(translators.any { it is DefaultPsiToDocumentableTranslator }) {
+//            "Could not find DefaultPsiToDocumentableTranslator"
+//        }
+//
+//        require(translators.any { it is DefaultDescriptorToDocumentableTranslator }) {
+//            "Could not find DefaultDescriptorToDocumentableTranslator"
+//        }
+//
+//        // execute the translators on the sources to gather the modules
+//        val modules = translators.map {
+//            it.invoke(
+//                sourceSet = parameters.sources,
+//                context = context,
+//            )
+//        }
+//
+//        // collect the right documentables from the modules (only linkable elements with docs)
+//        val pathsWithoutSources = mutableSetOf<String>()
+//        val documentables = mutableListOf<DocumentableWrapper>()
+//        modules.flatMap { it.withDescendants() }.let { rawDocs ->
+//            // TODO: issue #12: support Type Aliases
+//            // TODO: issue #13: support read-only docs
+//            val (withSources, withoutSources) = rawDocs.partition { it is WithSources }
+//
+//            // paths without sources are likely generated files or external sources, such as dependencies
+//            pathsWithoutSources += withoutSources.map { it.dri.fullyQualifiedPath }
+//            pathsWithoutSources += withoutSources.mapNotNull { it.dri.fullyQualifiedExtensionPath }
+//
+//            documentables += withSources.mapNotNull {
+//                val source = (it as WithSources).sources[parameters.sources]
+//                    ?: return@mapNotNull null
+//
+//                DocumentableWrapper.createFromDokkaOrNull(
+//                    documentable = it,
+//                    source = source,
+//                    logger = logger,
+//                )
+//            }
+//        }
+//
+//        // collect the documentables with sources per path
+//        val documentablesPerPath: MutableMap<String, List<DocumentableWrapper>> = documentables
+//            .flatMap { doc -> doc.paths.map { it to doc } }
+//            .groupBy { it.first }
+//            .mapValues { it.value.map { it.second } }
+//            .toMutableMap()
+//
+//        // add the paths for documentables without sources to the map
+//        for (path in pathsWithoutSources) {
+//            if (path !in documentablesPerPath) {
+//                documentablesPerPath[path] = emptyList()
+//            }
+//        }
+//
+//        log.info { "Found ${documentablesPerPath.size} source docs: $documentablesPerPath" }
+//
+//        return DocumentablesByPath.of(documentablesPerPath)
+        TODO()
     }
 
     private fun getModifiedDocumentablesPerFile(
@@ -236,13 +248,13 @@ abstract class ProcessDocsAction {
 
                 val docModificationsByRange = modifications
                     .filter { it.identifier !in idsToExclude } // skip modification if entire documentable is excluded
-                    .groupBy { it.docFileTextRange.toTextRange() }
+                    .groupBy { it.docFileTextRange }
                     .mapValues { it.value.first() }
-                    .toSortedMap(compareBy { it.startOffset })
+                    .toSortedMap(compareBy { it.first })
                     .map { (docTextRange, documentable) ->
                         getNewDocTextRangeAndDoc(
                             fileContent = fileContent,
-                            docTextRange = docTextRange,
+                            range = docTextRange,
                             newDocContent = documentable.docContent,
                             docIndent = documentable.docIndent,
                             sourceHasDocumentation = documentable.sourceHasDocumentation,
@@ -250,11 +262,11 @@ abstract class ProcessDocsAction {
                     }
 
                 val exclusionModificationsByRange = documentablesToExclude
-                    .groupBy { it.fileTextRange.toTextRange() }
+                    .groupBy { it.fileTextRange }
                     .mapValues { it.value.first() }
-                    .toSortedMap(compareBy { it.startOffset })
+                    .toSortedMap(compareBy { it.first })
                     .map { (fileTextRange, _) ->
-                        fileTextRange.toIntRange() to ""
+                        fileTextRange to ""
                     }
 
                 val processedFileContent = fileContent.replaceNonOverlappingRanges(
@@ -322,58 +334,54 @@ abstract class ProcessDocsAction {
      */
     private fun getNewDocTextRangeAndDoc(
         fileContent: String,
-        docTextRange: TextRange,
+        range: IntRange,
         newDocContent: DocContent,
         docIndent: Int,
         sourceHasDocumentation: Boolean,
-    ): Pair<IntRange, String> {
-        val range = docTextRange.toIntRange()
+    ): Pair<IntRange, String> = when {
+        // don't create empty kdoc, just remove it altogether
+        newDocContent.isEmpty() && !sourceHasDocumentation -> range to ""
 
-        return when {
-            // don't create empty kdoc, just remove it altogether
-            newDocContent.isEmpty() && !sourceHasDocumentation -> range to ""
+        // don't create empty kdoc, just remove it altogether
+        // We need to expand the replace-range so that the newline is also removed
+        newDocContent.isEmpty() && sourceHasDocumentation -> {
+            val prependingNewlineIndex = fileContent
+                .indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
 
-            // don't create empty kdoc, just remove it altogether
-            // We need to expand the replace-range so that the newline is also removed
-            newDocContent.isEmpty() && sourceHasDocumentation -> {
-                val prependingNewlineIndex = fileContent
-                    .indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
+            val trailingNewlineIndex = fileContent
+                .indexOfFirstOrNullWhile('\n', range.last + 1) { it.isWhitespace() }
 
-                val trailingNewlineIndex = fileContent
-                    .indexOfFirstOrNullWhile('\n', range.last + 1) { it.isWhitespace() }
+            val newRange = when {
+                prependingNewlineIndex != null && trailingNewlineIndex != null ->
+                    prependingNewlineIndex..range.last
 
-                val newRange = when {
-                    prependingNewlineIndex != null && trailingNewlineIndex != null ->
-                        prependingNewlineIndex..range.last
+                trailingNewlineIndex != null ->
+                    range.first..trailingNewlineIndex
 
-                    trailingNewlineIndex != null ->
-                        range.first..trailingNewlineIndex
-
-                    else -> range
-                }
-
-                newRange to ""
+                else -> range
             }
 
-            // create a new kdoc at given range
-            newDocContent.isNotEmpty() && !sourceHasDocumentation -> {
-                val newKdoc = buildString {
-                    append(newDocContent.toDoc())
-                    append("\n")
-                    append(" ".repeat(docIndent))
-                }
-
-                range to newKdoc
-            }
-
-            // replace the existing kdoc with the new one
-            newDocContent.isNotEmpty() && sourceHasDocumentation -> {
-                val newKdoc = newDocContent.toDoc(docIndent).trimStart()
-
-                range to newKdoc
-            }
-
-            else -> error("Unreachable")
+            newRange to ""
         }
+
+        // create a new kdoc at given range
+        newDocContent.isNotEmpty() && !sourceHasDocumentation -> {
+            val newKdoc = buildString {
+                append(newDocContent.toDoc())
+                append("\n")
+                append(" ".repeat(docIndent))
+            }
+
+            range to newKdoc
+        }
+
+        // replace the existing kdoc with the new one
+        newDocContent.isNotEmpty() && sourceHasDocumentation -> {
+            val newKdoc = newDocContent.toDoc(docIndent).trimStart()
+
+            range to newKdoc
+        }
+
+        else -> error("Unreachable")
     }
 }

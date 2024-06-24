@@ -37,11 +37,23 @@ dependencies {
     shadow(gradleKotlinDsl())
 
     // Dokka dependencies
-    val dokkaVersion = "1.8.10"
-    shadow("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
-    shadow("org.jetbrains.dokka:dokka-base:$dokkaVersion")
+    val dokkaVersion = "1.9.20"
+//    shadow("org.jetbrains.kotlin:kotlin-compiler:2.0.0")
+    shadow("org.jetbrains.kotlin:kotlin-compiler:2.0.20-Beta1")
+//    shadow("org.jetbrains.kotlin:idea:$dokkaVersion")
+
     shadow("org.jetbrains.dokka:dokka-core:$dokkaVersion")
-    shadow("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
+    shadow("org.jetbrains.dokka:dokka-base:$dokkaVersion")
+
+    shadow("org.jetbrains.dokka:analysis-kotlin-symbols:$dokkaVersion") // K2
+//    shadow("org.jetbrains.dokka:analysis-kotlin-descriptors:$dokkaVersion") // K1
+    shadow("org.jetbrains.dokka:analysis-kotlin-api:$dokkaVersion")
+
+//    shadow("org.jetbrains.dokka:analysis-kotlin-descriptors-ide:$dokkaVersion")
+//    shadow("org.jetbrains.dokka:analysis-kotlin-descriptors-compiler:$dokkaVersion")
+
+
+//    shadow("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
     shadow("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
     // logging
