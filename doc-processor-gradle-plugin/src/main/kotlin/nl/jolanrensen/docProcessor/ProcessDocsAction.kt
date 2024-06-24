@@ -58,21 +58,23 @@ abstract class ProcessDocsAction {
         // Find all processors
         val processors = findProcessors(parameters.processors, parameters.arguments)
 
-        if (processors.isEmpty())
+        if (processors.isEmpty()) {
             log.warn { "No processors found" }
-        else
+        } else {
             log.info { "Found processors: ${processors.map { it::class.qualifiedName }}" }
+        }
 
         // Run all processors
         val modifiedDocumentables =
-            processors.fold(sourceDocs) { acc, processor ->
-                log.lifecycle { "Running processor: ${processor::class.qualifiedName}..." }
-                val (docs, time) = measureTimedValue {
-                    processor.processSafely(processLimit = parameters.processLimit, documentablesByPath = acc)
-                }
-                log.lifecycle { "  - Finished in ${time.toString(DurationUnit.SECONDS)}." }
-                docs
-            }.documentablesToProcess
+            processors
+                .fold(sourceDocs) { acc, processor ->
+                    log.lifecycle { "Running processor: ${processor::class.qualifiedName}..." }
+                    val (docs, time) = measureTimedValue {
+                        processor.processSafely(processLimit = parameters.processLimit, documentablesByPath = acc)
+                    }
+                    log.lifecycle { "  - Finished in ${time.toString(DurationUnit.SECONDS)}." }
+                    docs
+                }.documentablesToProcess
 
         // filter to only include the modified documentables
         val modifiedDocumentablesPerFile = getModifiedDocumentablesPerFile(modifiedDocumentables)
@@ -80,7 +82,11 @@ abstract class ProcessDocsAction {
         val documentablesToExcludeFromSourcesPerFile = getDocumentablesToExcludePerFile(modifiedDocumentables)
 
         log.info {
-            "Modified documentables: ${modifiedDocumentablesPerFile.values.flatMap { it.map { it.fullyQualifiedPath } }}"
+            "Modified documentables: ${
+                modifiedDocumentablesPerFile.values.flatMap {
+                    it.map { it.fullyQualifiedPath }
+                }
+            }"
         }
 
         // copy the sources to the target folder while replacing all docs in modified documentables
@@ -113,8 +119,9 @@ abstract class ProcessDocsAction {
         val context = dokkaGenerator.initializePlugins(configuration, logger, listOf(DokkaBase()))
         val translators = context[CoreExtensions.sourceToDocumentableTranslator]
             .filter {
-                it is DefaultPsiToDocumentableTranslator || // java
-                        it is DefaultDescriptorToDocumentableTranslator // kotlin
+                it is DefaultPsiToDocumentableTranslator ||
+                    // java
+                    it is DefaultDescriptorToDocumentableTranslator // kotlin
             }
 
         require(translators.any { it is DefaultPsiToDocumentableTranslator }) {
@@ -185,8 +192,7 @@ abstract class ProcessDocsAction {
                 it.value.filter {
                     it.isModified // filter out unmodified documentables
                 }
-            }
-            .groupBy { it.file }
+            }.groupBy { it.file }
 
     private fun getDocumentablesToExcludePerFile(
         modifiedSourceDocs: Map<String, List<DocumentableWrapper>>,
@@ -199,8 +205,23 @@ abstract class ProcessDocsAction {
                         it.simpleName == ExcludeFromSources::class.simpleName
                     }
                 }
+            }.groupBy { it.file }
+
+    /**
+     * Enables `@file:ExcludeFromSources` annotation to work.
+     */
+    private fun File.containsExcludeFromSources(): Boolean {
+        for (line in bufferedReader().lines()) {
+            val trimmed = line.trim()
+            when {
+                trimmed.startsWith("package") -> return false
+                trimmed.startsWith("import") -> return false
+                trimmed.contains("@file:${ExcludeFromSources::class.simpleName}") -> return true
+                trimmed.matches("@file:\\[.*${ExcludeFromSources::class.simpleName}.*]".toRegex()) -> return true
             }
-            .groupBy { it.file }
+        }
+        return false
+    }
 
     @Throws(IOException::class)
     private fun copyAndModifySources(
@@ -210,6 +231,7 @@ abstract class ProcessDocsAction {
         for (source in parameters.sourceRoots) {
             for (file in source.walkTopDown()) {
                 if (!file.isFile) continue
+                if (file.containsExcludeFromSources()) continue
 
                 val relativePath = parameters.baseDir.toPath().relativize(file.toPath())
                 val targetFile = File(parameters.target, relativePath.toString())
@@ -223,7 +245,8 @@ abstract class ProcessDocsAction {
                 }
 
                 val fileContent = try {
-                    file.readText()
+                    file
+                        .readText()
                         .replace("\r\n", "\n")
                         .replace("\r", "\n")
                 } catch (e: Exception) {
@@ -258,7 +281,7 @@ abstract class ProcessDocsAction {
                     }
 
                 val processedFileContent = fileContent.replaceNonOverlappingRanges(
-                    *(docModificationsByRange + exclusionModificationsByRange).toTypedArray()
+                    *(docModificationsByRange + exclusionModificationsByRange).toTypedArray(),
                 )
 
                 try {

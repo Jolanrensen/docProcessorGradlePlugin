@@ -283,4 +283,74 @@ class TestExcludeFromSources : DocProcessorFunctionalTest(name = "excl") {
             ),
         ) shouldBe expectedOutput
     }
+
+    @Test
+    fun file() {
+        @Language("kt")
+        val content = """
+            @file:ExcludeFromSources            
+            
+            package com.example.plugin
+            
+            
+            class HelloWorld {
+                /**
+                 * Hello World
+                 */
+                val helloWorld = "Hello World"
+            }
+            
+            /**
+             * {@include [HelloWorld.helloWorld]}!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            additionals = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
+            ),
+        ) shouldBe null
+    }
+
+    @Test
+    fun `file 2`() {
+        @Language("kt")
+        val content = """
+            @file:[ExcludeFromSources ]            
+            
+            package com.example.plugin
+            
+            
+            class HelloWorld {
+                /**
+                 * Hello World
+                 */
+                val helloWorld = "Hello World"
+            }
+            
+            /**
+             * {@include [HelloWorld.helloWorld]}!
+             */
+            fun helloWorld() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "com.example.plugin",
+            processors = processors,
+            additionals = listOf(
+                AdditionalFile(
+                    relativePath = "src/main/kotlin/com/example/plugin/ExcludeFromSources.kt",
+                    content = annotationDef,
+                ),
+            ),
+        ) shouldBe null
+    }
 }
