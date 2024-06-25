@@ -82,6 +82,21 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
     fun target(file: File): Unit = target.set(file)
 
     /**
+     * Whether the output at [target] should be read-only.
+     * Defaults to `true`.
+     */
+    @get:Input
+    val outputReadOnly: Property<Boolean> = factory
+        .property(Boolean::class)
+        .convention(true)
+
+    /**
+     * Whether the output at [target] should be read-only.
+     * Defaults to `true`.
+     */
+    fun outputReadOnly(boolean: Boolean): Unit = outputReadOnly.set(boolean)
+
+    /**
      * Target folder of @ExportAsHtml Docs
      *
      * Defaults to $target/htmlExports
@@ -97,6 +112,21 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
      * Defaults to $target/htmlExports
      */
     fun exportAsHtmlDir(file: File): Unit = exportAsHtmlDir.set(file)
+
+    /**
+     * Whether the output at [exportAsHtmlDir] should be read-only.
+     * Defaults to `true`.
+     */
+    @get:Input
+    val htmlOutputReadOnly: Property<Boolean> = factory
+        .property(Boolean::class)
+        .convention(true)
+
+    /**
+     * Whether the output at [exportAsHtmlDir] should be read-only.
+     * Defaults to `true`.
+     */
+    fun htmlOutputReadOnly(boolean: Boolean): Unit = htmlOutputReadOnly.set(boolean)
 
     /**
      * Where the generated sources are placed.
@@ -303,6 +333,8 @@ abstract class ProcessDocTask @Inject constructor(factory: ObjectFactory) : Defa
             it.processLimit = processLimit.get()
             it.arguments = arguments.get()
             it.exportAsHtmlDir = exportAsHtmlDir.get()
+            it.outputReadOnly = outputReadOnly.get()
+            it.htmlOutputReadOnly = htmlOutputReadOnly.get()
         }
     }
 }

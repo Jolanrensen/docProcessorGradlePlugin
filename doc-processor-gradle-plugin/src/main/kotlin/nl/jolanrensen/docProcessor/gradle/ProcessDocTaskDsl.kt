@@ -49,6 +49,16 @@ class ProcessDocTaskDsl private constructor(public val task: ProcessDocTask) {
             task.target.set(value)
         }
 
+    /**
+     * Whether the output at [target] should be read-only.
+     * Defaults to `true`.
+     */
+    var outputReadOnly: Boolean
+        get() = task.outputReadOnly.get()
+        set(value) {
+            task.outputReadOnly.set(value)
+        }
+
     inner class ExportAsHtmlDsl internal constructor() {
         operator fun invoke(action: ExportAsHtmlDsl.() -> Unit): Unit = action()
 
@@ -61,6 +71,16 @@ class ProcessDocTaskDsl private constructor(public val task: ProcessDocTask) {
             get() = task.exportAsHtmlDir.get()
             set(value) {
                 task.exportAsHtmlDir.set(value)
+            }
+
+        /**
+         * Whether the output at [dir] should be read-only.
+         * Defaults to `true`.
+         */
+        var outputReadOnly: Boolean
+            get() = task.htmlOutputReadOnly.get()
+            set(value) {
+                task.htmlOutputReadOnly.set(value)
             }
 
         // TODO more settings
