@@ -22,6 +22,8 @@ abstract class ProcessDocsGradleAction : ProcessDocsAction(), WorkAction<Process
         override var processors: List<String>
         override var processLimit: Int
         override var arguments: Map<String, Any?>
+        override var outputReadOnly: Boolean
+        override var htmlOutputReadOnly: Boolean
     }
 
     override val parameters: ProcessDocsAction.Parameters

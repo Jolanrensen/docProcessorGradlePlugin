@@ -43,6 +43,8 @@ abstract class ProcessDocsAction {
         val processors: List<String>
         val processLimit: Int
         val arguments: Map<String, Any?>
+        val outputReadOnly: Boolean
+        val htmlOutputReadOnly: Boolean
     }
 
     abstract val parameters: Parameters
@@ -289,7 +291,9 @@ abstract class ProcessDocsAction {
                         setWritable(true, false)
                         delete()
                         writeText(processedFileContent)
-                        setReadOnly()
+                        if (parameters.outputReadOnly) {
+                            setReadOnly()
+                        }
                     }
                 } catch (e: Exception) {
                     throw IOException("Could not write to target file $targetFile", e)
@@ -328,7 +332,9 @@ abstract class ProcessDocsAction {
                     setWritable(true, false)
                     delete()
                     writeText(html)
-                    setReadOnly()
+                    if (parameters.htmlOutputReadOnly) {
+                        setReadOnly()
+                    }
                 }
             } catch (e: Exception) {
                 throw IOException("Could not write to target file $targetFile", e)
