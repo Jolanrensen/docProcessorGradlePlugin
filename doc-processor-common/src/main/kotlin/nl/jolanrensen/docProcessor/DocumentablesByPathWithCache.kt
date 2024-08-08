@@ -18,7 +18,8 @@ open class DocumentablesByPathWithCache(
     override var documentablesToProcessFilter: DocumentableWrapperFilter = NO_FILTER
 
     // graph representing the dependencies between documentables
-    private var dependencyGraph = SimpleDirectedGraph<UUID, _>(Edge::class.java as Class<out Edge<UUID>>)
+    @Suppress("UNCHECKED_CAST")
+    private var dependencyGraph = SimpleDirectedGraph<UUID, Edge<UUID>>(Edge::class.java as Class<out Edge<UUID>>)
 
     // holds the hashcodes of the source of the documentables, to be updated each time a documentable is queried
     private val docContentSourceHashCodeCache: MutableMap<UUID, Int> = mutableMapOf()

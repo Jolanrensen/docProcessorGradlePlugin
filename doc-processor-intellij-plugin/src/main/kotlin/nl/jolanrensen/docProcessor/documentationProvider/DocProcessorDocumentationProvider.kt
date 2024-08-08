@@ -68,7 +68,7 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
     override fun generateHoverDoc(element: PsiElement, originalElement: PsiElement?): String? =
         super.generateDoc(element, originalElement)
 
-    @Nls // todo takes about 5 minutes for a simple file XD
+    @Nls
     override fun generateRenderedDoc(comment: PsiDocCommentBase): String? {
 //        return kotlin.generateRenderedDoc(comment)
         val service = getService(comment.project)

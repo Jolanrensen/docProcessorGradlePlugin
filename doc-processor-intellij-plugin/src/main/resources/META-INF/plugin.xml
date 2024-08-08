@@ -13,24 +13,29 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow
-                factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"
-                icon="com.intellij.icons.ExpUiIcons.Gutter.JavadocRead"
-                id="Doc Preprocessor"/>
+            factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"
+            icon="com.intellij.icons.ExpUiIcons.Gutter.JavadocRead"
+            id="Doc Preprocessor"/>
         <documentationProvider
-                implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
-                id="DocProcessor"
-                order="first"/>
+            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
+            id="DocProcessor"
+            order="first"/>
         <lang.documentationProvider
-                language="kotlin"
-                implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
-                id="DocProcessor"
-                order="first"/>
+            language="kotlin"
+            implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
+            id="DocProcessor"
+            order="first"/>
         <lang.documentationProvider
-                language="JAVA"
-                implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
-                id="DocProcessorJava"
-                order="first"/>
+            language="JAVA"
+            implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
+            id="DocProcessorJava"
+            order="first"/>
 
+    </extensions>
+
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinK2Mode/>
+        <supportsKotlinPluginMode supportsK1="false" supportsK2="true"/>
     </extensions>
 
     <applicationListeners>
