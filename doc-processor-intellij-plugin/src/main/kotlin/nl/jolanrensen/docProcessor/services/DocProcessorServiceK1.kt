@@ -50,13 +50,16 @@ import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
 import java.io.File
 import java.util.concurrent.CancellationException
 
+/**
+ * See also [DocProcessorServiceK2]
+ */
 @Service(Service.Level.PROJECT)
-class DocProcessorService(private val project: Project) {
+class DocProcessorServiceK1(private val project: Project) {
 
-    private val logger = logger<DocProcessorService>()
+    private val logger = logger<DocProcessorServiceK1>()
 
     companion object {
-        fun getInstance(project: Project): DocProcessorService = project.service()
+        fun getInstance(project: Project): DocProcessorServiceK1 = project.service()
     }
 
     // TODO make configurable
@@ -66,6 +69,7 @@ class DocProcessorService(private val project: Project) {
      * Determines whether the DocProcessor is enabled or disabled.
      */
     var isEnabled = true
+        get() = field
         set(value) {
             field = value
             thisLogger().info(if (value) "DocProcessor enabled." else "DocProcessor disabled.")

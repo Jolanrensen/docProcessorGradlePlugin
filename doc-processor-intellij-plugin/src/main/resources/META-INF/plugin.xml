@@ -16,20 +16,39 @@
             factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"
             icon="com.intellij.icons.ExpUiIcons.Gutter.JavadocRead"
             id="Doc Preprocessor"/>
+
+        <!-- K1 -->
+
         <documentationProvider
-            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
+            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProviderK1"
             id="DocProcessor"
             order="first"/>
         <lang.documentationProvider
             language="kotlin"
-            implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
+            implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProviderK1"
             id="DocProcessor"
             order="first"/>
         <lang.documentationProvider
             language="JAVA"
-            implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProvider"
+            implementationClass="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProviderK1"
             id="DocProcessorJava"
             order="first"/>
+
+        <!-- K2 -->
+
+        <platform.backend.documentation.psiTargetProvider
+            id="KotlinDocumentationTargetProvider"
+            order="first"
+            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorPsiDocumentationTargetProvider"/>
+
+        <platform.backend.documentation.targetProvider
+            id="KotlinDocumentationTargetProvider"
+            order="first"
+            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationTargetProvider"/>
+
+        <platform.backend.documentation.inlineDocumentationProvider
+            order="first"
+            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorInlineDocumentationProvider"/>
 
     </extensions>
 

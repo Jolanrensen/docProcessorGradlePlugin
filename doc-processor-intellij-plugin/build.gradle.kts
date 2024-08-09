@@ -49,7 +49,10 @@ dependencies {
 
     intellijPlatform {
         intellijIdeaCommunity("2024.2")
-        bundledPlugins("org.jetbrains.kotlin", "com.intellij.java")
+        bundledPlugins(
+            "org.jetbrains.kotlin",
+            "com.intellij.java",
+        )
         zipSigner()
         instrumentationTools()
         testFramework(TestFrameworkType.Platform)

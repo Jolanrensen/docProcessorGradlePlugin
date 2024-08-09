@@ -12,7 +12,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil.processElements
 import nl.jolanrensen.docProcessor.docComment
-import nl.jolanrensen.docProcessor.services.DocProcessorService
+import nl.jolanrensen.docProcessor.services.DocProcessorServiceK1
 import org.jetbrains.annotations.Nls
 import org.jetbrains.kotlin.idea.KotlinDocumentationProvider
 import org.jetbrains.kotlin.psi.KtDeclaration
@@ -20,8 +20,8 @@ import org.jetbrains.kotlin.psi.KtFile
 import java.awt.Image
 import java.util.function.Consumer
 
-// TODO migrate to [DocumentationTarget]
-class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), ExternalDocumentationProvider {
+// K1
+class DocProcessorDocumentationProviderK1 : AbstractDocumentationProvider(), ExternalDocumentationProvider {
 
     init {
         println("DocProcessorDocumentationProvider created")
@@ -29,9 +29,9 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
 
     private val kotlin = KotlinDocumentationProvider()
 
-    private val serviceInstances: MutableMap<Project, DocProcessorService> = mutableMapOf()
+    private val serviceInstances: MutableMap<Project, DocProcessorServiceK1> = mutableMapOf()
     private fun getService(project: Project) =
-        serviceInstances.getOrPut(project) { DocProcessorService.getInstance(project) }
+        serviceInstances.getOrPut(project) { DocProcessorServiceK1.getInstance(project) }
 
     override fun getQuickNavigateInfo(element: PsiElement?, originalElement: PsiElement?): String? =
         kotlin.getQuickNavigateInfo(element, originalElement)
@@ -70,7 +70,6 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
 
     @Nls
     override fun generateRenderedDoc(comment: PsiDocCommentBase): String? {
-//        return kotlin.generateRenderedDoc(comment)
         val service = getService(comment.project)
         if (!service.isEnabled) return null
         val modifiedElement = service.getModifiedElement(comment.owner ?: return null)
