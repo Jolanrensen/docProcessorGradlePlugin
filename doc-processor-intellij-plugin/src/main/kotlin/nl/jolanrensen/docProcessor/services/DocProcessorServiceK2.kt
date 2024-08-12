@@ -17,6 +17,7 @@ import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
 import nl.jolanrensen.docProcessor.ExportAsHtml
 import nl.jolanrensen.docProcessor.MessageBundle
+import nl.jolanrensen.docProcessor.Mode
 import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.TagDocProcessorFailedException
 import nl.jolanrensen.docProcessor.annotationNames
@@ -32,8 +33,10 @@ import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.docComment
+import nl.jolanrensen.docProcessor.docProcessorIsEnabled
 import nl.jolanrensen.docProcessor.findProcessors
 import nl.jolanrensen.docProcessor.getOrigin
+import nl.jolanrensen.docProcessor.mode
 import nl.jolanrensen.docProcessor.programmingLanguage
 import nl.jolanrensen.docProcessor.renderToHtml
 import nl.jolanrensen.docProcessor.toDoc
@@ -67,12 +70,7 @@ class DocProcessorServiceK2(private val project: Project) {
     /**
      * Determines whether the DocProcessor is enabled or disabled.
      */
-    var isEnabled = true
-        get() = field
-        set(value) {
-            field = value
-            thisLogger().info(if (value) "DocProcessor enabled." else "DocProcessor disabled.")
-        }
+    val isEnabled get() = docProcessorIsEnabled && mode == Mode.K2
 
     fun PsiElement.allChildren(): List<PsiElement> =
         children.toList() + children.flatMap { it.allChildren() }
@@ -152,7 +150,7 @@ class DocProcessorServiceK2(private val project: Project) {
         val targets = kaSymbols.map {
             when (it) {
                 is KtDeclaration, is PsiDocCommentOwner ->
-                    DocumentableWrapper.createFromIntellijOrNull(it)
+                    DocumentableWrapper.createFromIntellijOrNull(it, useK2 = true)
 
                 else -> null
             }
@@ -234,7 +232,7 @@ class DocProcessorServiceK2(private val project: Project) {
     private fun getDocContent(psiElement: PsiElement): String? {
         return try {
             // Create a DocumentableWrapper from the element
-            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
+            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement, useK2 = true)
             if (documentableWrapper == null) {
                 thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
                 return null
@@ -268,9 +266,9 @@ class DocProcessorServiceK2(private val project: Project) {
             } else {
                 doc.docContent
             }
-        } catch (e: ProcessCanceledException) {
+        } catch (_: ProcessCanceledException) {
             return null
-        } catch (e: CancellationException) {
+        } catch (_: CancellationException) {
             return null
         } catch (e: TagDocProcessorFailedException) {
 //            e.printStackTrace()
@@ -280,7 +278,13 @@ class DocProcessorServiceK2(private val project: Project) {
 //            e.printStackTrace()
 
             // instead of throwing the exception, render it inside the kdoc
-            "```\n$e\n```"
+            """
+            |```
+            |$e
+            |
+            |${e.stackTrace.joinToString("\n")}
+            |```
+            """.trimMargin()
         }
     }
 

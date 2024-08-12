@@ -3,6 +3,7 @@ package nl.jolanrensen.docProcessor
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.analysis.api.analyze
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
 import org.jetbrains.kotlin.idea.base.utils.fqname.fqName
@@ -10,9 +11,11 @@ import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.psiUtil.isExtensionDeclaration
 import java.io.File
+import org.jetbrains.kotlin.psi.KtElement
 
 fun DocumentableWrapper.Companion.createFromIntellijOrNull(
     documentable: PsiElement,
+    useK2: Boolean,
 ): DocumentableWrapper? {
     require(documentable is KtDeclaration || documentable is PsiDocCommentOwner) {
         "Documentable must be a KtDeclaration or PsiDocCommentOwner, but was ${documentable::class.simpleName}"
@@ -20,14 +23,32 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
 
     val path = documentable.kotlinFqName?.asString() ?: return null
     val extensionPath: String? = if (documentable.isExtensionDeclaration()) {
-        (documentable as? KtDeclaration)
-            ?.descriptor
-            ?.let { it as CallableDescriptor }
-            ?.extensionReceiverParameter
-            ?.type
-            ?.fqName
-            ?.asString()
-            ?.let { "$it.${documentable.name}" }
+        if (useK2) {
+            // k2 method
+            (documentable as? KtElement)?.let {
+                analyze(it) {
+                    (documentable as? org.jetbrains.kotlin.psi.KtCallableDeclaration)
+                        ?.receiverTypeReference
+                        ?.type
+                        ?.fullyExpandedType
+                        ?.expandedSymbol
+                        ?.psi
+                        ?.kotlinFqName
+                        ?.toString()
+                        ?.let { "$it.${documentable.name}" }
+                }
+            }
+        } else {
+            // k1 method
+            (documentable as? KtDeclaration)
+                ?.descriptor
+                ?.let { it as CallableDescriptor }
+                ?.extensionReceiverParameter
+                ?.type
+                ?.fqName
+                ?.asString()
+                ?.let { "$it.${documentable.name}" }
+        }
     } else null
     val paths = listOfNotNull(path, extensionPath)
 
@@ -76,8 +97,8 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
     // calculate the indent of the doc comment by looking at how many spaces are on the first line before /**
     val docIndent = try {
         (docFileTextRange.startOffset -
-                fileText.lastIndexOfNot('\n', docFileTextRange.startOffset)
-                ).coerceAtLeast(0)
+            fileText.lastIndexOfNot('\n', docFileTextRange.startOffset)
+            ).coerceAtLeast(0)
     } catch (_: Throwable) {
         0
     }

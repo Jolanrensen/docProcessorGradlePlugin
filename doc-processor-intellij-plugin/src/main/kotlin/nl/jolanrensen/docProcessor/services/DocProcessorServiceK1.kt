@@ -17,6 +17,7 @@ import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
 import nl.jolanrensen.docProcessor.ExportAsHtml
 import nl.jolanrensen.docProcessor.MessageBundle
+import nl.jolanrensen.docProcessor.Mode
 import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.TagDocProcessorFailedException
 import nl.jolanrensen.docProcessor.annotationNames
@@ -32,8 +33,10 @@ import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.docComment
+import nl.jolanrensen.docProcessor.docProcessorIsEnabled
 import nl.jolanrensen.docProcessor.findProcessors
 import nl.jolanrensen.docProcessor.getOrigin
+import nl.jolanrensen.docProcessor.mode
 import nl.jolanrensen.docProcessor.programmingLanguage
 import nl.jolanrensen.docProcessor.renderToHtml
 import nl.jolanrensen.docProcessor.toDoc
@@ -53,6 +56,7 @@ import java.util.concurrent.CancellationException
 /**
  * See also [DocProcessorServiceK2]
  */
+@Suppress("UnstableApiUsage")
 @Service(Service.Level.PROJECT)
 class DocProcessorServiceK1(private val project: Project) {
 
@@ -68,12 +72,7 @@ class DocProcessorServiceK1(private val project: Project) {
     /**
      * Determines whether the DocProcessor is enabled or disabled.
      */
-    var isEnabled = true
-        get() = field
-        set(value) {
-            field = value
-            thisLogger().info(if (value) "DocProcessor enabled." else "DocProcessor disabled.")
-        }
+    val isEnabled get() = docProcessorIsEnabled && mode == Mode.K1
 
     /**
      * Helper function that queries the project for reference links and returns them as a list of DocumentableWrappers.
@@ -107,7 +106,7 @@ class DocProcessorServiceK1(private val project: Project) {
             .map {
                 when (it) {
                     is KtDeclaration, is PsiDocCommentOwner ->
-                        DocumentableWrapper.createFromIntellijOrNull(it)
+                        DocumentableWrapper.createFromIntellijOrNull(it, useK2 = false)
 
                     else -> null
                 }
@@ -185,7 +184,7 @@ class DocProcessorServiceK1(private val project: Project) {
     private fun getDocContent(psiElement: PsiElement): String? {
         return try {
             // Create a DocumentableWrapper from the element
-            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
+            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement, useK2 = false)
             if (documentableWrapper == null) {
                 thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
                 return null

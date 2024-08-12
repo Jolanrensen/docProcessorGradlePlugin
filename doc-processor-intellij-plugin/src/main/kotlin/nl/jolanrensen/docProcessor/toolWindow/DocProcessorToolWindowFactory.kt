@@ -1,6 +1,5 @@
 package nl.jolanrensen.docProcessor.toolWindow
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
@@ -8,14 +7,12 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.content.ContentFactory
 import nl.jolanrensen.docProcessor.MessageBundle
-import nl.jolanrensen.docProcessor.services.DocProcessorServiceK1
-import nl.jolanrensen.docProcessor.services.DocProcessorServiceK2
+import nl.jolanrensen.docProcessor.Mode
+import nl.jolanrensen.docProcessor.docProcessorIsEnabled
+import nl.jolanrensen.docProcessor.mode
 import javax.swing.JToggleButton
 
 class DocProcessorToolWindowFactory : ToolWindowFactory {
-    init {
-//        thisLogger().warn("Don't forget to remove all non-needed sample code files with their corresponding registration entries in `plugin.xml`.")
-    }
 
     private val contentFactory = ContentFactory.getInstance()
 
@@ -31,39 +28,43 @@ class DocProcessorToolWindowFactory : ToolWindowFactory {
 
     override fun shouldBeAvailable(project: Project) = true
 
+
     class DocProcessorToolWindow(toolWindow: ToolWindow) {
 
-        private val serviceK1 = toolWindow.project.service<DocProcessorServiceK1>()
-        private val serviceK2 = toolWindow.project.service<DocProcessorServiceK2>()
+//        private val serviceK1 = toolWindow.project.service<DocProcessorServiceK1>()
+//        private val serviceK2 = toolWindow.project.service<DocProcessorServiceK2>()
 
-        private fun JToggleButton.updateStateK1() {
-            isSelected = serviceK1.isEnabled
+        private fun JToggleButton.updateState() {
+            isSelected = true
             text = MessageBundle.message(
-                if (serviceK1.isEnabled) "k1enabled" else "k1disabled",
+                if (docProcessorIsEnabled) "enabled" else "disabled",
             )
         }
 
-        private fun JToggleButton.updateStateK2() {
-            isSelected = serviceK2.isEnabled
-            text = MessageBundle.message(
-                if (serviceK2.isEnabled) "k2enabled" else "k2disabled",
-            )
+        private fun JToggleButton.updateMode() {
+            isSelected = true
+            text = MessageBundle.message(mode.id)
         }
 
         fun getContent(): JBPanel<JBPanel<*>> = JBPanel<JBPanel<*>>().apply {
             add(JBLabel(MessageBundle.message("docPreprocessorEnabled")))
             add(JToggleButton().apply {
-                updateStateK1()
+                updateState()
                 addActionListener {
-                    serviceK1.isEnabled = !serviceK1.isEnabled
-                    updateStateK1()
+                    docProcessorIsEnabled = !docProcessorIsEnabled
+                    updateState()
                 }
             })
+
+            add(JBLabel(MessageBundle.message("mode")))
             add(JToggleButton().apply {
-                updateStateK2()
+                updateMode()
                 addActionListener {
-                    serviceK2.isEnabled = !serviceK2.isEnabled
-                    updateStateK2()
+                    mode = when (mode) {
+                        Mode.K1 -> Mode.K2
+                        Mode.K2 -> Mode.K1
+                    }
+                    updateMode()
                 }
             })
         }
