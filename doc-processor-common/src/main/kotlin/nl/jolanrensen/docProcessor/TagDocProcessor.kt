@@ -445,6 +445,14 @@ open class TagDocProcessorFailedException(
             }
         }
         appendLine(lineBreak)
+        appendLine("### Stack Trace")
+        cause?.stackTrace?.let {
+            for (line in it.joinToString("\n").lines()) {
+                appendLine(line)
+                appendLine()
+            }
+        }
+        appendLine(lineBreak)
         appendLine("Current state of the doc with the `${highlightException("cause for the exception")}`:")
         appendLine()
         appendLine("--------------------------------------------------")
