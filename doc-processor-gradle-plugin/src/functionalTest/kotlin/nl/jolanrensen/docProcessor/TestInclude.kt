@@ -32,7 +32,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * @include [com.example.plugin.helloWorld]  
              */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -48,7 +48,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * Hello World! 
              */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -76,7 +76,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                  */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -95,7 +95,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                  */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -118,7 +118,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * @include [helloWorld]
              */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -131,7 +131,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * Hello World!
              */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -154,7 +154,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
 
             /** @include [helloWorld2] */
             fun helloWorld3() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -168,8 +168,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** Hello World! */
             fun helloWorld3() {}
-            """.trimIndent()
-
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -194,7 +193,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** @include [helloWorld] */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -213,7 +212,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * [helloWorld]
              * [helloWorld][com.example.plugin.helloWorld] */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -239,7 +238,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** @include {@link Test#helloWorld2} */
                 public void helloWorld3() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -256,7 +255,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** Hello World! */
                 public void helloWorld3() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -277,7 +276,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** @include [helloWorld] {@include [helloWorld]} */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -288,8 +287,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** Hello World! Hello World! */
             fun helloWorld2() {}
-            """.trimIndent()
-
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -312,7 +310,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** @include {@link Test#helloWorld} {@include {@link Test#helloWorld}} */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -326,7 +324,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** Hello World! Hello World! */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -352,7 +350,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * @include [com.example.plugin.helloWorld]  
              */
             fun helloWorld(a: Int) {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -368,8 +366,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * Hello World! 
              */
             fun helloWorld(a: Int) {}
-            """.trimIndent()
-
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -397,7 +394,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                  */
                 public void helloWorld(int a) {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -416,7 +413,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                  */
                 public void helloWorld(int a) {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -436,7 +433,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * @include [helloWorld]
              */
             fun helloWorld(a: Int) {}
-            """.trimIndent()
+        """.trimIndent()
 
         shouldThrowAny {
             processContent(
@@ -460,7 +457,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                  */
                 public void helloWorld(int a) {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         shouldThrowAny {
             processContent(
@@ -482,7 +479,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * @include [nothing]
              */
             fun helloWorld(a: Int) {}
-            """.trimIndent()
+        """.trimIndent()
 
         shouldThrowAny {
             processContent(
@@ -506,7 +503,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                  */
                 public void helloWorld(int a) {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         shouldThrowAny {
             processContent(
@@ -528,7 +525,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * Hello World!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val content = """
@@ -536,7 +533,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** @include [helloWorld] */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -544,7 +541,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** Hello World! */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -552,7 +549,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 AdditionalFile(
                     relativePath = "src/main/kotlin/com/example/plugin/Test2.kt",
                     content = otherFile,
-                )
+                ),
             ),
             packageName = "com.example.plugin",
             processors = processors,
@@ -572,7 +569,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                  */
                 public void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val content = """
@@ -583,7 +580,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** @include {@link Test#helloWorld} */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -594,7 +591,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** Hello World! */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -604,7 +601,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 AdditionalFile(
                     relativePath = "src/main/java/com/example/plugin/Test.java",
                     content = otherFile,
-                )
+                ),
             ),
             processors = processors,
             language = FileLanguage.JAVA,
@@ -623,7 +620,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                  */
                 fun helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val content = """
@@ -633,7 +630,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** @include [helloWorld] */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -643,7 +640,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** Hello World! */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -651,7 +648,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 AdditionalFile(
                     relativePath = "src/main/kotlin/com/example/plugin/Test2.kt",
                     content = otherFile,
-                )
+                ),
             ),
             packageName = "com.example.plugin",
             processors = processors,
@@ -672,7 +669,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 public void helloWorld() {}
                 public static void helloWorld3() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val content = """
@@ -687,7 +684,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** @include helloWorld */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -702,7 +699,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** Hello World! */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -712,7 +709,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 AdditionalFile(
                     relativePath = "src/main/java/com/example/plugin/Test.java",
                     content = otherFile,
-                )
+                ),
             ),
             processors = processors,
             language = FileLanguage.JAVA,
@@ -729,7 +726,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
              * Hello World!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val content = """
@@ -740,7 +737,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** @include {@link TestKt#helloWorld} */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -751,7 +748,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 /** Hello World! */
                 public void helloWorld2() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -761,7 +758,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 AdditionalFile(
                     relativePath = "src/main/kotlin/com/example/plugin/Test.kt",
                     content = otherFile,
-                )
+                ),
             ),
             processors = processors,
             language = FileLanguage.JAVA,
@@ -781,7 +778,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                  */
                 public void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val content = """
@@ -789,7 +786,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** @include [Test.helloWorld] */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -797,7 +794,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             
             /** Hello World! */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -806,7 +803,7 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
                 AdditionalFile(
                     relativePath = "src/main/java/com/example/plugin/Test.java",
                     content = otherFile,
-                )
+                ),
             ),
             processors = processors,
         ) shouldBe expectedOutput

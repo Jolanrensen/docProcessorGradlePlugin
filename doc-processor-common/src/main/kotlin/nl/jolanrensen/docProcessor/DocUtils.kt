@@ -1,20 +1,9 @@
 package nl.jolanrensen.docProcessor
 
-import nl.jolanrensen.docProcessor.ReferenceState.*
-import org.intellij.lang.annotations.Language
-import org.intellij.markdown.MarkdownElementTypes
-import org.intellij.markdown.MarkdownTokenTypes
-import org.intellij.markdown.ast.ASTNode
-import org.intellij.markdown.ast.getParentOfType
-import org.intellij.markdown.ast.getTextInNode
-import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
-import org.intellij.markdown.flavours.gfm.GFMTokenTypes
-import org.intellij.markdown.html.GeneratingProvider
-import org.intellij.markdown.html.HtmlGenerator
-import org.intellij.markdown.html.entities.EntityConverter
-import org.intellij.markdown.parser.LinkMap
-import org.intellij.markdown.parser.MarkdownParser
-import java.util.*
+import nl.jolanrensen.docProcessor.ReferenceState.INSIDE_ALIASED_REFERENCE
+import nl.jolanrensen.docProcessor.ReferenceState.INSIDE_REFERENCE
+import nl.jolanrensen.docProcessor.ReferenceState.NONE
+import java.util.SortedMap
 import kotlin.collections.ArrayDeque
 
 /**
@@ -72,29 +61,30 @@ fun String.getDocContentOrNull(): DocContent? {
 /**
  * Turns multi-line String into valid KDoc/Javadoc.
  */
-fun DocContent.toDoc(indent: Int = 0): String = this
-    .split('\n')
-    .toMutableList()
-    .let {
-        it[0] = if (it[0].isEmpty()) "/**" else "/** ${it[0]}"
+fun DocContent.toDoc(indent: Int = 0): String =
+    this
+        .split('\n')
+        .toMutableList()
+        .let {
+            it[0] = if (it[0].isEmpty()) "/**" else "/** ${it[0]}"
 
-        val lastIsBlank = it.last().isBlank()
+            val lastIsBlank = it.last().isBlank()
 
-        it[it.lastIndex] = it[it.lastIndex].trim() + " */"
+            it[it.lastIndex] = it[it.lastIndex].trim() + " */"
 
-        it.mapIndexed { index, s ->
-            buildString {
-                if (index != 0) append("\n")
-                append(" ".repeat(indent))
+            it.mapIndexed { index, s ->
+                buildString {
+                    if (index != 0) append("\n")
+                    append(" ".repeat(indent))
 
-                if (!(index == 0 || index == it.lastIndex && lastIsBlank)) {
-                    append(" *")
-                    if (s.isNotEmpty()) append(" ")
+                    if (!(index == 0 || index == it.lastIndex && lastIsBlank)) {
+                        append(" *")
+                        if (s.isNotEmpty()) append(" ")
+                    }
+                    append(s)
                 }
-                append(s)
-            }
-        }.joinToString("")
-    }
+            }.joinToString("")
+        }
 
 /**
  * Can retrieve the arguments of an inline- or block-tag.
@@ -123,6 +113,7 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
         val blocksIndicators = mutableListOf<Char>()
 
         fun isDone(): Boolean = size >= numberOfArguments - 1
+
         fun isInCodeBlock() = BACKTICKS in blocksIndicators
 
         var escapeNext = false
@@ -141,22 +132,38 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
 
                 char == '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
             }
-            if (!isInCodeBlock()) when (char) {
-                '{' -> blocksIndicators += CURLY_BRACES
-                '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
-                '[' -> blocksIndicators += SQUARE_BRACKETS
-                ']' -> blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
-                '(' -> blocksIndicators += PARENTHESES
-                ')' -> blocksIndicators.removeAllElementsFromLast(PARENTHESES)
-                '<' -> blocksIndicators += ANGULAR_BRACKETS
-                '>' -> blocksIndicators.removeAllElementsFromLast(ANGULAR_BRACKETS)
-                '"' -> if (!blocksIndicators.removeAllElementsFromLast(DOUBLE_QUOTES)) blocksIndicators += DOUBLE_QUOTES
-                '\'' -> if (blocksIndicators.removeAllElementsFromLast(SINGLE_QUOTES)) blocksIndicators += SINGLE_QUOTES
+            if (!isInCodeBlock()) {
+                when (char) {
+                    '{' -> blocksIndicators += CURLY_BRACES
 
-                // TODO: issue #11: html tags
+                    '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
+
+                    '[' -> blocksIndicators += SQUARE_BRACKETS
+
+                    ']' -> blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
+
+                    '(' -> blocksIndicators += PARENTHESES
+
+                    ')' -> blocksIndicators.removeAllElementsFromLast(PARENTHESES)
+
+                    '<' -> blocksIndicators += ANGULAR_BRACKETS
+
+                    '>' -> blocksIndicators.removeAllElementsFromLast(ANGULAR_BRACKETS)
+
+                    '"' -> if (!blocksIndicators.removeAllElementsFromLast(DOUBLE_QUOTES)) {
+                        blocksIndicators += DOUBLE_QUOTES
+                    }
+
+                    '\'' -> if (blocksIndicators.removeAllElementsFromLast(SINGLE_QUOTES)) {
+                        blocksIndicators += SINGLE_QUOTES
+                    }
+
+                    // TODO: issue #11: html tags
+                }
             }
-            if (isDone() || !(currentBlock.isEmpty() && char.isWhitespace()))
+            if (isDone() || !(currentBlock.isEmpty() && char.isWhitespace())) {
                 currentBlock += char
+            }
         }
 
         add(currentBlock)
@@ -164,9 +171,13 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
 
     val trimmedArguments = arguments.mapIndexed { i, it ->
         when (i) {
-            arguments.lastIndex -> // last argument will be kept as is, removing one "splitting" space if it starts with one
-                if (it.startsWith(" ") || it.startsWith("\t")) it.drop(1)
-                else it
+            // last argument will be kept as is, removing one "splitting" space if it starts with one
+            arguments.lastIndex ->
+                if (it.startsWith(" ") || it.startsWith("\t")) {
+                    it.drop(1)
+                } else {
+                    it
+                }
 
             else -> // other arguments will be trimmed. A newline counts as a space
                 it.removePrefix("\n").trimStart(' ', '\t')
@@ -214,6 +225,7 @@ fun String.getTagArguments(
         val blocksIndicators = mutableListOf<Char>()
 
         fun isDone(): Boolean = size >= numberOfArguments - 1
+
         fun isInCodeBlock() = BACKTICKS in blocksIndicators
 
         var escapeNext = false
@@ -235,30 +247,50 @@ fun String.getTagArguments(
 
                 char == '`' -> if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
             }
-            if (!isInCodeBlock()) when (char) {
-                '{' -> blocksIndicators += CURLY_BRACES
-                '}' -> blocksIndicators.removeAllElementsFromLast(CURLY_BRACES)
-                    .let { if (!it) onRogueClosingChar('}', this.size, currentBlock.length) }
+            if (!isInCodeBlock()) {
+                when (char) {
+                    '{' -> blocksIndicators += CURLY_BRACES
 
-                '[' -> blocksIndicators += SQUARE_BRACKETS
-                ']' -> blocksIndicators.removeAllElementsFromLast(SQUARE_BRACKETS)
-                    .let { if (!it) onRogueClosingChar(']', this.size, currentBlock.length) }
+                    '}' ->
+                        blocksIndicators
+                            .removeAllElementsFromLast(CURLY_BRACES)
+                            .let { if (!it) onRogueClosingChar('}', this.size, currentBlock.length) }
 
-                '(' -> blocksIndicators += PARENTHESES
-                ')' -> blocksIndicators.removeAllElementsFromLast(PARENTHESES)
-                    .let { if (!it) onRogueClosingChar(')', this.size, currentBlock.length) }
+                    '[' -> blocksIndicators += SQUARE_BRACKETS
 
-                '<' -> blocksIndicators += ANGULAR_BRACKETS
-                '>' -> blocksIndicators.removeAllElementsFromLast(ANGULAR_BRACKETS)
-                    .let { if (!it) onRogueClosingChar('>', this.size, currentBlock.length) }
+                    ']' ->
+                        blocksIndicators
+                            .removeAllElementsFromLast(SQUARE_BRACKETS)
+                            .let { if (!it) onRogueClosingChar(']', this.size, currentBlock.length) }
 
-                '"' -> if (!blocksIndicators.removeAllElementsFromLast(DOUBLE_QUOTES)) blocksIndicators += DOUBLE_QUOTES
-                '\'' -> if (blocksIndicators.removeAllElementsFromLast(SINGLE_QUOTES)) blocksIndicators += SINGLE_QUOTES
+                    '(' -> blocksIndicators += PARENTHESES
 
-                // TODO: issue #11: html tags
+                    ')' ->
+                        blocksIndicators
+                            .removeAllElementsFromLast(PARENTHESES)
+                            .let { if (!it) onRogueClosingChar(')', this.size, currentBlock.length) }
+
+                    '<' -> blocksIndicators += ANGULAR_BRACKETS
+
+                    '>' ->
+                        blocksIndicators
+                            .removeAllElementsFromLast(ANGULAR_BRACKETS)
+                            .let { if (!it) onRogueClosingChar('>', this.size, currentBlock.length) }
+
+                    '"' -> if (!blocksIndicators.removeAllElementsFromLast(DOUBLE_QUOTES)) {
+                        blocksIndicators += DOUBLE_QUOTES
+                    }
+
+                    '\'' -> if (blocksIndicators.removeAllElementsFromLast(SINGLE_QUOTES)) {
+                        blocksIndicators += SINGLE_QUOTES
+                    }
+
+                    // TODO: issue #11: html tags
+                }
             }
-            if (isDone() || !currentBlock.all { it.isSplitter() } || !char.isSplitter())
+            if (isDone() || !currentBlock.all { it.isSplitter() } || !char.isSplitter()) {
                 currentBlock += char
+            }
         }
 
         add(currentBlock)
@@ -266,9 +298,13 @@ fun String.getTagArguments(
 
     val trimmedArguments = arguments.mapIndexed { i, it ->
         when (i) {
-            arguments.lastIndex -> // last argument will be kept as is, removing one "splitting" space if it starts with one
-                if (it.first().isSplitter() && it.firstOrNull() != '\n') it.drop(1)
-                else it
+            // last argument will be kept as is, removing one "splitting" space if it starts with one
+            arguments.lastIndex ->
+                if (it.first().isSplitter() && it.firstOrNull() != '\n') {
+                    it.drop(1)
+                } else {
+                    it
+                }
 
             else -> // other arguments will be trimmed. A newline counts as a space
                 it.removePrefix("\n").trimStart { it.isSplitter() }
@@ -284,21 +320,19 @@ fun String.getTagArguments(
  */
 fun String.decodeCallableTarget(): String =
     trim()
-
         .removePrefix("[")
         .removeSuffix("]")
-
-        .let { // for aliased tags like [Foo][Bar]
-            if ("][" in it) it.substringAfter("][")
-            else it
-        }
-        .trim()
-
+        .let {
+            // for aliased tags like [Foo][Bar]
+            if ("][" in it) {
+                it.substringAfter("][")
+            } else {
+                it
+            }
+        }.trim()
         .removePrefix("<code>") // for javaDoc
         .removeSuffix("</code>")
-
         .trim()
-
         // for javaDoc, attempt to be able to read
         // @include {@link Main#main(String[])} as "Main.main"
         .removePrefix("{") // alternatively for javaDoc
@@ -346,7 +380,6 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
         fun isInCodeBlock() = BACKTICKS in blocksIndicators
 
         for (line in docContent) {
-
             // start a new block if the line starts with a tag and we're not
             // in a {@..} or ```..``` block
             val lineStartsWithTag = line
@@ -357,8 +390,9 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
             when {
                 // start a new block if the line starts with a tag and we're not in a {@..} or ```..``` block
                 lineStartsWithTag && blocksIndicators.isEmpty() -> {
-                    if (currentBlock.isNotEmpty())
+                    if (currentBlock.isNotEmpty()) {
                         this += currentBlock.removeSuffix("\n")
+                    }
                     currentBlock = "$line\n"
                 }
 
@@ -486,8 +520,7 @@ fun DocContent.findBlockTagNamesInDocContent(): List<String> =
 /** Finds all tag names, including inline and block tags. */
 fun DocContent.findTagNamesInDocContent(): List<String> =
     findInlineTagNamesInDocContent() +
-            findBlockTagNamesInDocContent()
-
+        findBlockTagNamesInDocContent()
 
 /** Is able to find an entire JavaDoc/KDoc comment including the starting indent. */
 val docRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
@@ -522,6 +555,7 @@ fun DocContent.replaceKdocLinks(process: (String) -> String): DocContent {
 
         for ((i, char) in kdoc.withIndex()) {
             fun nextChar(): Char? = kdoc.getOrNull(i + 1)
+
             fun previousChar(): Char? = kdoc.getOrNull(i - 1)
 
             if (escapeNext) {
@@ -610,84 +644,84 @@ fun <T> MutableList<T>.removeAllElementsFromLast(element: T): Boolean {
 fun IntRange.coerceIn(start: Int = Int.MIN_VALUE, endInclusive: Int = Int.MAX_VALUE) =
     first.coerceAtLeast(start)..last.coerceAtMost(endInclusive)
 
-fun DocContent.removeKotlinLinks(): DocContent = buildString {
-    val kdoc = this@removeKotlinLinks
-    var escapeNext = false
-    var insideCodeBlock = false
-    var referenceState = NONE
+fun DocContent.removeKotlinLinks(): DocContent =
+    buildString {
+        val kdoc = this@removeKotlinLinks
+        var escapeNext = false
+        var insideCodeBlock = false
+        var referenceState = NONE
 
-    var currentBlock = ""
+        var currentBlock = ""
 
-    fun appendBlock() {
-        append(currentBlock)
-        currentBlock = ""
-    }
+        fun appendBlock() {
+            append(currentBlock)
+            currentBlock = ""
+        }
 
-    for ((i, char) in kdoc.withIndex()) {
-        fun nextChar(): Char? = kdoc.getOrNull(i + 1)
-        fun previousChar(): Char? = kdoc.getOrNull(i - 1)
+        for ((i, char) in kdoc.withIndex()) {
+            fun nextChar(): Char? = kdoc.getOrNull(i + 1)
 
-        when {
-            escapeNext -> {
-                escapeNext = false
-                currentBlock += char
-            }
+            fun previousChar(): Char? = kdoc.getOrNull(i - 1)
 
-            char == '\\' -> {
-                escapeNext = true
-            }
+            when {
+                escapeNext -> {
+                    escapeNext = false
+                    currentBlock += char
+                }
 
-            char == '`' -> {
-                insideCodeBlock = !insideCodeBlock
-                currentBlock += char
-            }
+                char == '\\' -> {
+                    escapeNext = true
+                }
 
-            insideCodeBlock -> {
-                currentBlock += char
-            }
+                char == '`' -> {
+                    insideCodeBlock = !insideCodeBlock
+                    currentBlock += char
+                }
 
-            char == '[' -> {
-                referenceState = when {
-                    previousChar() == ']' -> {
-                        when (referenceState) {
-                            INSIDE_REFERENCE -> INSIDE_ALIASED_REFERENCE
-                            else -> INSIDE_REFERENCE
+                insideCodeBlock -> {
+                    currentBlock += char
+                }
+
+                char == '[' -> {
+                    referenceState = when {
+                        previousChar() == ']' -> {
+                            when (referenceState) {
+                                INSIDE_REFERENCE -> INSIDE_ALIASED_REFERENCE
+                                else -> INSIDE_REFERENCE
+                            }
+                        }
+
+                        else -> {
+                            appendBlock()
+                            INSIDE_REFERENCE
                         }
                     }
+                }
 
-                    else -> {
+                char == ']' -> {
+                    if (nextChar() !in listOf('[', '(') || referenceState == INSIDE_ALIASED_REFERENCE) {
+                        referenceState = NONE
+
+                        if (currentBlock.startsWith("**") && currentBlock.endsWith("**")) {
+                            val trimmed = currentBlock.removeSurrounding("**")
+                            currentBlock = "**`$trimmed`**"
+                        } else {
+                            currentBlock = "`$currentBlock`"
+                        }
+
                         appendBlock()
-                        INSIDE_REFERENCE
                     }
                 }
-            }
 
-            char == ']' -> {
-                if (nextChar() !in listOf('[', '(') || referenceState == INSIDE_ALIASED_REFERENCE) {
-                    referenceState = NONE
+                referenceState == INSIDE_ALIASED_REFERENCE -> {}
 
-                    if (currentBlock.startsWith("**") && currentBlock.endsWith("**")) {
-                        val trimmed = currentBlock.removeSurrounding("**")
-                        currentBlock = "**`$trimmed`**"
-                    } else {
-                        currentBlock = "`$currentBlock`"
-                    }
-
-                    appendBlock()
+                else -> {
+                    currentBlock += char
                 }
-            }
-
-            referenceState == INSIDE_ALIASED_REFERENCE -> {}
-
-            else -> {
-                currentBlock += char
             }
         }
-    }
-    appendBlock()
-}
-    .replace("****", "")
-    .replace("``", "")
+        appendBlock()
+    }.replace("****", "")
+        .replace("``", "")
 
-fun IntRange.coerceAtMost(endInclusive: Int) =
-    first.coerceAtMost(endInclusive)..last.coerceAtMost(endInclusive)
+fun IntRange.coerceAtMost(endInclusive: Int) = first.coerceAtMost(endInclusive)..last.coerceAtMost(endInclusive)

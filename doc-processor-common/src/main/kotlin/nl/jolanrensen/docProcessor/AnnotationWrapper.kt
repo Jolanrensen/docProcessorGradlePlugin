@@ -1,9 +1,6 @@
 package nl.jolanrensen.docProcessor
 
-data class AnnotationWrapper(
-    val fullyQualifiedPath: String,
-    val arguments: List<Pair<String?, Any?>>,
-) {
+data class AnnotationWrapper(val fullyQualifiedPath: String, val arguments: List<Pair<String?, Any?>>) {
     override fun toString(): String =
         if (arguments.isEmpty()) {
             "@$fullyQualifiedPath"

@@ -153,8 +153,7 @@ class ProcessDocTaskDsl private constructor(public val task: ProcessDocTask) {
      * }
      * ```
      */
-    fun dependencies(action: DependencySet.() -> Unit): DependencySet =
-        task.classpath.dependencies.apply(action)
+    fun dependencies(action: DependencySet.() -> Unit): DependencySet = task.classpath.dependencies.apply(action)
 
     /**
      * Adds a plugin dependency to the classpath of this task.

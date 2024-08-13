@@ -56,7 +56,7 @@ fun DocContent.renderToHtml(theme: Boolean, stripReferences: Boolean): String {
             appendLine("<head>")
             appendLine("<style type=\"text/css\">")
             @Language("css")
-            val _1 = appendLine(
+            val a = appendLine(
                 """
                 :root {
                     --background: #fff;
@@ -98,7 +98,8 @@ fun DocContent.renderToHtml(theme: Boolean, stripReferences: Boolean): String {
                 :root[theme="dark"] {
                     background-color: #19191C;
                     color: #FFFFFFCC
-                }""".trimIndent()
+                }
+                """.trimIndent(),
             )
             appendLine("</style>")
             appendLine("</head>")
@@ -111,7 +112,6 @@ fun DocContent.renderToHtml(theme: Boolean, stripReferences: Boolean): String {
 class MyReferenceLinksGeneratingProvider : GeneratingProvider {
 
     override fun processNode(visitor: HtmlGenerator.HtmlGeneratingVisitor, text: String, node: ASTNode) {
-
         // reference
         val label = node.children.firstOrNull { it.type == MarkdownElementTypes.LINK_LABEL }
             ?: return
@@ -151,8 +151,7 @@ open class TableAwareCodeSpanGeneratingProvider : GeneratingProvider {
     }
 
     /** From GFM spec: First, line endings are converted to spaces.*/
-    protected fun CharSequence.replaceNewLines(): CharSequence =
-        replace("\\r\\n?|\\n".toRegex(), " ")
+    protected fun CharSequence.replaceNewLines(): CharSequence = replace("\\r\\n?|\\n".toRegex(), " ")
 
     /**
      * From GFM spec:
@@ -163,12 +162,13 @@ open class TableAwareCodeSpanGeneratingProvider : GeneratingProvider {
      * which must be separated by whitespace from the opening or closing backtick strings.
      */
     protected fun CharSequence.trimForCodeSpan(): CharSequence =
-        if (isBlank()) this
-        else removeSurrounding(" ", " ")
+        if (isBlank()) {
+            this
+        } else {
+            removeSurrounding(" ", " ")
+        }
 
-    protected fun isInsideTable(node: ASTNode): Boolean {
-        return node.getParentOfType(GFMTokenTypes.CELL) != null
-    }
+    protected fun isInsideTable(node: ASTNode): Boolean = node.getParentOfType(GFMTokenTypes.CELL) != null
 
     protected fun collectContentNodes(node: ASTNode): List<ASTNode> {
         check(node.children.size >= 2)

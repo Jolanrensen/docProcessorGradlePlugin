@@ -5,7 +5,11 @@ import mu.KotlinLogging
 import nl.jolanrensen.docProcessor.ProcessDocsAction.Parameters
 import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
 import nl.jolanrensen.docProcessor.gradle.lifecycle
-import org.jetbrains.dokka.*
+import org.jetbrains.dokka.CoreExtensions
+import org.jetbrains.dokka.DokkaBootstrapImpl
+import org.jetbrains.dokka.DokkaConfigurationImpl
+import org.jetbrains.dokka.DokkaGenerator
+import org.jetbrains.dokka.DokkaSourceSetImpl
 import org.jetbrains.dokka.base.DokkaBase
 import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
 import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
@@ -13,7 +17,6 @@ import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.withDescendants
 import java.io.File
 import java.io.IOException
-import java.util.*
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 

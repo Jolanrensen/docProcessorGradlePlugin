@@ -1,6 +1,6 @@
 package nl.jolanrensen.docProcessor
 
-/**
+/*
  * Many of the contents of this file are copied from Dokka's
  * [DocComment][org.jetbrains.dokka.base.translators.psi.parsers.DocComment]
  * since many of these methods were internal or private.
@@ -9,7 +9,13 @@ package nl.jolanrensen.docProcessor
  */
 
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.*
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiDocCommentOwner
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiJavaCodeReferenceElement
+import com.intellij.psi.PsiJavaFile
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiNamedElement
 import com.intellij.psi.impl.source.tree.JavaDocElementType
 import com.intellij.psi.javadoc.PsiDocComment
 import com.intellij.psi.javadoc.PsiDocTag
@@ -22,7 +28,25 @@ import org.jetbrains.dokka.links.JavaClassReference
 import org.jetbrains.dokka.links.Nullable
 import org.jetbrains.dokka.links.TypeConstructor
 import org.jetbrains.dokka.links.TypeReference
-import org.jetbrains.dokka.model.*
+import org.jetbrains.dokka.model.AnnotationParameterValue
+import org.jetbrains.dokka.model.AnnotationValue
+import org.jetbrains.dokka.model.ArrayValue
+import org.jetbrains.dokka.model.BooleanValue
+import org.jetbrains.dokka.model.Callable
+import org.jetbrains.dokka.model.ClassValue
+import org.jetbrains.dokka.model.DClasslike
+import org.jetbrains.dokka.model.DParameter
+import org.jetbrains.dokka.model.DTypeAlias
+import org.jetbrains.dokka.model.Documentable
+import org.jetbrains.dokka.model.DocumentableSource
+import org.jetbrains.dokka.model.DoubleValue
+import org.jetbrains.dokka.model.EnumValue
+import org.jetbrains.dokka.model.FloatValue
+import org.jetbrains.dokka.model.IntValue
+import org.jetbrains.dokka.model.LiteralValue
+import org.jetbrains.dokka.model.LongValue
+import org.jetbrains.dokka.model.NullValue
+import org.jetbrains.dokka.model.StringValue
 import org.jetbrains.dokka.utilities.DokkaLogger
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
@@ -40,7 +64,6 @@ import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.kotlin.resolve.ImportPath
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
-import java.util.*
 
 /**
  * Is [linkable element](https://kotlinlang.org/docs/kotlin-doc.html#links-to-elements)
@@ -50,13 +73,15 @@ import java.util.*
  */
 fun Documentable.isLinkableElement(): Boolean =
     this is DClasslike ||
-            this is Callable ||
-            this is DParameter ||
-            this is DTypeAlias // TODO: issue #12: will not be included in DocumentableWithSources since it has no source
+        this is Callable ||
+        this is DParameter ||
+        this is DTypeAlias // TODO: issue #12: will not be included in DocumentableWithSources since it has no source
 
 sealed interface DocComment {
     fun hasTag(tag: JavadocTag): Boolean
+
     fun hasTagWithExceptionOfType(tag: JavadocTag, exceptionFqName: String): Boolean
+
     fun tagsByName(tag: JavadocTag, param: String? = null): List<DocumentationContent>
 
     val tagNames: List<String>
@@ -104,10 +129,15 @@ val DocumentableSource.textRange: TextRange?
 
 data class JavaDocComment(val comment: PsiDocComment) : DocComment {
     override fun hasTag(tag: JavadocTag): Boolean = comment.hasTag(tag)
+
     override fun hasTagWithExceptionOfType(tag: JavadocTag, exceptionFqName: String): Boolean =
-        comment.hasTag(tag) && comment.tagsByName(tag).firstIsInstanceOrNull<PsiDocTag>()
-            ?.resolveToElement()
-            ?.getKotlinFqName()?.asString() == exceptionFqName
+        comment.hasTag(tag) &&
+            comment
+                .tagsByName(tag)
+                .firstIsInstanceOrNull<PsiDocTag>()
+                ?.resolveToElement()
+                ?.getKotlinFqName()
+                ?.asString() == exceptionFqName
 
     override fun tagsByName(tag: JavadocTag, param: String?): List<DocumentationContent> =
         comment.tagsByName(tag).map { PsiDocumentationContent(it, tag) }
@@ -130,9 +160,12 @@ data class KotlinDocComment(val comment: KDocTag, val descriptor: DeclarationDes
     override fun tagsByName(tag: JavadocTag, param: String?): List<DocumentationContent> =
         when (tag) {
             JavadocTag.DESCRIPTION -> listOf(DescriptorDocumentationContent(descriptor, comment, tag))
-            else -> comment.children.mapNotNull { (it as? KDocTag) }
-                .filter { it.name == "$tag" && param?.let { param -> it.hasExceptionWithName(param) } != false }
-                .map { DescriptorDocumentationContent(descriptor, it, tag) }
+
+            else ->
+                comment.children
+                    .mapNotNull { (it as? KDocTag) }
+                    .filter { it.name == "$tag" && param?.let { param -> it.hasExceptionWithName(param) } != false }
+                    .map { DescriptorDocumentationContent(descriptor, it, tag) }
         }
 
     override val tagNames: List<String>
@@ -143,16 +176,14 @@ data class KotlinDocComment(val comment: KDocTag, val descriptor: DeclarationDes
     private fun KDocTag.hasExceptionWithName(tag: JavadocTag, exceptionFqName: String) =
         text.startsWith("@$tag") && hasExceptionWithName(exceptionFqName)
 
-    private fun KDocTag.hasExceptionWithName(exceptionFqName: String) =
-        getSubjectName() == exceptionFqName
+    private fun KDocTag.hasExceptionWithName(exceptionFqName: String) = getSubjectName() == exceptionFqName
 }
 
 interface DocumentationContent {
     val tag: JavadocTag
 }
 
-data class PsiDocumentationContent(val psiElement: PsiElement, override val tag: JavadocTag) :
-    DocumentationContent
+data class PsiDocumentationContent(val psiElement: PsiElement, override val tag: JavadocTag) : DocumentationContent
 
 data class DescriptorDocumentationContent(
     val descriptor: DeclarationDescriptor?,
@@ -173,7 +204,15 @@ fun PsiDocComment.tagsByName(tag: JavadocTag): List<PsiElement> =
     }
 
 enum class JavadocTag {
-    PARAM, THROWS, RETURN, AUTHOR, SEE, DEPRECATED, EXCEPTION, HIDE, INCLUDE,
+    PARAM,
+    THROWS,
+    RETURN,
+    AUTHOR,
+    SEE,
+    DEPRECATED,
+    EXCEPTION,
+    HIDE,
+    INCLUDE,
 
     /**
      * Artificial tag created to handle tag-less section
@@ -192,16 +231,13 @@ enum class JavadocTag {
      */
 }
 
-fun PsiClass.implementsInterface(fqName: FqName): Boolean {
-    return allInterfaces().any { it.getKotlinFqName() == fqName }
-}
+fun PsiClass.implementsInterface(fqName: FqName): Boolean = allInterfaces().any { it.getKotlinFqName() == fqName }
 
-fun PsiClass.allInterfaces(): Sequence<PsiClass> {
-    return sequence {
+fun PsiClass.allInterfaces(): Sequence<PsiClass> =
+    sequence {
         this.yieldAll(interfaces.toList())
         interfaces.forEach { yieldAll(it.allInterfaces()) }
     }
-}
 
 /**
  * Workaround for failing [PsiMethod.findSuperMethods].
@@ -251,18 +287,24 @@ fun findClosestDocComment(element: PsiNamedElement?, logger: DokkaLogger): DocCo
 
         logger.debug(
             "Conflicting documentation for ${DRI.from(element)}" +
-                    "${superMethods.map { DRI.from(it) }}"
+                "${superMethods.map { DRI.from(it) }}",
         )
 
-        /* Prioritize super class over interface */
+        // Prioritize super class over interface
         val indexOfSuperClass = superMethods.indexOfFirst { method ->
             val parent = method.parent
-            if (parent is PsiClass) !parent.isInterface
-            else false
+            if (parent is PsiClass) {
+                !parent.isInterface
+            } else {
+                false
+            }
         }
 
-        return if (indexOfSuperClass >= 0) superMethodDocumentation[indexOfSuperClass]
-        else superMethodDocumentation.first()
+        return if (indexOfSuperClass >= 0) {
+            superMethodDocumentation[indexOfSuperClass]
+        } else {
+            superMethodDocumentation.first()
+        }
     }
     return element.children.firstIsInstanceOrNull<PsiDocComment>()?.let { JavaDocComment(it) }
 }
@@ -283,15 +325,20 @@ fun PsiNamedElement.toKdocComment(): KotlinDocComment? =
     }
 
 fun PsiDocTag.resolveToElement(): PsiElement? =
-    dataElements.firstOrNull()?.firstChild?.referenceElementOrSelf()?.resolveToGetDri()
+    dataElements
+        .firstOrNull()
+        ?.firstChild
+        ?.referenceElementOrSelf()
+        ?.resolveToGetDri()
 
 fun PsiElement.referenceElementOrSelf(): PsiElement? =
     if (node.elementType == JavaDocElementType.DOC_REFERENCE_HOLDER) {
         PsiTreeUtil.findChildOfType(this, PsiJavaCodeReferenceElement::class.java)
-    } else this
+    } else {
+        this
+    }
 
-fun PsiElement.resolveToGetDri(): PsiElement? =
-    reference?.resolve()
+fun PsiElement.resolveToGetDri(): PsiElement? = reference?.resolve()
 
 /**
  * Gets the fully qualified path of a linkable target.
@@ -341,88 +388,104 @@ val DocumentableSource.programmingLanguage: ProgrammingLanguage
 /**
  * Collects the imports from this [DocumentableSource] as [ImportPath]s, irrespective of the programming language.
  */
-fun DocumentableSource.getImports(): List<ImportPath> = buildList {
-    when (programmingLanguage) {
-        ProgrammingLanguage.JAVA -> {
-            val psiFile = psi?.containingFile as? PsiJavaFile
+fun DocumentableSource.getImports(): List<ImportPath> =
+    buildList {
+        when (programmingLanguage) {
+            ProgrammingLanguage.JAVA -> {
+                val psiFile = psi?.containingFile as? PsiJavaFile
 
-            val implicitImports = psiFile?.implicitlyImportedPackages?.toList().orEmpty()
-            val writtenImports = psiFile
-                ?.importList
-                ?.allImportStatements
-                ?.toList().orEmpty()
+                val implicitImports = psiFile?.implicitlyImportedPackages?.toList().orEmpty()
+                val writtenImports = psiFile
+                    ?.importList
+                    ?.allImportStatements
+                    ?.toList()
+                    .orEmpty()
 
-            for (import in implicitImports) {
-                this += ImportPath(
-                    fqName = FqName(import),
-                    isAllUnder = true,
-                )
+                for (import in implicitImports) {
+                    this += ImportPath(
+                        fqName = FqName(import),
+                        isAllUnder = true,
+                    )
+                }
+
+                for (import in writtenImports) {
+                    val qualifiedName = import.importReference?.qualifiedName ?: continue
+                    this += ImportPath(
+                        fqName = FqName(qualifiedName),
+                        isAllUnder = import.isOnDemand,
+                    )
+                }
             }
 
-            for (import in writtenImports) {
-                val qualifiedName = import.importReference?.qualifiedName ?: continue
-                this += ImportPath(
-                    fqName = FqName(qualifiedName),
-                    isAllUnder = import.isOnDemand,
+            ProgrammingLanguage.KOTLIN -> {
+                val writtenImports = psi
+                    ?.containingFile
+                    .let { it as? KtFile }
+                    ?.importDirectives
+                    ?.mapNotNull { it.importPath }
+                    ?: emptyList()
+
+                this += writtenImports
+
+                val implicitImports = listOf(
+                    "kotlin",
+                    "kotlin.annotation",
+                    "kotlin.collections",
+                    "kotlin.comparisons",
+                    "kotlin.io",
+                    "kotlin.ranges",
+                    "kotlin.sequences",
+                    "kotlin.text",
+                    "kotlin.math",
                 )
+
+                for (import in implicitImports) {
+                    this += ImportPath(
+                        fqName = FqName(import),
+                        isAllUnder = true,
+                    )
+                }
             }
-        }
-
-        ProgrammingLanguage.KOTLIN -> {
-            val writtenImports = psi
-                ?.containingFile
-                .let { it as? KtFile }
-                ?.importDirectives
-                ?.mapNotNull { it.importPath }
-                ?: emptyList()
-
-            this += writtenImports
-
-            val implicitImports = listOf(
-                "kotlin",
-                "kotlin.annotation",
-                "kotlin.collections",
-                "kotlin.comparisons",
-                "kotlin.io",
-                "kotlin.ranges",
-                "kotlin.sequences",
-                "kotlin.text",
-                "kotlin.math",
-            )
-
-            for (import in implicitImports)
-                this += ImportPath(
-                    fqName = FqName(import),
-                    isAllUnder = true,
-                )
         }
     }
-}
 
-fun ImportPath.toSimpleImportPath(): SimpleImportPath = SimpleImportPath(
-    fqName = fqName.toUnsafe().render(),
-    isAllUnder = isAllUnder,
-    alias = alias?.asString(),
-)
+fun ImportPath.toSimpleImportPath(): SimpleImportPath =
+    SimpleImportPath(
+        fqName = fqName.toUnsafe().render(),
+        isAllUnder = isAllUnder,
+        alias = alias?.asString(),
+    )
 
 fun AnnotationParameterValue.getValue(): Any? =
     when (this) {
         is StringValue -> value
+
         is BooleanValue -> value
+
         is NullValue -> null
+
         is DoubleValue -> value
+
         is FloatValue -> value
+
         is LongValue -> value
+
         is IntValue -> value
+
         is LiteralValue -> text()
+
         is ClassValue -> classDRI.fullyQualifiedPath
+
         is EnumValue -> enumDri.fullyQualifiedPath
+
         is ArrayValue -> value.map { it.getValue() }
+
         is AnnotationValue -> AnnotationWrapper(
             fullyQualifiedPath = annotation.dri.fullyQualifiedPath,
             arguments = annotation.params.entries.map { (name, paramValue) ->
                 name to paramValue.getValue()
             },
         )
+
         else -> error("Could not read Annotation parameter: $this")
     }

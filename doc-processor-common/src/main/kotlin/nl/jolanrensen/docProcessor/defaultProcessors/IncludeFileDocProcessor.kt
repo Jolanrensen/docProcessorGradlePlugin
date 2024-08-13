@@ -26,20 +26,17 @@ const val INCLUDE_FILE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProce
 class IncludeFileDocProcessor : TagDocProcessor() {
 
     private val tag = "includeFile"
-    override fun tagIsSupported(tag: String): Boolean =
-        tag == this.tag
 
-    private fun processContent(
-        line: String,
-        documentable: DocumentableWrapper,
-    ): String {
+    override fun tagIsSupported(tag: String): Boolean = tag == this.tag
+
+    private fun processContent(line: String, documentable: DocumentableWrapper): String {
         val includeFileArguments = line.getTagArguments(
             tag = tag,
             numberOfArguments = 2,
         )
-        val filePath = includeFileArguments.first()
+        val filePath = includeFileArguments
+            .first()
             .trim()
-
             // TODO: issue #10: figure out how to make file location clickable both for Java and Kotlin
             .removePrefix("(")
             .removeSuffix(")")
@@ -51,29 +48,35 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         val currentDir: File? = documentable.file.parentFile
         val targetFile = currentDir?.resolve(filePath)
 
-        if (targetFile == null || !targetFile.exists())
+        if (targetFile == null || !targetFile.exists()) {
             throw FileNotFoundException("File $filePath (-> ${targetFile?.absolutePath}) does not exist.")
+        }
 
-        if (targetFile.isDirectory)
+        if (targetFile.isDirectory) {
             throw IllegalArgumentException("File $filePath (-> ${targetFile.absolutePath}) is a directory.")
+        }
 
         val content = targetFile.readText()
 
         return when (documentable.programmingLanguage) {
-            JAVA -> StringEscapeUtils.escapeHtml4(content)
-                .replace("@", "&#64;")
-                .replace("*/", "&#42;&#47;")
+            JAVA ->
+                StringEscapeUtils.escapeHtml4(content)
+                    .replace("@", "&#64;")
+                    .replace("*/", "&#42;&#47;")
 
             KOTLIN -> content
         }.let {
             if (extraContent.isNotEmpty()) {
                 buildString {
                     append(it)
-                    if (!extraContent.first().isWhitespace())
+                    if (!extraContent.first().isWhitespace()) {
                         append(" ")
+                    }
                     append(extraContent)
                 }
-            } else it
+            } else {
+                it
+            }
         }
     }
 
@@ -86,10 +89,11 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = processContent(
-        line = tagWithContent,
-        documentable = documentable,
-    )
+    ): String =
+        processContent(
+            line = tagWithContent,
+            documentable = documentable,
+        )
 
     /**
      * How to process the `@includeFile tag` when it's a block tag.
@@ -102,8 +106,9 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = processContent(
-        line = tagWithContent,
-        documentable = documentable,
-    )
+    ): String =
+        processContent(
+            line = tagWithContent,
+            documentable = documentable,
+        )
 }

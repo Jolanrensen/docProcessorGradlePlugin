@@ -1,12 +1,21 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import nl.jolanrensen.docProcessor.*
+import nl.jolanrensen.docProcessor.DocContent
+import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
+import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.decodeCallableTarget
+import nl.jolanrensen.docProcessor.getDocContentOrNull
+import nl.jolanrensen.docProcessor.getTagArguments
+import nl.jolanrensen.docProcessor.javaLinkRegex
+import nl.jolanrensen.docProcessor.replaceKdocLinks
+import nl.jolanrensen.docProcessor.toDoc
+import nl.jolanrensen.docProcessor.withoutFilters
 import org.apache.commons.text.StringEscapeUtils
 import org.jgrapht.traverse.NotDirectedAcyclicGraphException
 import org.jgrapht.traverse.TopologicalOrderIterator
-import java.util.*
 
 /**
  * @see IncludeDocProcessor
@@ -117,9 +126,11 @@ class IncludeDocProcessor : TagDocProcessor() {
             .joinToString("\n\n") { (path, documentables) ->
                 buildString {
                     appendLine("$path:")
-                    appendLine(documentables.joinToString("\n\n") {
-                        it.queryFileForDocTextRange().getDocContentOrNull()?.toDoc(4) ?: ""
-                    })
+                    appendLine(
+                        documentables.joinToString("\n\n") {
+                            it.queryFileForDocTextRange().getDocContentOrNull()?.toDoc(4) ?: ""
+                        },
+                    )
                 }
             }
         error("Circular references detected in @include statements:\n$circularRefs")
@@ -129,24 +140,26 @@ class IncludeDocProcessor : TagDocProcessor() {
      * Queries the path targeted by the @include tag and returns the docs of that element to
      * overwrite the @include tag.
      */
-    private fun processContent(
-        line: String,
-        documentable: DocumentableWrapper,
-    ): String {
+    private fun processContent(line: String, documentable: DocumentableWrapper): String {
         val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
         val includeArguments = line.getTagArguments(tag = TAG, numberOfArguments = 2)
         val includePath = includeArguments.first().decodeCallableTarget()
         // for stuff written after the @include tag, save and include it later
         val extraContent = includeArguments.getOrElse(1) { "" }
 
-        logger.debug { "Running include processor for ${documentable.fullyQualifiedPath}/${documentable.fullyQualifiedExtensionPath}, line @include $includePath" }
+        logger.debug {
+            "Running include processor for ${
+                documentable.fullyQualifiedPath
+            }/${documentable.fullyQualifiedExtensionPath}, line @include $includePath"
+        }
 
         // query the filtered documentables for the @include paths
         val targetDocumentable = documentable.queryDocumentables(
             query = includePath,
             documentables = documentablesByPath,
             documentablesNoFilters = unfilteredDocumentablesByPath,
-            canBeCache = true, // for IntelliJ plugin
+            // for IntelliJ plugin
+            canBeCache = true,
         ) { it.identifier != documentable.identifier }
 
         if (targetDocumentable == null) {
@@ -187,7 +200,7 @@ class IncludeDocProcessor : TagDocProcessor() {
                         $attemptedQueries
                         |]
                         """.trimMargin()
-                }
+                },
             )
         }
 
@@ -220,8 +233,8 @@ class IncludeDocProcessor : TagDocProcessor() {
                 if (javaLinkRegex in targetContent) {
                     logger.warn {
                         "Java {@link statements} are not replaced by their fully qualified path. " +
-                                "Make sure to use fully qualified paths in {@link statements} when " +
-                                "@including docs with {@link statements}."
+                            "Make sure to use fully qualified paths in {@link statements} when " +
+                            "@including docs with {@link statements}."
                     }
                 }
 
@@ -235,8 +248,9 @@ class IncludeDocProcessor : TagDocProcessor() {
         if (extraContent.isNotEmpty()) {
             targetContent = buildString {
                 append(targetContent)
-                if (!extraContent.first().isWhitespace())
+                if (!extraContent.first().isWhitespace()) {
                     append(" ")
+                }
                 append(extraContent)
             }
         }
@@ -254,10 +268,11 @@ class IncludeDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = processContent(
-        line = tagWithContent,
-        documentable = documentable,
-    )
+    ): String =
+        processContent(
+            line = tagWithContent,
+            documentable = documentable,
+        )
 
     /**
      * How to process the `@include tag` when it's a block tag.
@@ -270,10 +285,11 @@ class IncludeDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = processContent(
-        line = tagWithContent,
-        documentable = documentable,
-    )
+    ): String =
+        processContent(
+            line = tagWithContent,
+            documentable = documentable,
+        )
 
     override fun <T : DocumentableWrapper> sortDocumentables(
         documentables: List<T>,
@@ -295,4 +311,3 @@ class IncludeDocProcessor : TagDocProcessor() {
         }
     }
 }
-

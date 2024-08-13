@@ -21,21 +21,24 @@ const val REMOVE_ESCAPE_CHARS_PROCESSOR = "nl.jolanrensen.docProcessor.defaultPr
 class RemoveEscapeCharsProcessor : DocProcessor() {
 
     private val escapeChars = listOf('\\')
+
     override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath {
         val mutableDocs = documentablesByPath
             .toMutable()
             .withDocsToProcessFilter { it.sourceHasDocumentation }
 
         runBlocking {
-            mutableDocs.documentablesToProcess.flatMap { (_, docs) ->
-                docs.map {
-                    launch {
-                        it.modifyDocContentAndUpdate(
-                            it.docContent.removeEscapeCharacters(escapeChars)
-                        )
+            mutableDocs
+                .documentablesToProcess
+                .flatMap { (_, docs) ->
+                    docs.map {
+                        launch {
+                            it.modifyDocContentAndUpdate(
+                                it.docContent.removeEscapeCharacters(escapeChars),
+                            )
+                        }
                     }
-                }
-            }.joinAll()
+                }.joinAll()
         }
 
         return mutableDocs

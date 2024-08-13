@@ -11,9 +11,13 @@ import java.io.File
  *
  * Gradle wrapper for [ProcessDocsAction].
  */
-abstract class ProcessDocsGradleAction : ProcessDocsAction(), WorkAction<ProcessDocsGradleAction.Parameters> {
+abstract class ProcessDocsGradleAction :
+    ProcessDocsAction(),
+    WorkAction<ProcessDocsGradleAction.Parameters> {
 
-    interface Parameters : ProcessDocsAction.Parameters, WorkParameters {
+    interface Parameters :
+        ProcessDocsAction.Parameters,
+        WorkParameters {
         override var baseDir: File
         override var sources: DokkaSourceSetImpl
         override var sourceRoots: List<File>

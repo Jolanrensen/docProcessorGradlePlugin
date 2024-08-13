@@ -194,16 +194,24 @@ class DocProcessorServiceK1(private val project: Project) {
             logger.debug { "\n\n" }
 
             if (!needsRebuild) {
-                logger.debug { "loading fully cached ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}" }
+                logger.debug {
+                    "loading fully cached ${
+                        documentableWrapper.fullyQualifiedPath
+                    }/${documentableWrapper.fullyQualifiedExtensionPath}"
+                }
                 return documentableCache.getDocContentResult(documentableWrapper.identifier)!!
             }
-            logger.debug { "preprocessing ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}" }
+            logger.debug {
+                "preprocessing ${
+                    documentableWrapper.fullyQualifiedPath
+                }/${documentableWrapper.fullyQualifiedExtensionPath}"
+            }
 
             // Process the DocumentablesByPath
             val results = processDocumentablesByPath(documentableCache)
 
             // Retrieve the original DocumentableWrapper from the results
-            val doc = results[documentableWrapper.identifier] ?: return null //error("Something went wrong")
+            val doc = results[documentableWrapper.identifier] ?: return null // error("Something went wrong")
 
             documentableCache.updatePostProcessing()
 
@@ -234,10 +242,7 @@ class DocProcessorServiceK1(private val project: Project) {
         }
     }
 
-    private fun exportToHtmlFile(
-        psiElement: PsiElement,
-        doc: DocumentableWrapper,
-    ): File {
+    private fun exportToHtmlFile(psiElement: PsiElement, doc: DocumentableWrapper): File {
         val annotationArgs = (psiElement as? KtDeclaration)
             ?.annotationEntries
             ?.firstOrNull { ExportAsHtml::class.simpleName!! in it.shortName!!.asString() }

@@ -1,7 +1,6 @@
 package nl.jolanrensen.docProcessor
 
 import io.kotest.matchers.shouldBe
-import nl.jolanrensen.docProcessor.defaultProcessors.findKeyAndValueFromDollarSign
 import org.junit.jupiter.api.Test
 
 class TestGetTagArguments {
@@ -22,26 +21,26 @@ class TestGetTagArguments {
         tagContent
             .getTagArguments("tag", 1)
             .map { it.removeEscapeCharacters() } shouldBe
-                listOf(
-                    "[some (\"more ]``difficult] (content with) spaces",
-                )
+            listOf(
+                "[some (\"more ]``difficult] (content with) spaces",
+            )
 
         tagContent
             .getTagArguments("tag", 2)
             .map { it.removeEscapeCharacters() } shouldBe
-                listOf(
-                    "[some (\"more ]``difficult]",
-                    "(content with) spaces",
-                )
+            listOf(
+                "[some (\"more ]``difficult]",
+                "(content with) spaces",
+            )
 
         tagContent
             .getTagArguments("tag", 3)
             .map { it.removeEscapeCharacters() } shouldBe
-                listOf(
-                    "[some (\"more ]``difficult]",
-                    "(content with)",
-                    "spaces",
-                )
+            listOf(
+                "[some (\"more ]``difficult]",
+                "(content with)",
+                "spaces",
+            )
     }
 
     @Test
@@ -85,9 +84,10 @@ class TestGetTagArguments {
         val tagContent = "@include {@link com.example.plugin.JavaMain.Main2.TestB}"
 
         tagContent.getTagArguments("include", 1) shouldBe
-                listOf("{@link com.example.plugin.JavaMain.Main2.TestB}")
+            listOf("{@link com.example.plugin.JavaMain.Main2.TestB}")
 
-        tagContent.getTagArguments("include", 1)
+        tagContent
+            .getTagArguments("include", 1)
             .first()
             .decodeCallableTarget() shouldBe "com.example.plugin.JavaMain.Main2.TestB"
     }
@@ -97,17 +97,18 @@ class TestGetTagArguments {
         val tagContent = "@tag [Something] with a newline at the end\n"
 
         tagContent.getTagArguments("tag", 1) shouldBe
-                listOf(
-                    "[Something] with a newline at the end\n",
-                )
+            listOf(
+                "[Something] with a newline at the end\n",
+            )
 
         tagContent.getTagArguments("tag", 2) shouldBe
-                listOf(
-                    "[Something]",
-                    "with a newline at the end\n",
-                )
+            listOf(
+                "[Something]",
+                "with a newline at the end\n",
+            )
 
-        tagContent.getTagArguments("tag", 2)
+        tagContent
+            .getTagArguments("tag", 2)
             .first()
             .decodeCallableTarget() shouldBe "Something"
     }

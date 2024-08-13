@@ -44,13 +44,10 @@ class SampleDocProcessor : TagDocProcessor() {
     private val sampleStartRegex = Regex(" *// *SampleStart *\n")
     private val sampleEndRegex = Regex(" *// *SampleEnd *\n")
 
-    private fun processContent(
-        tagWithContent: String,
-        documentable: DocumentableWrapper,
-    ): String {
+    private fun processContent(tagWithContent: String, documentable: DocumentableWrapper): String {
         val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
         val noComments = tagWithContent.startsWith("{@$sampleNoComments") ||
-                tagWithContent.trimStart().startsWith("@$sampleNoComments ")
+            tagWithContent.trimStart().startsWith("@$sampleNoComments ")
 
         // get the full @sample / @sampleNoComments path
         val sampleArguments = tagWithContent.getTagArguments(
@@ -91,11 +88,14 @@ class SampleDocProcessor : TagDocProcessor() {
         return if (extraContent.isNotEmpty()) {
             buildString {
                 append(commentContent)
-                if (!extraContent.first().isWhitespace())
+                if (!extraContent.first().isWhitespace()) {
                     append(" ")
+                }
                 append(extraContent)
             }
-        } else commentContent
+        } else {
+            commentContent
+        }
     }
 
     private fun throwError(samplePath: String, queries: List<String>): Nothing =
@@ -104,7 +104,8 @@ class SampleDocProcessor : TagDocProcessor() {
             |Reference not found: $samplePath. 
             |Attempted queries: [
             ${queries.joinToString("\n") { "|  $it" }}
-            ]""".trimMargin()
+            ]
+            """.trimMargin(),
         )
 
     /**
@@ -112,14 +113,14 @@ class SampleDocProcessor : TagDocProcessor() {
      * removing docs at the start with [noComments].
      * Returns `null` if the source text cannot be found.
      */
-    private fun getTargetSourceText(
-        targetDocumentable: DocumentableWrapper,
-        noComments: Boolean,
-    ): String {
+    private fun getTargetSourceText(targetDocumentable: DocumentableWrapper, noComments: Boolean): String {
         val indent = " ".repeat(targetDocumentable.docIndent)
         val rawQueriedSource = targetDocumentable.rawSource.let {
-            if (noComments) it.replace(docRegex) { "" }
-            else it
+            if (noComments) {
+                it.replace(docRegex) { "" }
+            } else {
+                it
+            }
         }
         return (indent + rawQueriedSource).trimIndent()
     }
@@ -130,13 +131,23 @@ class SampleDocProcessor : TagDocProcessor() {
      */
     private fun String.getContentBetweenSampleComments(): String {
         val hasSampleComments = sampleStartRegex.containsMatchIn(this) &&
-                sampleEndRegex.containsMatchIn(this)
+            sampleEndRegex.containsMatchIn(this)
 
         return if (hasSampleComments) {
-            val start = sampleStartRegex.findAll(this).first().range.last + 1
-            val end = sampleEndRegex.findAll(this).last().range.first - 1
+            val start = sampleStartRegex
+                .findAll(this)
+                .first()
+                .range
+                .last + 1
+            val end = sampleEndRegex
+                .findAll(this)
+                .last()
+                .range
+                .first - 1
             this.substring(start, end).trimIndent()
-        } else this
+        } else {
+            this
+        }
     }
 
     /**
@@ -148,31 +159,33 @@ class SampleDocProcessor : TagDocProcessor() {
         sampleSourceText: String,
         sampleLanguage: ProgrammingLanguage,
         currentLanguage: ProgrammingLanguage,
-    ): String = buildString {
-        when (currentLanguage) {
-            JAVA -> {
-                appendLine("<pre>")
-                appendLine(
-                    StringEscapeUtils.escapeHtml4(sampleSourceText)
-                        .replace("@", "&#64;")
-                        .replace("*/", "&#42;&#47;")
-                )
-                append("</pre>")
-            }
+    ): String =
+        buildString {
+            when (currentLanguage) {
+                JAVA -> {
+                    appendLine("<pre>")
+                    appendLine(
+                        StringEscapeUtils
+                            .escapeHtml4(sampleSourceText)
+                            .replace("@", "&#64;")
+                            .replace("*/", "&#42;&#47;"),
+                    )
+                    append("</pre>")
+                }
 
-            KOTLIN -> {
-                append("```")
-                appendLine(
-                    when (sampleLanguage) {
-                        JAVA -> "java"
-                        KOTLIN -> "kotlin"
-                    }
-                )
-                appendLine(sampleSourceText)
-                append("```")
+                KOTLIN -> {
+                    append("```")
+                    appendLine(
+                        when (sampleLanguage) {
+                            JAVA -> "java"
+                            KOTLIN -> "kotlin"
+                        },
+                    )
+                    appendLine(sampleSourceText)
+                    append("```")
+                }
             }
         }
-    }
 
     /**
      * How to process the `@sample tag` when it's an inline tag.
@@ -183,10 +196,11 @@ class SampleDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = processContent(
-        tagWithContent = tagWithContent,
-        documentable = documentable,
-    )
+    ): String =
+        processContent(
+            tagWithContent = tagWithContent,
+            documentable = documentable,
+        )
 
     /**
      * How to process the `@sample tag` when it's a block tag.
@@ -199,8 +213,9 @@ class SampleDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = processContent(
-        tagWithContent = tagWithContent,
-        documentable = documentable,
-    )
+    ): String =
+        processContent(
+            tagWithContent = tagWithContent,
+            documentable = documentable,
+        )
 }

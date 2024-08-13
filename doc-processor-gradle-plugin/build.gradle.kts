@@ -1,5 +1,5 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
@@ -9,6 +9,7 @@ plugins {
     id("com.gradle.plugin-publish") version "1.1.0"
     signing
     id("com.github.johnrengelman.shadow")
+    id("org.jlleitschuh.gradle.ktlint")
 }
 
 group = "nl.jolanrensen.docProcessor"
@@ -101,7 +102,7 @@ configurations[functionalTest.implementationConfigurationName]
 val functionalTestTask = tasks.register<Test>("functionalTest") {
     testClassesDirs = functionalTest.output.classesDirs
     classpath = configurations[functionalTest.runtimeClasspathConfigurationName] +
-            functionalTest.output
+        functionalTest.output
 }
 
 tasks.check {

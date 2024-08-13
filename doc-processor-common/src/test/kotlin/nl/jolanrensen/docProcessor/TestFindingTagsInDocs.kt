@@ -48,13 +48,12 @@ class TestFindingTagsInDocs {
         ```
         @g Test
         
-        """.trimIndent()
+    """.trimIndent()
 
     @Test
     fun `Split doc content per block`() {
         val expected = listOf(
             "\n\nblablah",
-
             """
                  @a a
                Some extra text. @b nothing, this is skipped
@@ -67,8 +66,7 @@ class TestFindingTagsInDocs {
                @e TestB
                {@f TestC }{@i}
                ```
-               """.trimIndent(),
-
+            """.trimIndent(),
             "@g Test\n",
         )
 
@@ -86,7 +84,8 @@ class TestFindingTagsInDocs {
             "i" to 191..194,
         )
 
-        difficultKdoc.findInlineTagNamesInDocContentWithRanges()
+        difficultKdoc
+            .findInlineTagNamesInDocContentWithRanges()
             .map { difficultKdoc.substring(it.second) }
             .let { println(it) }
 
@@ -96,7 +95,11 @@ class TestFindingTagsInDocs {
     @Test
     fun `Find inline tags in doc content`() {
         val expected = setOf(
-            "c", "d", "h", "f", "i",
+            "c",
+            "d",
+            "h",
+            "f",
+            "i",
         )
 
         difficultKdoc.findInlineTagNamesInDocContent().toSet() shouldBe expected
@@ -105,7 +108,8 @@ class TestFindingTagsInDocs {
     @Test
     fun `Find block tags in doc content`() {
         val expected = setOf(
-            "a", "g"
+            "a",
+            "g",
         )
 
         difficultKdoc.findBlockTagNamesInDocContent().toSet() shouldBe expected
@@ -169,7 +173,8 @@ class TestFindingTagsInDocs {
              */
         """.trimIndent()
 
-        kdoc.getDocContentOrNull()
+        kdoc
+            .getDocContentOrNull()
             ?.splitDocContentPerBlock()
             ?.joinToString("\n")
             ?.toDoc() shouldBe kdoc
@@ -181,7 +186,8 @@ class TestFindingTagsInDocs {
             /** Hello World! */
         """.trimIndent()
 
-        kdoc.getDocContentOrNull()
+        kdoc
+            .getDocContentOrNull()
             ?.splitDocContentPerBlock()
             ?.joinToString("\n")
             ?.toDoc() shouldBe kdoc
@@ -193,7 +199,8 @@ class TestFindingTagsInDocs {
             /** @include Hello World! */
         """.trimIndent()
 
-        kdoc.getDocContentOrNull()
+        kdoc
+            .getDocContentOrNull()
             ?.splitDocContentPerBlock()
             ?.joinToString("\n")
             ?.toDoc() shouldBe kdoc
@@ -205,7 +212,8 @@ class TestFindingTagsInDocs {
             /** @{[Hello]} World! */
         """.trimIndent()
 
-        kdoc.getDocContentOrNull()!!
+        kdoc
+            .getDocContentOrNull()!!
             .findTagNamesInDocContent()
     }
 }

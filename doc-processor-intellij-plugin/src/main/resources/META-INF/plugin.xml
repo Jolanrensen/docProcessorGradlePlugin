@@ -56,9 +56,4 @@
         <supportsKotlinK2Mode/>
         <supportsKotlinPluginMode supportsK1="false" supportsK2="true"/>
     </extensions>
-
-    <applicationListeners>
-        <listener class="nl.jolanrensen.docProcessor.listeners.DocProcessorFrameStateListener"
-                  topic="com.intellij.ide.FrameStateListener"/>
-    </applicationListeners>
 </idea-plugin>

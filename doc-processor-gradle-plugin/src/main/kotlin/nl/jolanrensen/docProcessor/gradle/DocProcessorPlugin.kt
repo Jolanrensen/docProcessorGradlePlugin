@@ -16,10 +16,11 @@ import java.io.File
  * file.
  */
 class DocProcessorPlugin : Plugin<Project> {
-    override fun apply(project: Project): Unit = with(project) {
-        // add maven central to repositories, which is needed to add dokka as a dependency in ProcessDocTasks
-        repositories.mavenCentral()
-    }
+    override fun apply(project: Project): Unit =
+        with(project) {
+            // add maven central to repositories, which is needed to add dokka as a dependency in ProcessDocTasks
+            repositories.mavenCentral()
+        }
 }
 
 /**
@@ -41,12 +42,10 @@ class DocProcessorPlugin : Plugin<Project> {
  * @see [Project.createProcessDocTask]
  * @see [Project.maybeCreateProcessDocTask]
  */
-public fun TaskContainer.creatingProcessDocTask(
-    sources: Iterable<File>,
-    block: ProcessDocTaskDsl.() -> Unit,
-) = creating(ProcessDocTask::class) {
-    ProcessDocTaskDsl(this, sources).block()
-}
+public fun TaskContainer.creatingProcessDocTask(sources: Iterable<File>, block: ProcessDocTaskDsl.() -> Unit) =
+    creating(ProcessDocTask::class) {
+        ProcessDocTaskDsl(this, sources).block()
+    }
 
 /**
  * Create a new [ProcessDocTask].
@@ -146,11 +145,8 @@ public fun Project.maybeCreateProcessDocTask(
  * @see [Project.creatingProcessDocTask]
  * @see [Project.maybeCreateProcessDocTask]
  */
-public fun Project.createProcessDocTask(
-    name: String,
-    sources: Iterable<File>,
-    block: ProcessDocTaskDsl.() -> Unit,
-) = tasks.createProcessDocTask(name, sources, block)
+public fun Project.createProcessDocTask(name: String, sources: Iterable<File>, block: ProcessDocTaskDsl.() -> Unit) =
+    tasks.createProcessDocTask(name, sources, block)
 
 /**
  * Create a new [ProcessDocTask] using by-delegate.
@@ -171,7 +167,5 @@ public fun Project.createProcessDocTask(
  * @see [Project.createProcessDocTask]
  * @see [Project.maybeCreateProcessDocTask]
  */
-public fun Project.creatingProcessDocTask(
-    sources: Iterable<File>,
-    block: ProcessDocTaskDsl.() -> Unit,
-) = tasks.creatingProcessDocTask(sources, block)
+public fun Project.creatingProcessDocTask(sources: Iterable<File>, block: ProcessDocTaskDsl.() -> Unit) =
+    tasks.creatingProcessDocTask(sources, block)

@@ -18,16 +18,16 @@ class DocProcessorToolWindowFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         toolWindow.contentManager.addContent(
+            @Suppress("ktlint:standard:comment-wrapping")
             contentFactory.createContent(
                 /* component = */ DocProcessorToolWindow(toolWindow).getContent(),
                 /* displayName = */ null,
                 /* isLockable = */ false,
-            )
+            ),
         )
     }
 
     override fun shouldBeAvailable(project: Project) = true
-
 
     class DocProcessorToolWindow(toolWindow: ToolWindow) {
 
@@ -46,27 +46,32 @@ class DocProcessorToolWindowFactory : ToolWindowFactory {
             text = MessageBundle.message(mode.id)
         }
 
-        fun getContent(): JBPanel<JBPanel<*>> = JBPanel<JBPanel<*>>().apply {
-            add(JBLabel(MessageBundle.message("docPreprocessorEnabled")))
-            add(JToggleButton().apply {
-                updateState()
-                addActionListener {
-                    docProcessorIsEnabled = !docProcessorIsEnabled
-                    updateState()
-                }
-            })
+        fun getContent(): JBPanel<JBPanel<*>> =
+            JBPanel<JBPanel<*>>().apply {
+                add(JBLabel(MessageBundle.message("docPreprocessorEnabled")))
+                add(
+                    JToggleButton().apply {
+                        updateState()
+                        addActionListener {
+                            docProcessorIsEnabled = !docProcessorIsEnabled
+                            updateState()
+                        }
+                    },
+                )
 
-            add(JBLabel(MessageBundle.message("mode")))
-            add(JToggleButton().apply {
-                updateMode()
-                addActionListener {
-                    mode = when (mode) {
-                        Mode.K1 -> Mode.K2
-                        Mode.K2 -> Mode.K1
-                    }
-                    updateMode()
-                }
-            })
-        }
+                add(JBLabel(MessageBundle.message("mode")))
+                add(
+                    JToggleButton().apply {
+                        updateMode()
+                        addActionListener {
+                            mode = when (mode) {
+                                Mode.K1 -> Mode.K2
+                                Mode.K2 -> Mode.K1
+                            }
+                            updateMode()
+                        }
+                    },
+                )
+            }
     }
 }

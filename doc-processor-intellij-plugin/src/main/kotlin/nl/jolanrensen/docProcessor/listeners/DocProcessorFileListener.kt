@@ -3,7 +3,12 @@ package nl.jolanrensen.docProcessor.listeners
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
-import com.intellij.openapi.vfs.newvfs.events.*
+import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileCopyEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileCreateEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileDeleteEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileMoveEvent
 import org.jetbrains.kotlin.idea.util.isJavaFileType
 import org.jetbrains.kotlin.idea.util.isKotlinFileType
 
@@ -26,7 +31,8 @@ class DocProcessorFileListener(private val project: Project, private val onConte
             when (event) {
                 is VFileCopyEvent,
                 is VFileMoveEvent,
-                is VFileCreateEvent -> {
+                is VFileCreateEvent,
+                -> {
                     event.file?.let { file ->
                         if ((file.isKotlinFileType() || file.isJavaFileType()) && // TODO
                             fileIndex.isInContent(file)
@@ -52,7 +58,6 @@ class DocProcessorFileListener(private val project: Project, private val onConte
                         onContentChanged()
                         println("content change detected: ${event.file.path}")
                     }
-
                 }
             }
         }

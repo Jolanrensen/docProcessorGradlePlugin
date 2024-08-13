@@ -3,9 +3,25 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import nl.jolanrensen.docProcessor.*
+import nl.jolanrensen.docProcessor.BACKTICKS
+import nl.jolanrensen.docProcessor.CURLY_BRACES
+import nl.jolanrensen.docProcessor.DocContent
+import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
-import java.util.*
+import nl.jolanrensen.docProcessor.SQUARE_BRACKETS
+import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.decodeCallableTarget
+import nl.jolanrensen.docProcessor.findTagNamesInDocContent
+import nl.jolanrensen.docProcessor.getLineAndCharacterOffset
+import nl.jolanrensen.docProcessor.getTagArguments
+import nl.jolanrensen.docProcessor.getTagNameOrNull
+import nl.jolanrensen.docProcessor.javaLinkRegex
+import nl.jolanrensen.docProcessor.removeAllElementsFromLast
+import nl.jolanrensen.docProcessor.replaceNonOverlappingRanges
+import nl.jolanrensen.docProcessor.withoutFilters
+import java.util.Collections
+import java.util.UUID
 
 /**
  * @see ArgDocProcessor
@@ -105,14 +121,11 @@ class ArgDocProcessor : TagDocProcessor() {
         val args: MutableSet<String> = Collections.synchronizedSet(mutableSetOf()),
     )
 
-    override fun shouldContinue(
-        i: Int,
-        anyModifications: Boolean,
-        processLimit: Int,
-    ): Boolean {
+    override fun shouldContinue(i: Int, anyModifications: Boolean, processLimit: Int): Boolean {
         val processLimitReached = i >= processLimit
-        if (processLimitReached)
+        if (processLimitReached) {
             onProcessError()
+        }
 
         val atLeastOneRun = i > 0
 
@@ -135,7 +148,11 @@ class ArgDocProcessor : TagDocProcessor() {
                         logger.warn {
                             buildString {
                                 val arguments = if (args.size == 1) "argument" else "arguments"
-                                appendLine("Could not find @$DECLARE_ARGUMENT_TAGS $arguments in doc (${documentable.file.absolutePath}:$line:$char):")
+                                appendLine(
+                                    "Could not find @$DECLARE_ARGUMENT_TAGS $arguments in doc (${
+                                        documentable.file.absolutePath
+                                    }:$line:$char):",
+                                )
                                 appendLine(args.joinToString(",\n") { "  \"@$RETRIEVE_ARGUMENT_TAGS $it\"" })
                             }
                         }
@@ -166,7 +183,7 @@ class ArgDocProcessor : TagDocProcessor() {
                 docs.map { doc ->
                     launch {
                         doc.modifyDocContentAndUpdate(
-                            doc.docContent.replaceDollarNotation()
+                            doc.docContent.replaceDollarNotation(),
                         )
                     }
                 }
@@ -185,15 +202,20 @@ class ArgDocProcessor : TagDocProcessor() {
                     .getLineAndCharacterOffset(documentable.docFileTextRange.first)
 
                 appendLine("Old tag names used in doc: (${documentable.file.absolutePath}:$line:$char)")
-                appendLine("The tag names \"$OLD_RETRIEVE_ARGUMENT_TAGS\" is deprecated. Use \"${RETRIEVE_ARGUMENT_TAGS.first()}\" or \$ instead.")
-                appendLine("The tag name \"$OLD_DECLARE_ARGUMENT_TAGS\" is deprecated. Use \"${DECLARE_ARGUMENT_TAGS.first()}\" instead.")
+                appendLine(
+                    "The tag names \"$OLD_RETRIEVE_ARGUMENT_TAGS\" is deprecated. Use \"${
+                        RETRIEVE_ARGUMENT_TAGS.first()
+                    }\" or \$ instead.",
+                )
+                appendLine(
+                    "The tag name \"$OLD_DECLARE_ARGUMENT_TAGS\" is deprecated. Use \"${
+                        DECLARE_ARGUMENT_TAGS.first()
+                    }\" instead.",
+                )
             }
         }
 
-    private fun processTag(
-        tagWithContent: String,
-        documentable: DocumentableWrapper,
-    ): String {
+    private fun processTag(tagWithContent: String, documentable: DocumentableWrapper): String {
         val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
         val tagName = tagWithContent.getTagNameOrNull()
         val isDeclareArgumentDeclaration = tagName in DECLARE_ARGUMENT_TAGS
@@ -203,8 +225,9 @@ class ArgDocProcessor : TagDocProcessor() {
         val declareArgTagsStillPresent = DECLARE_ARGUMENT_TAGS.any { it in tagNames }
         val retrieveArgTagsPresent = RETRIEVE_ARGUMENT_TAGS.any { it in tagNames }
 
-        if (tagName in OLD_RETRIEVE_ARGUMENT_TAGS || tagName in OLD_DECLARE_ARGUMENT_TAGS)
+        if (tagName in OLD_RETRIEVE_ARGUMENT_TAGS || tagName in OLD_DECLARE_ARGUMENT_TAGS) {
             provideNewNameWarning(documentable)
+        }
 
         return when {
             isDeclareArgumentDeclaration -> { // @set
@@ -221,7 +244,8 @@ class ArgDocProcessor : TagDocProcessor() {
                     keys = buildReferenceKeys(originalKey, documentable, unfilteredDocumentablesByPath)
                 }
 
-                val value = argArguments.getOrElse(1) { "" }
+                val value = argArguments
+                    .getOrElse(1) { "" }
                     .trimStart()
                     .removeSuffix("\n")
 
@@ -264,8 +288,8 @@ class ArgDocProcessor : TagDocProcessor() {
                 if (documentable.programmingLanguage == JAVA && javaLinkRegex in originalKey) {
                     logger.warn {
                         "Java {@link statements} are not replaced by their fully qualified path. " +
-                                "Make sure to use fully qualified paths in {@link statements} when " +
-                                "using {@link statements} as a key in @set."
+                            "Make sure to use fully qualified paths in {@link statements} when " +
+                            "using {@link statements} as a key in @set."
                     }
                 }
 
@@ -295,19 +319,21 @@ class ArgDocProcessor : TagDocProcessor() {
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = processTag(
-        tagWithContent = tagWithContent,
-        documentable = documentable,
-    )
+    ): String =
+        processTag(
+            tagWithContent = tagWithContent,
+            documentable = documentable,
+        )
 
     override fun processInlineTagWithContent(
         tagWithContent: String,
         path: String,
         documentable: DocumentableWrapper,
-    ): String = processTag(
-        tagWithContent = tagWithContent,
-        documentable = documentable,
-    )
+    ): String =
+        processTag(
+            tagWithContent = tagWithContent,
+            documentable = documentable,
+        )
 
     private fun buildReferenceKeys(
         originalKey: String,
@@ -322,8 +348,9 @@ class ArgDocProcessor : TagDocProcessor() {
             documentables = documentablesByPath,
         )
 
-        if (referencedDocumentable != null)
+        if (referencedDocumentable != null) {
             keys = referencedDocumentable.paths.map { "[$it]" }
+        }
 
         return keys
     }
@@ -352,6 +379,7 @@ fun DocContent.replaceDollarNotation(): DocContent {
  * Replaces all `${KEY}` with `{@get KEY}`
  * and `${KEY=DEFAULT}` with `{@set KEY DEFAULT}`
  */
+@Suppress("ktlint:standard:function-naming")
 fun DocContent.`replace ${}'s`(): DocContent {
     val text = this
     val locations = `find ${}'s`()
@@ -382,6 +410,7 @@ fun DocContent.`replace ${}'s`(): DocContent {
  * The list is sorted by depth, with the deepest tags first and then by order of appearance.
  * "${}" marks are ignored if "\" escaped.
  */
+@Suppress("ktlint:standard:function-naming")
 private fun DocContent.`find ${}'s`(): List<IntRange> {
     var text = this
 
@@ -436,6 +465,7 @@ private fun DocContent.`find ${}'s`(): List<IntRange> {
  * Replaces all "$KEY" with "{@get KEY}"
  * and "$KEY=DEFAULT" with "{@get KEY DEFAULT}"
  */
+@Suppress("ktlint:standard:function-naming")
 fun DocContent.`replace $tags`(): DocContent {
     val text = this
     val locations = `find $tags`()
@@ -461,6 +491,7 @@ fun DocContent.`replace $tags`(): DocContent {
  * Finds all inline $ tags by their respective range in the doc.
  * The function also returns the absolute index of the `=` sign if it exists
  */
+@Suppress("ktlint:standard:function-naming")
 private fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
     val text = this
 
@@ -535,8 +566,11 @@ fun String.findKeyAndValueFromDollarSign(): KeyAndValue<String, String?> {
     }
 
     val blocksIndicators = mutableListOf<Char>()
+
     fun isInQuoteBlock() = BACKTICKS in blocksIndicators
+
     fun isInSquareBrackets() = SQUARE_BRACKETS in blocksIndicators
+
     fun isInCurlyBraces() = CURLY_BRACES in blocksIndicators
 
     var key = ""
@@ -546,10 +580,15 @@ fun String.findKeyAndValueFromDollarSign(): KeyAndValue<String, String?> {
     var escapeNext = false
 
     fun isWritingValue() = value != null
+
     fun isWritingKey() = value == null
+
     fun appendChar(char: Char) {
-        if (isWritingValue()) value += char
-        else key += char
+        if (isWritingValue()) {
+            value += char
+        } else {
+            key += char
+        }
     }
 
     fun startWritingValue() {
@@ -576,7 +615,6 @@ fun String.findKeyAndValueFromDollarSign(): KeyAndValue<String, String?> {
                 blocksIndicators += BACKTICKS
                 appendChar(char)
             }
-
 
             isFirstChar && char == '[' -> {
                 blocksIndicators += SQUARE_BRACKETS
@@ -610,12 +648,14 @@ fun String.findKeyAndValueFromDollarSign(): KeyAndValue<String, String?> {
                         if (!isInSquareBrackets() && timesInSquareBrackets == 1) {
                             readyForSecondSquareBracket = true
                             appendChar(char)
-                            continue  // skip it being set to false again
+                            continue // skip it being set to false again
                         }
                     }
 
                     '[' -> blocksIndicators += SQUARE_BRACKETS
+
                     '{' -> blocksIndicators += CURLY_BRACES
+
                     '`' -> blocksIndicators += BACKTICKS
                 }
                 appendChar(char)
@@ -631,8 +671,10 @@ fun String.findKeyAndValueFromDollarSign(): KeyAndValue<String, String?> {
                 when {
                     // move to writing value
                     char == '=' -> startWritingValue()
+
                     // only letters, digits, or _, no whitespace are allowed
                     Regex("[\\p{L}\\p{N}_]") in char.toString() -> appendChar(char)
+
                     // stop otherwise
                     else -> break
                 }
@@ -652,6 +694,7 @@ fun String.findKeyAndValueFromDollarSign(): KeyAndValue<String, String?> {
                 when {
                     // only letters, digits, or _, no whitespace are allowed
                     Regex("[\\p{L}\\p{N}_]") in char.toString() -> appendChar(char)
+
                     // stop otherwise
                     else -> break
                 }
@@ -667,7 +710,4 @@ fun String.findKeyAndValueFromDollarSign(): KeyAndValue<String, String?> {
     return KeyAndValue(key, value)
 }
 
-data class KeyAndValue<K, V>(
-    val key: K,
-    val value: V,
-)
+data class KeyAndValue<K, V>(val key: K, val value: V)

@@ -8,22 +8,16 @@ abstract class DocProcessorTest(name: String) {
 
     sealed interface Additional
 
-    class AdditionalDocumentable(
-        val documentableWrapper: DocumentableWrapper,
-    ) : Additional
+    class AdditionalDocumentable(val documentableWrapper: DocumentableWrapper) : Additional
 
-    class AdditionalDirectory(
-        val relativePath: String = "src/main/kotlin/com/example/plugin",
-    ) : Additional
+    class AdditionalDirectory(val relativePath: String = "src/main/kotlin/com/example/plugin") : Additional
 
     class AdditionalFile(
         val relativePath: String = "src/main/kotlin/com/example/plugin/file.txt",
         val contents: String,
     ) : Additional
 
-    class AdditionalPath(
-        val fullyQualifiedPath: String,
-    ) : Additional
+    class AdditionalPath(val fullyQualifiedPath: String) : Additional
 
     fun createDocumentableWrapper(
         documentation: String,
@@ -38,29 +32,31 @@ abstract class DocProcessorTest(name: String) {
         imports: List<SimpleImportPath> = emptyList(),
         packageName: String = "com.example.plugin",
         language: ProgrammingLanguage = KOTLIN,
-    ): DocumentableWrapper = DocumentableWrapper(
-        docContent = documentation.getDocContentOrNull()!!,
-        programmingLanguage = language,
-        imports = imports,
-        rawSource = documentation + "\n" + documentableSourceNoDoc,
-        fullyQualifiedPath = fullyQualifiedPath,
-        fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
-        fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
-        file = File(
-            "src/main/${if (language == KOTLIN) "kotlin" else "java"}/${
-                packageName.replace('.', '/')
-            }/$fileName.${if (language == KOTLIN) "kt" else "java"}"
-        ),
-        docFileTextRange = docFileTextRange,
-        docIndent = docIndent,
-        annotations = emptyList(),
-        fileTextRange = fileTextRange,
-        origin = Unit,
-    )
+    ): DocumentableWrapper =
+        DocumentableWrapper(
+            docContent = documentation.getDocContentOrNull()!!,
+            programmingLanguage = language,
+            imports = imports,
+            rawSource = documentation + "\n" + documentableSourceNoDoc,
+            fullyQualifiedPath = fullyQualifiedPath,
+            fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+            fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
+            file = File(
+                "src/main/${if (language == KOTLIN) "kotlin" else "java"}/${
+                    packageName.replace('.', '/')
+                }/$fileName.${if (language == KOTLIN) "kt" else "java"}",
+            ),
+            docFileTextRange = docFileTextRange,
+            docIndent = docIndent,
+            annotations = emptyList(),
+            fileTextRange = fileTextRange,
+            origin = Unit,
+        )
 
-    fun String.textRangeOf(text: String): IntRange = indexOf(text).let { start ->
-        start until (start + text.length)
-    }
+    fun String.textRangeOf(text: String): IntRange =
+        indexOf(text).let { start ->
+            start until (start + text.length)
+        }
 
     @kotlin.jvm.Throws(IOException::class)
     fun processContent(
@@ -101,12 +97,17 @@ abstract class DocProcessorTest(name: String) {
             .mapNotNull { modifiedDocumentables.query(it, documentableWrapper) }
             .flatten()
             .firstOrNull {
-                it.fullyQualifiedPath == documentableWrapper.fullyQualifiedPath
-                        && it.fullyQualifiedExtensionPath == documentableWrapper.fullyQualifiedExtensionPath
-                        && it.file == documentableWrapper.file
-                        && it.docFileTextRange == documentableWrapper.docFileTextRange
-            }
-            ?: error("Original doc not found for ${documentableWrapper.fullyQualifiedPath} or ${documentableWrapper.fullyQualifiedExtensionPath}")
+                it.fullyQualifiedPath == documentableWrapper.fullyQualifiedPath &&
+                    it.fullyQualifiedExtensionPath == documentableWrapper.fullyQualifiedExtensionPath &&
+                    it.file == documentableWrapper.file &&
+                    it.docFileTextRange == documentableWrapper.docFileTextRange
+            } ?: error(
+            "Original doc not found for ${
+                documentableWrapper.fullyQualifiedPath
+            } or ${
+                documentableWrapper.fullyQualifiedExtensionPath
+            }",
+        )
 
         return originalDoc.docContent.toDoc(originalDoc.docIndent)
     }

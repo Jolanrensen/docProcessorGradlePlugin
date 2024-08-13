@@ -7,6 +7,7 @@ plugins {
     kotlin("jvm")
     id("org.jetbrains.intellij.platform") version "2.0.0"
     id("com.github.johnrengelman.shadow")
+    id("org.jlleitschuh.gradle.ktlint")
 }
 
 group = "nl.jolanrensen.docProcessor"
@@ -37,7 +38,6 @@ intellijPlatform {
         }
     }
 }
-
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))

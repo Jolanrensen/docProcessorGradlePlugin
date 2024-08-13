@@ -13,11 +13,16 @@ import kotlin.test.Test
 class ReadMeExampleTest : DocProcessorFunctionalTest("readMe") {
 
     private val processors = listOf(
-        ::INCLUDE_DOC_PROCESSOR, // The @include processor
-        ::INCLUDE_FILE_DOC_PROCESSOR, // The @includeFile processor
-        ::ARG_DOC_PROCESSOR, // The @set and @get / $ processor
-        ::COMMENT_DOC_PROCESSOR, // The @comment processor
-        ::SAMPLE_DOC_PROCESSOR, // The @sample and @sampleNoComments processor
+        // The @include processor
+        ::INCLUDE_DOC_PROCESSOR,
+        // The @includeFile processor
+        ::INCLUDE_FILE_DOC_PROCESSOR,
+        // The @set and @get / $ processor
+        ::ARG_DOC_PROCESSOR,
+        // The @comment processor
+        ::COMMENT_DOC_PROCESSOR,
+        // The @sample and @sampleNoComments processor
+        ::SAMPLE_DOC_PROCESSOR,
         ::REMOVE_ESCAPE_CHARS_PROCESSOR,
     ).map { it.name }
 
@@ -43,7 +48,7 @@ class ReadMeExampleTest : DocProcessorFunctionalTest("readMe") {
                 return result;
             }
         }
-        """.trimIndent()
+    """.trimIndent()
 
     @Language("json")
     private val jsonContent = """
@@ -191,6 +196,4 @@ class ReadMeExampleTest : DocProcessorFunctionalTest("readMe") {
             ),
         ) shouldBe expected
     }
-
-
 }

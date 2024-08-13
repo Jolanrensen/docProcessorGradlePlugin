@@ -8,7 +8,8 @@ import nl.jolanrensen.docProcessor.decodeCallableTarget
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.withoutFilters
 import org.jgrapht.graph.SimpleDirectedGraph
-import java.util.*
+import java.util.Collections
+import java.util.UUID
 
 /**
  * Generates a dependency graph of the [DocumentablesByPath] based on `@include tags`.
@@ -29,27 +30,18 @@ internal class IncludeDocAnalyzer :
                 .getAnalyzedResult()
     }
 
-    override fun analyseBlockTagWithContent(
-        tagWithContent: String,
-        path: String,
-        documentable: DocumentableWrapper,
-    ) = analyseContent(tagWithContent, documentable)
+    override fun analyseBlockTagWithContent(tagWithContent: String, path: String, documentable: DocumentableWrapper) =
+        analyseContent(tagWithContent, documentable)
 
-    override fun analyseInlineTagWithContent(
-        tagWithContent: String,
-        path: String,
-        documentable: DocumentableWrapper,
-    ) = analyseContent(tagWithContent, documentable)
+    override fun analyseInlineTagWithContent(tagWithContent: String, path: String, documentable: DocumentableWrapper) =
+        analyseContent(tagWithContent, documentable)
 
     private val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
     private val dependencies: MutableSet<Edge<DocumentableWrapper>> = Collections.synchronizedSet(mutableSetOf())
     internal var analyzeQueriesToo = false
     private val analyzedDocumentables = mutableSetOf<UUID>()
 
-    private fun analyseContent(
-        line: String,
-        documentable: DocumentableWrapper,
-    ) {
+    private fun analyseContent(line: String, documentable: DocumentableWrapper) {
         val includeArguments = line.getTagArguments(tag = IncludeDocProcessor.TAG, numberOfArguments = 2)
         val includePath = includeArguments.first().decodeCallableTarget()
 
@@ -78,14 +70,12 @@ internal class IncludeDocAnalyzer :
         require(hasRun) { "analyze must be called before getAnalyzedResult" }
 
         val dag = SimpleDirectedGraph.createBuilder<DocumentableWrapper, _>(
-            Edge::class.java as Class<out Edge<DocumentableWrapper>>
-        )
-            .apply {
-                for (dep in dependencies) {
-                    addEdge(dep.from, dep.to, dep)
-                }
+            Edge::class.java as Class<out Edge<DocumentableWrapper>>,
+        ).apply {
+            for (dep in dependencies) {
+                addEdge(dep.from, dep.to, dep)
             }
-            .build()
+        }.build()
 
         return dag
     }

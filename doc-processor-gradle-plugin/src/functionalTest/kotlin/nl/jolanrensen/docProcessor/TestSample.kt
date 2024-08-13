@@ -215,7 +215,6 @@ class TestSample : DocProcessorFunctionalTest(name = "sample") {
 
     @Test
     fun `Sample Java from Kotlin`() {
-
         @Language("java")
         val otherFile = """
             package com.example.plugin;
@@ -266,7 +265,7 @@ class TestSample : DocProcessorFunctionalTest(name = "sample") {
                 AdditionalFile(
                     relativePath = "src/main/java/com/example/plugin/HelloWorld.java",
                     content = otherFile,
-                )
+                ),
             ),
             processors = processors,
         ) shouldBe expectedOutput
@@ -375,5 +374,4 @@ class TestSample : DocProcessorFunctionalTest(name = "sample") {
             language = FileLanguage.JAVA,
         ) shouldBe expectedOutput
     }
-
 }

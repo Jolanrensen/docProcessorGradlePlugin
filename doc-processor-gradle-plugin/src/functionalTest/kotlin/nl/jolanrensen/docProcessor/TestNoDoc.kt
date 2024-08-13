@@ -15,7 +15,6 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
 
     @Test
     fun `Simple no docs kotlin`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -24,14 +23,14 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
              * Hello World!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
             package com.example.plugin
             
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -42,7 +41,6 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
 
     @Test
     fun `Simple no docs java`() {
-
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -57,7 +55,7 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
                  */
                 void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -67,7 +65,7 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
             
                 void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -78,10 +76,8 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
         ) shouldBe expectedOutput
     }
 
-
     @Test
     fun `Indented no docs kotlin`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -90,14 +86,14 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
                      * Hello World!
                      */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
             package com.example.plugin
             
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -108,7 +104,6 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
 
     @Test
     fun `Indented no docs java`() {
-
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -123,7 +118,7 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
                          */
                 void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -133,7 +128,7 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
             
                 void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -146,19 +141,18 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
 
     @Test
     fun `No docs without start newline kotlin`() {
-
         @Language("kt")
         val content = """
             /**
              * Hello World!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -169,7 +163,6 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
 
     @Test
     fun `No docs without start newline java`() {
-
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -182,7 +175,7 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
                  */
                 void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -190,7 +183,7 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
             class HelloWorld {
                 void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -203,20 +196,19 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
 
     @Test
     fun `No docs without end newline kotlin`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
             /**
              * Hello World!
              */fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
             package com.example.plugin
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -227,7 +219,6 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
 
     @Test
     fun `No docs without end newline java`() {
-
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -239,7 +230,7 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
                  */
                 void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -247,7 +238,7 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
             class HelloWorld {
                 void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -260,13 +251,12 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
 
     @Test
     fun `Already no docs kotlin`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
             
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -277,7 +267,6 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
 
     @Test
     fun `Already no docs java`() {
-
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -286,7 +275,7 @@ class TestNoDoc : DocProcessorFunctionalTest(name = "no-doc") {
             
                 void helloWorld() {}
             }
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,

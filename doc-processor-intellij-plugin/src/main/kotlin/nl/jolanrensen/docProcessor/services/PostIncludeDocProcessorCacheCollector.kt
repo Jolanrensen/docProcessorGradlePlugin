@@ -4,9 +4,8 @@ import nl.jolanrensen.docProcessor.DocAnalyser
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
 
-class PostIncludeDocProcessorCacheCollector(
-    private val cacheHolder: DocumentablesByPathWithCache,
-) : DocAnalyser<Unit>() {
+class PostIncludeDocProcessorCacheCollector(private val cacheHolder: DocumentablesByPathWithCache) :
+    DocAnalyser<Unit>() {
 
     override fun getAnalyzedResult() = Unit
 

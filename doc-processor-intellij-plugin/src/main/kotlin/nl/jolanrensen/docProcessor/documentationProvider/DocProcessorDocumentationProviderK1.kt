@@ -21,7 +21,9 @@ import java.awt.Image
 import java.util.function.Consumer
 
 // K1
-class DocProcessorDocumentationProviderK1 : AbstractDocumentationProvider(), ExternalDocumentationProvider {
+class DocProcessorDocumentationProviderK1 :
+    AbstractDocumentationProvider(),
+    ExternalDocumentationProvider {
 
     init {
         println("DocProcessorDocumentationProvider created")
@@ -30,6 +32,7 @@ class DocProcessorDocumentationProviderK1 : AbstractDocumentationProvider(), Ext
     private val kotlin = KotlinDocumentationProvider()
 
     private val serviceInstances: MutableMap<Project, DocProcessorServiceK1> = mutableMapOf()
+
     private fun getService(project: Project) =
         serviceInstances.getOrPut(project) { DocProcessorServiceK1.getInstance(project) }
 
@@ -88,23 +91,20 @@ class DocProcessorDocumentationProviderK1 : AbstractDocumentationProvider(), Ext
         psiManager: PsiManager,
         `object`: Any?,
         element: PsiElement?,
-    ): PsiElement? =
-        kotlin.getDocumentationElementForLookupItem(psiManager, `object`, element)
+    ): PsiElement? = kotlin.getDocumentationElementForLookupItem(psiManager, `object`, element)
 
     override fun getDocumentationElementForLink(
         psiManager: PsiManager,
         link: String,
         context: PsiElement?,
-    ): PsiElement? =
-        kotlin.getDocumentationElementForLink(psiManager, link, context)
+    ): PsiElement? = kotlin.getDocumentationElementForLink(psiManager, link, context)
 
     @Deprecated("Deprecated in Java")
     override fun getCustomDocumentationElement(
         editor: Editor,
         file: PsiFile,
         contextElement: PsiElement?,
-    ): PsiElement? =
-        kotlin.getCustomDocumentationElement(editor, file, contextElement)
+    ): PsiElement? = kotlin.getCustomDocumentationElement(editor, file, contextElement)
 
     override fun getCustomDocumentationElement(
         editor: Editor,

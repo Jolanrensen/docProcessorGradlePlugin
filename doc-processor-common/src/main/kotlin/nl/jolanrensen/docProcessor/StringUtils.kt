@@ -20,18 +20,19 @@ fun String.lastIndexOfNot(char: Char, startIndex: Int = lastIndex): Int {
 /**
  * Removes "\" from the String, but only if it is not escaped.
  */
-fun String.removeEscapeCharacters(escapeChars: List<Char> = listOf('\\')): String = buildString {
-    var escapeNext = false
-    for (char in this@removeEscapeCharacters) {
-        if (escapeNext) {
-            escapeNext = false
-        } else if (char in escapeChars) {
-            escapeNext = true
-            continue
+fun String.removeEscapeCharacters(escapeChars: List<Char> = listOf('\\')): String =
+    buildString {
+        var escapeNext = false
+        for (char in this@removeEscapeCharacters) {
+            if (escapeNext) {
+                escapeNext = false
+            } else if (char in escapeChars) {
+                escapeNext = true
+                continue
+            }
+            append(char)
         }
-        append(char)
     }
-}
 
 /**
  * Replaces multiple ranges with their respective replacements.
@@ -65,7 +66,8 @@ fun String.replaceNonOverlappingRanges(vararg rangeToReplacement: Pair<IntRange,
 fun CharSequence.replaceAll(
     regex: Regex,
     limit: Int = 10_000,
-    intermediateReplacementChar: Char = ' ', // must not match the regex
+    // must not match the regex
+    intermediateReplacementChar: Char = ' ',
     transform: (MatchResult) -> CharSequence,
 ): String {
     var text = this.toString()
@@ -77,7 +79,9 @@ fun CharSequence.replaceAll(
             val range = it.range
             replacements[range] = transform(it).toString()
 
-            intermediateReplacementChar.toString().repeat(range.count())
+            intermediateReplacementChar
+                .toString()
+                .repeat(range.count())
                 .also { require(regex !in it) { "intermediateReplacementChar must not match the regex" } }
         }
 
@@ -123,7 +127,9 @@ fun String.getLineAndCharacterOffset(offset: Int): Pair<Int, Int> {
         if (this[i] == '\n') {
             line++
             character = 1
-        } else character++
+        } else {
+            character++
+        }
     }
 
     return Pair(line, character)

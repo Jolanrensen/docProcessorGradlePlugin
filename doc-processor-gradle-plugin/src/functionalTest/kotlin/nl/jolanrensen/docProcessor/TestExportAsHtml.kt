@@ -19,7 +19,6 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
 
     @Test
     fun `Simple Export as HTML test`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -56,7 +55,6 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
 
     @Test
     fun `Simple Export as HTML with range`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -100,7 +98,6 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
 
     @Test
     fun `Simple Export as HTML test with theme unnamed`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -137,7 +134,6 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
 
     @Test
     fun `Simple Export as HTML test with theme named`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -174,7 +170,6 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
 
     @Test
     fun `Simple Export as HTML test without theme unnamed`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -211,7 +206,6 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
 
     @Test
     fun `Simple Export as HTML test without theme named`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -248,7 +242,6 @@ class TestExportAsHtml : DocProcessorFunctionalTest("exportAsHtml") {
 
     @Test
     fun `Simple Export as HTML test without theme unnamed without stripping`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin

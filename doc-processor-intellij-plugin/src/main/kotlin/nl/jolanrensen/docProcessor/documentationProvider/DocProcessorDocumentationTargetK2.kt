@@ -40,6 +40,7 @@ class DocProcessorPsiDocumentationTargetProvider : PsiDocumentationTargetProvide
     val kotlin = KotlinPsiDocumentationTargetProvider()
 
     private val serviceInstances: MutableMap<Project, DocProcessorServiceK2> = mutableMapOf()
+
     private fun getService(project: Project) =
         serviceInstances.getOrPut(project) { DocProcessorServiceK2.getInstance(project) }
 
@@ -61,7 +62,9 @@ class DocProcessorPsiDocumentationTargetProvider : PsiDocumentationTargetProvide
 class DocProcessorDocumentationTargetProvider : DocumentationTargetProvider {
 
     fun PsiElement?.isModifier() =
-        this != null && parent is KtModifierList && KtTokens.MODIFIER_KEYWORDS_ARRAY.firstOrNull { it.value == text } != null
+        this != null &&
+            parent is KtModifierList &&
+            KtTokens.MODIFIER_KEYWORDS_ARRAY.firstOrNull { it.value == text } != null
 
     /**
      * Creates [org.jetbrains.kotlin.idea.k2.codeinsight.quickDoc.KotlinDocumentationTarget]
@@ -70,13 +73,11 @@ class DocProcessorDocumentationTargetProvider : DocumentationTargetProvider {
     val kotlinPsi = KotlinPsiDocumentationTargetProvider()
 
     private val serviceInstances: MutableMap<Project, DocProcessorServiceK2> = mutableMapOf()
+
     private fun getService(project: Project) =
         serviceInstances.getOrPut(project) { DocProcessorServiceK2.getInstance(project) }
 
-    override fun documentationTargets(
-        file: PsiFile,
-        offset: Int
-    ): List<DocumentationTarget> {
+    override fun documentationTargets(file: PsiFile, offset: Int): List<DocumentationTarget> {
         val service = getService(file.project)
         if (!service.isEnabled) return kotlin.documentationTargets(file, offset)
 
@@ -92,11 +93,10 @@ class DocProcessorDocumentationTargetProvider : DocumentationTargetProvider {
             } catch (e: Exception) {
                 e.printStackTrace()
                 null
-            }
+            },
         )
     }
 }
-
 
 class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
 
@@ -121,11 +121,11 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
             return JavaDocExternalFilter.filterInternalDocInfo(result.toString())
         }
 
-        override fun getOwnerTarget(): DocumentationTarget? =
-            kotlinPsi.documentationTarget(declaration, declaration)
+        override fun getOwnerTarget(): DocumentationTarget? = kotlinPsi.documentationTarget(declaration, declaration)
     }
 
     private val serviceInstances: MutableMap<Project, DocProcessorServiceK2> = mutableMapOf()
+
     private fun getService(project: Project) =
         serviceInstances.getOrPut(project) { DocProcessorServiceK2.getInstance(project) }
 
@@ -147,7 +147,7 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
             val comment = modified?.docComment as KDoc?
             if (comment != null) {
                 result.add(
-                    DocProcessorInlineDocumentation(comment, modified as KtDeclaration)
+                    DocProcessorInlineDocumentation(comment, modified as KtDeclaration),
                 )
             }
             true
@@ -156,10 +156,7 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
         return result
     }
 
-    override fun findInlineDocumentation(
-        file: PsiFile,
-        textRange: TextRange
-    ): InlineDocumentation? {
+    override fun findInlineDocumentation(file: PsiFile, textRange: TextRange): InlineDocumentation? {
         val service = getService(file.project)
         if (!service.isEnabled) return kotlin.findInlineDocumentation(file, textRange)
 
@@ -179,5 +176,3 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
         return null
     }
 }
-
-
