@@ -18,7 +18,6 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
 
     @Test
     fun `Simple include file kotlin`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -29,7 +28,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
              * ```
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -41,7 +40,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
              * ```
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -55,7 +54,6 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
             processors = processors,
         ) shouldBe expectedOutput
     }
-
 
     @Test
     fun `File does not exist`() {
@@ -104,7 +102,6 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
 
     @Test
     fun `Include itself block comment kotlin`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -113,7 +110,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
              * @includeFile (./test.kt)
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -128,7 +125,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
              * fun helloWorld() {}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -140,7 +137,6 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
 
     @Test
     fun `Include itself block comment java`() {
-
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -149,7 +145,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
              * @includeFile (./HelloWorld.java)
              */
             class HelloWorld {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -164,7 +160,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
              * class HelloWorld {}
              */
             class HelloWorld {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -177,7 +173,6 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
 
     @Test
     fun `Include itself inline comment kotlin`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -188,7 +183,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
              * ```
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         shouldThrowAny {
             processContent(
@@ -202,7 +197,6 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
 
     @Test
     fun `Include itself inline comment java`() {
-
         @Language("java")
         val content = """
             package com.example.plugin;
@@ -213,7 +207,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
              * ```
              */
             class HelloWorld {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("java")
         val expectedOutput = """
@@ -232,7 +226,7 @@ class TestIncludeFile : DocProcessorFunctionalTest(name = "includeFile") {
              * ```
              */
             class HelloWorld {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,

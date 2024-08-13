@@ -1,10 +1,13 @@
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("java")
     kotlin("jvm")
-    id("org.jetbrains.intellij") version "1.17.3"
+    id("org.jetbrains.intellij.platform") version "2.0.0"
     id("com.github.johnrengelman.shadow")
+    id("org.jlleitschuh.gradle.ktlint")
 }
 
 group = "nl.jolanrensen.docProcessor"
@@ -12,6 +15,9 @@ version = "0.3.11-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
     mavenLocal()
     maven("https://www.jetbrains.com/intellij-repository/snapshots") {
         mavenContent { snapshotsOnly() }
@@ -23,19 +29,14 @@ repositories {
     maven("https://www.myget.org/F/rd-snapshots/maven/")
 }
 
-tasks.patchPluginXml {
-    sinceBuild = "231"
-    untilBuild = "242.*"
-}
-
-intellij {
-    version = "2023.2.6"
-    type = "IC"
-    pluginName = "DocProcessor"
-    plugins.addAll(
-        "org.jetbrains.kotlin",
-        "com.intellij.java",
-    )
+intellijPlatform {
+    pluginConfiguration {
+        name = "DocProcessor"
+        ideaVersion {
+            sinceBuild = "231"
+            untilBuild = "242.*"
+        }
+    }
 }
 
 dependencies {
@@ -45,13 +46,25 @@ dependencies {
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-assertions-core:5.5.5")
+
+    intellijPlatform {
+        intellijIdeaCommunity("2024.2")
+        bundledPlugins(
+            "org.jetbrains.kotlin",
+            "com.intellij.java",
+        )
+        zipSigner()
+        instrumentationTools()
+        testFramework(TestFrameworkType.Platform)
+    }
 }
 
 tasks.getByName<Test>("test") {
     useJUnitPlatform()
 }
+
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "17"
+    compilerOptions.jvmTarget = JvmTarget.JVM_17
 }
 
 java {

@@ -32,7 +32,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello {@get name Dave, how are you?}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -42,7 +42,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello Dave, how are you?
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -63,7 +63,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set test1a World}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -75,7 +75,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              *
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -95,7 +95,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set name World}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -106,7 +106,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              *
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -126,7 +126,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set name World}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -137,7 +137,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              *
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -157,7 +157,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set name World}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -168,7 +168,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              *
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -187,7 +187,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello ${'$'}{name there Default}!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -197,7 +197,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello there Default!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -216,7 +216,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello ${'$'}{name=there Default}!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -226,7 +226,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello there Default!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -246,7 +246,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * @set name World
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -256,7 +256,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello World!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -275,7 +275,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello ${'$'}name=Default!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -285,7 +285,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello Default!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -304,7 +304,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello ${'$'}name Default!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -314,7 +314,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello  Default!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -334,7 +334,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * @set `name` World
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -344,7 +344,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello World!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -363,7 +363,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello {@get name}!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -373,7 +373,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello !
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -392,7 +392,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello ${'$'}{name}!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -402,7 +402,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello !
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -423,7 +423,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set name World}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -435,7 +435,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              *
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -456,7 +456,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * @set name World
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -466,7 +466,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello World!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -488,7 +488,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set name Everyone}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -498,7 +498,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello World!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -520,7 +520,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set [Key] World}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -533,7 +533,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              *
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -559,7 +559,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * yeah
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -573,7 +573,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * yeah!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -584,7 +584,6 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
 
     @Test
     fun `Block notation with default`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -596,7 +595,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * @get [Key] How are you?
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -609,7 +608,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * How are you?
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -620,7 +619,6 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
 
     @Test
     fun `Block notation no default`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -633,7 +631,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * @comment
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -645,7 +643,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello World!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -667,7 +665,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set [Key] World}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -680,7 +678,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              *
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -706,7 +704,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set [Key] World!}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -719,7 +717,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              *
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -741,7 +739,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * {@set [Key] {World\}}
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -754,7 +752,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              *
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -775,7 +773,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
              * Hello {@get [Key]}!
              */
             fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val content = """
@@ -783,7 +781,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             
             /** @include [helloWorld] {@set [Key] World} */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val expectedOutput = """
@@ -791,7 +789,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
             
             /** Hello World! */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             content = content,
@@ -799,7 +797,7 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
                 AdditionalFile(
                     relativePath = "src/main/kotlin/com/example/plugin/Test2.kt",
                     content = otherFile,
-                )
+                ),
             ),
             packageName = "com.example.plugin",
             processors = processors,
@@ -927,8 +925,10 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
         "\$key no more key".replaceDollarNotation() shouldBe "{@get key} no more key"
         "\$[key] \$[key2] \$[key3]".replaceDollarNotation() shouldBe "{@get [key]} {@get [key2]} {@get [key3]}"
         "a\${a}a\${a}a".replaceDollarNotation() shouldBe "a{@get a}a{@get a}a"
-        "\$[anything [] goes {}[a][test] ][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@get [anything [] goes {}[a][test] ][replaceDollarNotation]}"
-        "\$[hello[[[`]]]` there][replaceDollarNotation]".replaceDollarNotation() shouldBe "{@get [hello[[[`]]]` there][replaceDollarNotation]}"
+        "\$[anything [] goes {}[a][test] ][replaceDollarNotation]".replaceDollarNotation() shouldBe
+            "{@get [anything [] goes {}[a][test] ][replaceDollarNotation]}"
+        "\$[hello[[[`]]]` there][replaceDollarNotation]".replaceDollarNotation() shouldBe
+            "{@get [hello[[[`]]]` there][replaceDollarNotation]}"
         "{@set \$a test}".replaceDollarNotation() shouldBe "{@set {@get a} test}"
         "Hello \$name!".replaceDollarNotation() shouldBe "Hello {@get name}!"
 
@@ -938,21 +938,27 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
         "a\${a= b c}a".replaceDollarNotation() shouldBe "a{@get a  b c}a"
         "a\${test=test\\test}".replaceDollarNotation() shouldBe "a{@get test test\\test}"
         "a\${test test=test}".replaceDollarNotation() shouldBe "a{@get test test=test}"
-        "\${[test with spaces][function]=something}".replaceDollarNotation() shouldBe "{@get [test with spaces][function] something}"
-        "\${hi=\${test} \${\$hi=2}}".also(::println).replaceDollarNotation() shouldBe "{@get hi {@get test} {@get {@get hi 2}}}"
+        "\${[test with spaces][function]=something}".replaceDollarNotation() shouldBe
+            "{@get [test with spaces][function] something}"
+        "\${hi=\${test} \${\$hi=2}}".also(::println).replaceDollarNotation() shouldBe
+            "{@get hi {@get test} {@get {@get hi 2}}}"
     }
 
     @Test
     fun `Using it for ${} notation`() {
         "\${spaces}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("spaces", null)
-        "\${anything here with or without spaces}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("anything", null)
-        "\${[unless spaces are in][Aliases]}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[unless spaces are in][Aliases]", null)
+        "\${anything here with or without spaces}".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("anything", null)
+        "\${[unless spaces are in][Aliases]}".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("[unless spaces are in][Aliases]", null)
         "\${someKey}blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
         "\${someKey{}blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
 
         "\${spaces=}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("spaces", "")
-        "\${anything=here with or without spaces}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("anything", "here with or without spaces")
-        "\${[unless spaces are in][Aliases]=test}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[unless spaces are in][Aliases]", "test")
+        "\${anything=here with or without spaces}".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("anything", "here with or without spaces")
+        "\${[unless spaces are in][Aliases]=test}".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("[unless spaces are in][Aliases]", "test")
         "\${someKey}=blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
         "\${someKey=}blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", "")
         "\${someKey{}=blahblah}".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
@@ -962,20 +968,26 @@ class TestArg : DocProcessorFunctionalTest(name = "arg") {
     @Test
     fun `Using it for $ notation`() {
         "\$anything here without spaces".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("anything", null)
-        "\$[anything [] goes {}[a][test] ][replaceDollarNotation] blah".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[anything [] goes {}[a][test] ][replaceDollarNotation]", null)
+        "\$[anything [] goes {}[a][test] ][replaceDollarNotation] blah".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("[anything [] goes {}[a][test] ][replaceDollarNotation]", null)
         "\$[key] \$[key2] \$[key3]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[key]", null)
         "\$key no more key".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("key", null)
-        "\$`some\nlarge key <>` that ends there".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("`some\nlarge key <>`", null)
+        "\$`some\nlarge key <>` that ends there".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("`some\nlarge key <>`", null)
 
         // rogue }
         "\$someKey}blahblah".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
         "\$someKey{}b".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", null)
 
         // =
-        "\$someKey=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("someKey", "[hi there][test]")
-        "\$[hi there][test]=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[hi there][test]", "[hi there][test]")
-        "\$[hi there][test][test2]=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[hi there][test]", null)
-        "\$[hi there][test]\\[test2\\]=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("[hi there][test]\\[test2\\]", "[hi there][test]")
+        "\$someKey=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("someKey", "[hi there][test]")
+        "\$[hi there][test]=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("[hi there][test]", "[hi there][test]")
+        "\$[hi there][test][test2]=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("[hi there][test]", null)
+        "\$[hi there][test]\\[test2\\]=[hi there][test][test12]".findKeyAndValueFromDollarSign() shouldBe
+            KeyAndValue("[hi there][test]\\[test2\\]", "[hi there][test]")
 
         // rando { without }
         "\${hello=there".findKeyAndValueFromDollarSign() shouldBe KeyAndValue("", null)

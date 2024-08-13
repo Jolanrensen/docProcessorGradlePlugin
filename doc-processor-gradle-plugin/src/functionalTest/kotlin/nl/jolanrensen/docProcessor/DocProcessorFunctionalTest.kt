@@ -60,7 +60,8 @@ abstract class DocProcessorFunctionalTest(name: String) {
             TYPEALIAS,
             FILE,
         )
-        annotation class ${ExcludeFromSources::class.simpleName}""".trimIndent()
+        annotation class ${ExcludeFromSources::class.simpleName}
+    """.trimIndent()
 
     @Language("kts")
     private val settingsFile = """
@@ -74,7 +75,8 @@ abstract class DocProcessorFunctionalTest(name: String) {
     """.trimIndent()
 
     @Language("kts")
-    private fun getBuildFileContent(processors: List<String>, plugins: List<String>): String = """
+    private fun getBuildFileContent(processors: List<String>, plugins: List<String>): String =
+        """
         import nl.jolanrensen.docProcessor.gradle.*
         import nl.jolanrensen.docProcessor.defaultProcessors.*
         
@@ -92,9 +94,15 @@ abstract class DocProcessorFunctionalTest(name: String) {
         val processKdocMain by creatingProcessDocTask(sources = kotlinMainSources) {
             
             dependencies {
-                ${if (plugins.isEmpty()) "" else """
+                ${
+            if (plugins.isEmpty()) {
+                ""
+            } else {
+                """
                     ${plugins.joinToString("\n") { "plugin(\"$it\")" }}
-                """.trimIndent()}
+                """.trimIndent()
+            }
+        }
             }
            
             arguments += ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false
@@ -112,13 +120,14 @@ abstract class DocProcessorFunctionalTest(name: String) {
                 languageVersion.set(JavaLanguageVersion.of(8))
             }
         }
-    """.trimIndent()
+        """.trimIndent()
 
     protected val projectDirectory = File("build/$name")
     protected val outputDirectory = File(projectDirectory, "build/docProcessor/processKdocMain")
 
     enum class FileLanguage {
-        JAVA, KOTLIN
+        JAVA,
+        KOTLIN,
     }
 
     sealed interface Additional {
@@ -130,10 +139,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
         val content: String,
     ) : Additional
 
-    class AdditionalDirectory(
-        override val relativePath: String = "src/main/kotlin/com/example/plugin",
-    ) : Additional
-
+    class AdditionalDirectory(override val relativePath: String = "src/main/kotlin/com/example/plugin") : Additional
 
     /**
      * This function allows you to process content with any given processors.
@@ -210,19 +216,17 @@ abstract class DocProcessorFunctionalTest(name: String) {
     /**
      * Returns the relative path for the given [packageName] and [language].
      */
-    private fun getRelativePath(
-        language: FileLanguage,
-        packageName: String
-    ): String = buildString {
-        append("src/main/")
-        append(
-            when (language) {
-                FileLanguage.JAVA -> "java/"
-                FileLanguage.KOTLIN -> "kotlin/"
-            }
-        )
-        append(packageName.replace('.', '/'))
-    }
+    private fun getRelativePath(language: FileLanguage, packageName: String): String =
+        buildString {
+            append("src/main/")
+            append(
+                when (language) {
+                    FileLanguage.JAVA -> "java/"
+                    FileLanguage.KOTLIN -> "kotlin/"
+                },
+            )
+            append(packageName.replace('.', '/'))
+        }
 
     /**
      * Returns the file name with the correct extension for the given [fileName] and [language].

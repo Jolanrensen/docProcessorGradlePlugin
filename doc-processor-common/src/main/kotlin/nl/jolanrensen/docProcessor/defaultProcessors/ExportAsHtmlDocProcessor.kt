@@ -33,6 +33,7 @@ class ExportAsHtmlDocProcessor : TagDocProcessor() {
         EXPORT_AS_HTML_START,
         EXPORT_AS_HTML_END,
     )
+
     override fun tagIsSupported(tag: String): Boolean = tag in tags
 
     override fun processBlockTagWithContent(
@@ -56,10 +57,7 @@ class ExportAsHtmlDocProcessor : TagDocProcessor() {
         return ""
     }
 
-    private fun updateHtmlRangeInDoc(
-        tag: String,
-        documentable: DocumentableWrapper,
-    ) {
+    private fun updateHtmlRangeInDoc(tag: String, documentable: DocumentableWrapper) {
         require(documentable is MutableDocumentableWrapper) {
             "DocumentableWrapper must be MutableDocumentableWrapper to use this processor."
         }

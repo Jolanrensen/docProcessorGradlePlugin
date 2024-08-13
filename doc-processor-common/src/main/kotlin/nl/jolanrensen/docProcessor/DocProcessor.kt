@@ -3,8 +3,7 @@ package nl.jolanrensen.docProcessor
 import mu.KLogger
 import mu.KotlinLogging
 import java.io.Serializable
-import java.util.Collections.emptyIterator
-import java.util.*
+import java.util.ServiceLoader
 import kotlin.jvm.Throws
 
 /**
@@ -38,27 +37,24 @@ abstract class DocProcessor : Serializable {
      * @param documentablesByPath Documentables by path
      * @return modified docs by path
      */
-    protected abstract fun process(
-        processLimit: Int,
-        documentablesByPath: DocumentablesByPath,
-    ): DocumentablesByPath
+    protected abstract fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath
 
     // ensuring each doc processor instance is only run once
     protected var hasRun = false
 
     // ensuring each doc processor instance is only run once
     @Throws(DocProcessorFailedException::class)
-    fun processSafely(
-        processLimit: Int,
-        documentablesByPath: DocumentablesByPath,
-    ): DocumentablesByPath {
+    fun processSafely(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath {
         if (hasRun) error("This instance of ${this::class.qualifiedName} has already run and cannot be reused.")
 
         return try {
             process(processLimit, documentablesByPath).withoutFilters()
         } catch (e: Throwable) {
-            if (e is DocProcessorFailedException) throw e
-            else throw DocProcessorFailedException(name, cause = e)
+            if (e is DocProcessorFailedException) {
+                throw e
+            } else {
+                throw DocProcessorFailedException(name, cause = e)
+            }
         } finally {
             hasRun = true
         }
@@ -83,7 +79,9 @@ fun findProcessors(fullyQualifiedNames: List<String>, arguments: Map<String, Any
         }.map {
             // create a new instance of the processor, so it can safely be used multiple times
             // also pass on the arguments
-            it::class.java.getDeclaredConstructor().newInstance()
+            it::class.java
+                .getDeclaredConstructor()
+                .newInstance()
                 .also { it.arguments = arguments }
         }
 

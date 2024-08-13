@@ -11,12 +11,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
-import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiPolyVariantReference
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
 import nl.jolanrensen.docProcessor.ExportAsHtml
 import nl.jolanrensen.docProcessor.MessageBundle
+import nl.jolanrensen.docProcessor.Mode
 import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.TagDocProcessorFailedException
 import nl.jolanrensen.docProcessor.annotationNames
@@ -32,31 +33,35 @@ import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.docComment
+import nl.jolanrensen.docProcessor.docProcessorIsEnabled
 import nl.jolanrensen.docProcessor.findProcessors
 import nl.jolanrensen.docProcessor.getOrigin
+import nl.jolanrensen.docProcessor.mode
 import nl.jolanrensen.docProcessor.programmingLanguage
 import nl.jolanrensen.docProcessor.renderToHtml
 import nl.jolanrensen.docProcessor.toDoc
-import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
-import org.jetbrains.kotlin.idea.caches.resolve.safeAnalyzeNonSourceRootCode
-import org.jetbrains.kotlin.idea.codeInsight.DescriptorToSourceUtilsIde
+import org.jetbrains.kotlin.idea.base.psi.copied
 import org.jetbrains.kotlin.idea.kdoc.KDocElementFactory
-import org.jetbrains.kotlin.idea.kdoc.resolveKDocLink
+import org.jetbrains.kotlin.kdoc.psi.impl.KDocName
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
-import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.calls.util.getValueArgumentsInParentheses
-import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
 import java.io.File
 import java.util.concurrent.CancellationException
+import kotlin.collections.flatMap
+import kotlin.reflect.KType
+import kotlin.reflect.typeOf
 
 @Service(Service.Level.PROJECT)
-class DocProcessorService(private val project: Project) {
+class DocProcessorServiceK2(private val project: Project) {
 
-    private val logger = logger<DocProcessorService>()
+    /**
+     * See [DocProcessorServiceK2]
+     */
+    private val logger = logger<DocProcessorServiceK2>()
 
     companion object {
-        fun getInstance(project: Project): DocProcessorService = project.service()
+        fun getInstance(project: Project): DocProcessorServiceK2 = project.service()
     }
 
     // TODO make configurable
@@ -65,49 +70,87 @@ class DocProcessorService(private val project: Project) {
     /**
      * Determines whether the DocProcessor is enabled or disabled.
      */
-    var isEnabled = true
-        set(value) {
-            field = value
-            thisLogger().info(if (value) "DocProcessor enabled." else "DocProcessor disabled.")
+    val isEnabled get() = docProcessorIsEnabled && mode == Mode.K2
+
+    fun PsiElement.allChildren(): List<PsiElement> = children.toList() + children.flatMap { it.allChildren() }
+
+    fun PsiElement.allChildrenOfType(kType: KType): List<PsiElement> =
+        children.filter { it::class == kType.classifier } +
+            children.flatMap { it.allChildrenOfType(kType) }
+
+    /**
+     * Resolves a KDoc link from a context by copying the context, adding
+     * a new KDoc with just the link there, then resolve it, finally restoring the original.
+     */
+    private fun resolveKDocLink(link: String, context: PsiElement): List<PsiElement> {
+        // Create a copy of the element, so we can modify it
+        val psiElement = try {
+            context.copiedWithFile()
+        } catch (_: Exception) {
+            null
+        } ?: return emptyList()
+
+        val originalComment = psiElement.docComment
+
+        try {
+            val newComment = KDocElementFactory(project)
+                .createKDocFromText("/**[$link]*/")
+
+            val newCommentInContext =
+                if (psiElement.docComment != null) {
+                    psiElement.docComment!!.replace(newComment)
+                } else {
+                    psiElement.addBefore(newComment, psiElement.firstChild)
+                }
+
+            // KDocLink is `[X.Y]`, KDocNames are X, X.Y, for some reason
+            return newCommentInContext
+                .allChildrenOfType(typeOf<KDocName>())
+                .maxBy { it.text.length }
+                .let {
+                    when (val ref = it.reference) {
+                        is PsiPolyVariantReference -> ref.multiResolve(false).mapNotNull { it?.element }
+                        else -> listOfNotNull(ref?.resolve())
+                    }
+                }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return emptyList()
+        } finally {
+            // restore the original docComment state so the text range is still correct
+            if (originalComment == null) {
+                psiElement.docComment!!.delete()
+            } else {
+                psiElement.docComment!!.replace(originalComment.copied())
+            }
         }
+    }
 
     /**
      * Helper function that queries the project for reference links and returns them as a list of DocumentableWrappers.
      */
     private fun query(context: PsiElement, link: String): List<DocumentableWrapper>? {
         logger.debug { "querying intellij for: $link, from ${(context.navigationElement as? KtElement)?.name}" }
-        val psiManager = PsiManager.getInstance(project)
 
-        val descriptors = when (val navElement = context.navigationElement) {
+        val kaSymbols = when (val navElement = context.navigationElement) {
             is KtElement -> {
-                val resolutionFacade = navElement.getResolutionFacade()
-                val bindingContext = navElement.safeAnalyzeNonSourceRootCode(resolutionFacade, BodyResolveMode.PARTIAL)
-                val contextDescriptor =
-                    bindingContext[BindingContext.DECLARATION_TO_DESCRIPTOR, navElement] ?: return null
-
                 resolveKDocLink(
-                    context = bindingContext,
-                    resolutionFacade = resolutionFacade,
-                    fromDescriptor = contextDescriptor,
-                    contextElement = navElement,
-                    fromSubjectOfTag = null,
-                    qualifiedName = link.split('.'),
+                    link = link,
+                    context = navElement,
                 )
             }
 
             else -> error("Java not supported yet.")
         }
 
-        val targets = descriptors
-            .flatMap { DescriptorToSourceUtilsIde.getAllDeclarations(psiManager.project, it) }
-            .map {
-                when (it) {
-                    is KtDeclaration, is PsiDocCommentOwner ->
-                        DocumentableWrapper.createFromIntellijOrNull(it)
+        val targets = kaSymbols.map {
+            when (it) {
+                is KtDeclaration, is PsiDocCommentOwner ->
+                    DocumentableWrapper.createFromIntellijOrNull(it, useK2 = true)
 
-                    else -> null
-                }
+                else -> null
             }
+        }
 
         return when {
             // No declarations found in entire project, so null
@@ -150,14 +193,18 @@ class DocProcessorService(private val project: Project) {
         }
 
         // If the new doc is not empty, generate a new doc element
-        val newComment = when (originalElement.programmingLanguage) {
-            ProgrammingLanguage.KOTLIN ->
-                KDocElementFactory(project)
-                    .createKDocFromText(newDocContent.toDoc())
+        val newComment = try {
+            when (originalElement.programmingLanguage) {
+                ProgrammingLanguage.KOTLIN ->
+                    KDocElementFactory(project)
+                        .createKDocFromText(newDocContent.toDoc())
 
-            ProgrammingLanguage.JAVA ->
-                PsiElementFactory.getInstance(project)
-                    .createDocCommentFromText(newDocContent.toDoc())
+                ProgrammingLanguage.JAVA ->
+                    PsiElementFactory.getInstance(project)
+                        .createDocCommentFromText(newDocContent.toDoc())
+            }
+        } catch (_: Exception) {
+            return null
         }
 
         // Replace the old doc element with the new one if it exists, otherwise add a new one
@@ -181,7 +228,7 @@ class DocProcessorService(private val project: Project) {
     private fun getDocContent(psiElement: PsiElement): String? {
         return try {
             // Create a DocumentableWrapper from the element
-            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement)
+            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement, useK2 = true)
             if (documentableWrapper == null) {
                 thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
                 return null
@@ -191,16 +238,24 @@ class DocProcessorService(private val project: Project) {
             logger.debug { "\n\n" }
 
             if (!needsRebuild) {
-                logger.debug { "loading fully cached ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}" }
+                logger.debug {
+                    "loading fully cached ${
+                        documentableWrapper.fullyQualifiedPath
+                    }/${documentableWrapper.fullyQualifiedExtensionPath}"
+                }
                 return documentableCache.getDocContentResult(documentableWrapper.identifier)!!
             }
-            logger.debug { "preprocessing ${documentableWrapper.fullyQualifiedPath}/${documentableWrapper.fullyQualifiedExtensionPath}" }
+            logger.debug {
+                "preprocessing ${
+                    documentableWrapper.fullyQualifiedPath
+                }/${documentableWrapper.fullyQualifiedExtensionPath}"
+            }
 
             // Process the DocumentablesByPath
             val results = processDocumentablesByPath(documentableCache)
 
             // Retrieve the original DocumentableWrapper from the results
-            val doc = results[documentableWrapper.identifier] ?: return null //error("Something went wrong")
+            val doc = results[documentableWrapper.identifier] ?: return null
 
             documentableCache.updatePostProcessing()
 
@@ -215,9 +270,9 @@ class DocProcessorService(private val project: Project) {
             } else {
                 doc.docContent
             }
-        } catch (e: ProcessCanceledException) {
+        } catch (_: ProcessCanceledException) {
             return null
-        } catch (e: CancellationException) {
+        } catch (_: CancellationException) {
             return null
         } catch (e: TagDocProcessorFailedException) {
 //            e.printStackTrace()
@@ -227,14 +282,17 @@ class DocProcessorService(private val project: Project) {
 //            e.printStackTrace()
 
             // instead of throwing the exception, render it inside the kdoc
-            "```\n$e\n```"
+            """
+            |```
+            |$e
+            |
+            |${e.stackTrace.joinToString("\n")}
+            |```
+            """.trimMargin()
         }
     }
 
-    private fun exportToHtmlFile(
-        psiElement: PsiElement,
-        doc: DocumentableWrapper,
-    ): File {
+    private fun exportToHtmlFile(psiElement: PsiElement, doc: DocumentableWrapper): File {
         val annotationArgs = (psiElement as? KtDeclaration)
             ?.annotationEntries
             ?.firstOrNull { ExportAsHtml::class.simpleName!! in it.shortName!!.asString() }

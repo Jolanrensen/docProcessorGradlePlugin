@@ -14,7 +14,8 @@ class TestStringUtils {
             Examples:
             `\${'$'}["store"]["book"][*]["author"]`
             
-            `\${'$'}[1]` will match `\${'$'}[*]`""".trimIndent()
+            `\${'$'}[1]` will match `\${'$'}[*]`
+        """.trimIndent()
 
         println(content.removeEscapeCharacters())
     }
@@ -45,11 +46,12 @@ class TestStringUtils {
         )
 
         someText.replaceNonOverlappingRanges(*replacements) shouldBe
-                """
+            """
                     Hi World
                     This is some other text then before.
                     It has many lines.
-                    I hope you like it.""".trimIndent()
+                    I hope you like it.
+            """.trimIndent()
     }
 
     @Test
@@ -58,7 +60,8 @@ class TestStringUtils {
             [H[ello] [World]!
             This is [text][text].
             It has many lines [NewPath] [Not processed] [Also\].
-            I hope you [like][it] [right?]""".trimIndent()
+            I hope you [like][it] [right?]
+        """.trimIndent()
 
         val res = someText.replaceKdocLinks { "NewPath" }
 
@@ -66,7 +69,8 @@ class TestStringUtils {
             [H[ello][NewPath] [World][NewPath]!
             This is [text][NewPath].
             It has many lines [NewPath] [Not processed] [Also\].
-            I hope you [like][NewPath] [right?][NewPath]""".trimIndent()
+            I hope you [like][NewPath] [right?][NewPath]
+        """.trimIndent()
     }
 
     @Test

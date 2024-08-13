@@ -1,13 +1,12 @@
 package nl.jolanrensen.docProcessor
 
-import java.util.*
+import java.util.UUID
 
 typealias DocumentableWrapperFilter = (DocumentableWrapper) -> Boolean
 
 @Suppress("ClassName")
 internal data object NO_FILTER : DocumentableWrapperFilter {
     override fun invoke(p1: DocumentableWrapper): Boolean = true
-
 }
 
 interface DocumentablesByPath {
@@ -35,13 +34,13 @@ interface DocumentablesByPath {
      * Returns `null` if no [DocumentableWrapper] is found for the given [path] and [path]
      * does not exist in the project.
      */
-    fun query(
-        path: String,
-        queryContext: DocumentableWrapper,
-        canBeCache: Boolean = false,
-    ): List<DocumentableWrapper>?
+    fun query(path: String, queryContext: DocumentableWrapper, canBeCache: Boolean = false): List<DocumentableWrapper>?
 
-    @Deprecated("Use query instead", ReplaceWith("query(path, queryContext, canBeCache)"), level = DeprecationLevel.ERROR)
+    @Deprecated(
+        "Use query instead",
+        ReplaceWith("query(path, queryContext, canBeCache)"),
+        level = DeprecationLevel.ERROR,
+    )
     operator fun get(
         path: String,
         queryContext: DocumentableWrapper,
@@ -67,8 +66,7 @@ interface DocumentablesByPath {
     companion object {
         val EMPTY: DocumentablesByPath = DocumentablesByPathFromMap(emptyMap())
 
-        fun of(map: Map<String, List<DocumentableWrapper>>): DocumentablesByPath =
-            DocumentablesByPathFromMap(map)
+        fun of(map: Map<String, List<DocumentableWrapper>>): DocumentablesByPath = DocumentablesByPathFromMap(map)
 
         fun of(map: Map<String, List<MutableDocumentableWrapper>>): MutableDocumentablesByPath =
             MutableDocumentablesByPathFromMap(map)
@@ -87,8 +85,7 @@ interface MutableDocumentablesByPath : DocumentablesByPath {
         path: String,
         queryContext: DocumentableWrapper,
         canBeCache: Boolean,
-    ): List<MutableDocumentableWrapper>? =
-        query(path, queryContext, canBeCache)
+    ): List<MutableDocumentableWrapper>? = query(path, queryContext, canBeCache)
 
     override operator fun get(identifier: UUID): MutableDocumentableWrapper? =
         documentablesToProcess.values
@@ -116,6 +113,7 @@ fun <T : DocumentablesByPath> T.withoutFilters(): T =
     }
 
 fun Map<String, List<DocumentableWrapper>>.toDocumentablesByPath(): DocumentablesByPath = DocumentablesByPath.of(this)
+
 fun Iterable<Pair<String, List<DocumentableWrapper>>>.toDocumentablesByPath(): DocumentablesByPath =
     toMap().toDocumentablesByPath()
 
@@ -135,5 +133,4 @@ internal fun Map<String, List<DocumentableWrapper>>.toMutable(): Map<String, Lis
         }
     }
 
-fun <K, V> MutableMap<K, MutableList<V>>.add(key: K, value: V) =
-    getOrPut(key) { mutableListOf() }.add(value)
+fun <K, V> MutableMap<K, MutableList<V>>.add(key: K, value: V) = getOrPut(key) { mutableListOf() }.add(value)

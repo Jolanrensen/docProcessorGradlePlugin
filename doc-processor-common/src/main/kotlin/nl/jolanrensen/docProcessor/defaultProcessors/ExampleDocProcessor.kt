@@ -7,8 +7,7 @@ import nl.jolanrensen.docProcessor.getTagArguments
 class ExampleDocProcessor : TagDocProcessor() {
 
     /** We'll intercept @example tags. */
-    override fun tagIsSupported(tag: String): Boolean =
-        tag == "example"
+    override fun tagIsSupported(tag: String): Boolean = tag == "example"
 
     /** How `{@inner tags}` are processed. */
     override fun processInlineTagWithContent(
@@ -26,7 +25,6 @@ class ExampleDocProcessor : TagDocProcessor() {
 
     // We can use the same function for both processInnerTagWithContent and processTagWithContent
     private fun processContent(tagWithContent: String): String {
-
         // We can log stuff if we want to using https://github.com/oshai/kotlin-logging
         logger.info { "Hi from the example logs!" }
 
@@ -37,11 +35,13 @@ class ExampleDocProcessor : TagDocProcessor() {
             .trimEnd() // remove trailing whitespaces/newlines
 
         // While we can play with the other arguments, let's just return some simple modified content
-        var newContent = "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
+        var newContent =
+            "Hi from the example doc processor! Here's the content after the @example tag: \"$contentWithoutTag\""
 
         // Since we trimmed all trailing newlines from the content, we'll add one back if they were there.
-        if (tagWithContent.endsWith("\n"))
+        if (tagWithContent.endsWith("\n")) {
             newContent += "\n"
+        }
 
         return newContent
     }

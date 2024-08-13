@@ -1,7 +1,19 @@
 package nl.jolanrensen.docProcessor
 
-import kotlin.annotation.AnnotationTarget.*
 import nl.jolanrensen.docProcessor.defaultProcessors.ExportAsHtmlDocProcessor
+import kotlin.annotation.AnnotationTarget.ANNOTATION_CLASS
+import kotlin.annotation.AnnotationTarget.CLASS
+import kotlin.annotation.AnnotationTarget.CONSTRUCTOR
+import kotlin.annotation.AnnotationTarget.FIELD
+import kotlin.annotation.AnnotationTarget.FILE
+import kotlin.annotation.AnnotationTarget.FUNCTION
+import kotlin.annotation.AnnotationTarget.LOCAL_VARIABLE
+import kotlin.annotation.AnnotationTarget.PROPERTY
+import kotlin.annotation.AnnotationTarget.PROPERTY_GETTER
+import kotlin.annotation.AnnotationTarget.PROPERTY_SETTER
+import kotlin.annotation.AnnotationTarget.TYPE
+import kotlin.annotation.AnnotationTarget.TYPEALIAS
+import kotlin.annotation.AnnotationTarget.VALUE_PARAMETER
 
 /**
  * Example `ExportAsHtml` annotation.
@@ -34,7 +46,4 @@ import nl.jolanrensen.docProcessor.defaultProcessors.ExportAsHtmlDocProcessor
     TYPEALIAS,
     FILE,
 )
-annotation class ExportAsHtml(
-    val theme: Boolean = true,
-    val stripReferences: Boolean = true,
-)
+annotation class ExportAsHtml(val theme: Boolean = true, val stripReferences: Boolean = true)

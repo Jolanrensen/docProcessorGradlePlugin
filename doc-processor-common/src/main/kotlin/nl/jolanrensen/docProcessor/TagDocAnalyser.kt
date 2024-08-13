@@ -6,17 +6,9 @@ package nl.jolanrensen.docProcessor
  */
 abstract class TagDocAnalyser<out R> : TagDocProcessor() {
 
-    abstract fun analyseBlockTagWithContent(
-        tagWithContent: String,
-        path: String,
-        documentable: DocumentableWrapper,
-    )
+    abstract fun analyseBlockTagWithContent(tagWithContent: String, path: String, documentable: DocumentableWrapper)
 
-    abstract fun analyseInlineTagWithContent(
-        tagWithContent: String,
-        path: String,
-        documentable: DocumentableWrapper,
-    )
+    abstract fun analyseInlineTagWithContent(tagWithContent: String, path: String, documentable: DocumentableWrapper)
 
     abstract fun getAnalyzedResult(): R
 
@@ -43,10 +35,8 @@ abstract class TagDocAnalyser<out R> : TagDocProcessor() {
         return tagWithContent
     }
 
-    protected final fun analyzeDocumentable(
-        documentable: DocumentableWrapper,
-        processLimit: Int,
-    ): Boolean = processDocumentable(documentable.toMutable(), processLimit)
+    protected final fun analyzeDocumentable(documentable: DocumentableWrapper, processLimit: Int): Boolean =
+        processDocumentable(documentable.toMutable(), processLimit)
 
     final override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath =
         super.process(processLimit, documentablesByPath)
@@ -56,8 +46,9 @@ abstract class TagDocAnalyser<out R> : TagDocProcessor() {
         val processLimitReached = i >= processLimit
 
         // Throw error if process limit is reached or if supported tags keep being present but no modifications are made
-        if (processLimitReached)
+        if (processLimitReached) {
             onProcessError()
+        }
 
         return false
     }

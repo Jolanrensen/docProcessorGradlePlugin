@@ -31,7 +31,6 @@ abstract class TagDocProcessor : DocProcessor() {
     val DocumentableWrapper.hasSupportedTag
         get() = tags.any(::tagIsSupported)
 
-
     protected lateinit var mutableDocumentablesByPath: MutableDocumentablesByPath
 
     /**
@@ -90,11 +89,7 @@ abstract class TagDocProcessor : DocProcessor() {
      * @return `true` if recursion limit is reached, `false` otherwise.
      */
     @Throws(IllegalStateException::class)
-    open fun shouldContinue(
-        i: Int,
-        anyModifications: Boolean,
-        processLimit: Int,
-    ): Boolean {
+    open fun shouldContinue(i: Int, anyModifications: Boolean, processLimit: Int): Boolean {
         val processLimitReached = i >= processLimit
 
         val hasSupportedTags = mutableDocumentablesByPath
@@ -104,8 +99,9 @@ abstract class TagDocProcessor : DocProcessor() {
         val tagsArePresentButNoModifications = hasSupportedTags && !anyModifications && atLeastOneRun
 
         // Throw error if process limit is reached or if supported tags keep being present but no modifications are made
-        if (processLimitReached || tagsArePresentButNoModifications)
+        if (processLimitReached || tagsArePresentButNoModifications) {
             onProcessError()
+        }
 
         return hasSupportedTags
     }
@@ -154,10 +150,7 @@ abstract class TagDocProcessor : DocProcessor() {
      * filtered documentables. This means that recursion (a.k.a tags that create other supported tags)
      * is possible. However, there is a limit to prevent infinite recursion ([ProcessDocsAction.Parameters.processLimit]).
      */
-    override fun process(
-        processLimit: Int,
-        documentablesByPath: DocumentablesByPath,
-    ): DocumentablesByPath {
+    override fun process(processLimit: Int, documentablesByPath: DocumentablesByPath): DocumentablesByPath {
         // Convert to mutable
         mutableDocumentablesByPath = documentablesByPath
             .toMutable()
@@ -178,12 +171,17 @@ abstract class TagDocProcessor : DocProcessor() {
             var anyModifications = false
             if (canProcessParallel) {
                 runBlocking {
-                    anyModifications = filteredDocumentablesWithTag.mapNotNull { documentable ->
-                        if (!documentable.hasSupportedTag) null
-                        else async {
-                            processDocumentable(documentable, processLimit)
-                        }
-                    }.awaitAll().any { it }
+                    anyModifications = filteredDocumentablesWithTag
+                        .mapNotNull { documentable ->
+                            if (!documentable.hasSupportedTag) {
+                                null
+                            } else {
+                                async {
+                                    processDocumentable(documentable, processLimit)
+                                }
+                            }
+                        }.awaitAll()
+                        .any { it }
                 }
             } else {
                 for (documentable in filteredDocumentablesWithTag) {
@@ -203,10 +201,7 @@ abstract class TagDocProcessor : DocProcessor() {
         return mutableDocumentablesByPath
     }
 
-    protected fun processDocumentable(
-        documentable: MutableDocumentableWrapper,
-        processLimit: Int,
-    ): Boolean {
+    protected fun processDocumentable(documentable: MutableDocumentableWrapper, processLimit: Int): Boolean {
         val docContent = documentable.docContent
         val processedDoc = processTagsInContent(
             docContent = docContent,
@@ -295,8 +290,8 @@ abstract class TagDocProcessor : DocProcessor() {
             .map { (split, rangeDocContent) ->
                 val shouldProcess =
                     split.trimStart().startsWith("@") &&
-                            split.getTagNameOrNull()
-                                ?.let(::tagIsSupported) == true
+                        split.getTagNameOrNull()
+                            ?.let(::tagIsSupported) == true
 
                 if (shouldProcess) {
                     try {
@@ -323,8 +318,7 @@ abstract class TagDocProcessor : DocProcessor() {
                 list.filterIndexed { i, it ->
                     i == 0 || i == list.lastIndex || it.isNotEmpty()
                 }
-            }
-            .joinToString("\n")
+            }.joinToString("\n")
 
         return processedDoc
     }
@@ -342,16 +336,16 @@ open class TagDocProcessorFailedException(
     val rangeInCurrentDoc: IntRange,
     cause: Throwable? = null,
 ) : DocProcessorFailedException(
-    processorName = processorName,
-    cause = cause,
-    message = renderMessage(
-        documentable = documentable,
-        rangeInCurrentDoc = rangeInCurrentDoc,
         processorName = processorName,
-        currentDoc = currentDoc,
         cause = cause,
-    ),
-) {
+        message = renderMessage(
+            documentable = documentable,
+            rangeInCurrentDoc = rangeInCurrentDoc,
+            processorName = processorName,
+            currentDoc = currentDoc,
+            cause = cause,
+        ),
+    ) {
     companion object {
         private fun renderMessage(
             documentable: DocumentableWrapper,
@@ -359,46 +353,49 @@ open class TagDocProcessorFailedException(
             processorName: String,
             currentDoc: DocContent,
             cause: Throwable?,
-        ): String = buildString {
-            val docRangeInFile = documentable.docFileTextRange
-            val fileText = documentable.file.readText()
-            val (docLine, docChar) = fileText.getLineAndCharacterOffset(docRangeInFile.first)
-            val (exceptionLine, exceptionChar) = fileText.getLineAndCharacterOffset(rangeInCurrentDoc.first)
+        ): String =
+            buildString {
+                val docRangeInFile = documentable.docFileTextRange
+                val fileText = documentable.file.readText()
+                val (docLine, docChar) = fileText.getLineAndCharacterOffset(docRangeInFile.first)
+                val (exceptionLine, exceptionChar) = fileText.getLineAndCharacterOffset(rangeInCurrentDoc.first)
 
-            fun highlightException(it: String) = "<a href=\"\">$it</a>"
+                fun highlightException(it: String) = "<a href=\"\">$it</a>"
 
-            appendLine("Doc processor $processorName failed processing doc:")
-            appendLine("Doc location: ${documentable.file.absolutePath}:$docLine:$docChar")
-            appendLine("Exception location: ${documentable.file.absolutePath}:$exceptionLine:$exceptionChar")
-            appendLine(
-                "Tag throwing the exception: ${
-                    highlightException(
-                        currentDoc.substring(
-                            rangeInCurrentDoc.coerceAtMost(
-                                currentDoc.lastIndex
-                            )
+                appendLine("Doc processor $processorName failed processing doc:")
+                appendLine("Doc location: ${documentable.file.absolutePath}:$docLine:$docChar")
+                appendLine("Exception location: ${documentable.file.absolutePath}:$exceptionLine:$exceptionChar")
+                appendLine(
+                    "Tag throwing the exception: ${
+                        highlightException(
+                            currentDoc.substring(
+                                rangeInCurrentDoc.coerceAtMost(
+                                    currentDoc.lastIndex,
+                                ),
+                            ),
                         )
-                    )
-                }"
-            )
-            cause?.message?.let {
-                appendLine("Reason for the exception: $it")
+                    }",
+                )
+                cause?.message?.let {
+                    appendLine("Reason for the exception: $it")
+                }
+                appendLine("\u200E")
+                appendLine("Current state of the doc with the ${highlightException("cause for the exception")}:")
+                appendLine("--------------------------------------------------")
+                appendLine(
+                    try {
+                        currentDoc.replaceRange(
+                            range = rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex),
+                            replacement = highlightException(
+                                currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)),
+                            ),
+                        )
+                    } catch (e: Throwable) {
+                        currentDoc
+                    }.toDoc(),
+                )
+                appendLine("--------------------------------------------------")
             }
-            appendLine("\u200E")
-            appendLine("Current state of the doc with the ${highlightException("cause for the exception")}:")
-            appendLine("--------------------------------------------------")
-            appendLine(
-                try {
-                    currentDoc.replaceRange(
-                        range = rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex),
-                        replacement = highlightException(currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex))),
-                    )
-                } catch (e: Throwable) {
-                    currentDoc
-                }.toDoc()
-            )
-            appendLine("--------------------------------------------------")
-        }
     }
 
     fun renderMessage(): String =
@@ -410,56 +407,67 @@ open class TagDocProcessorFailedException(
             cause = cause,
         )
 
-    fun renderDoc(): String = buildString {
-        val docRangeInFile = documentable.docFileTextRange
-        val fileText = documentable.file.readText()
-        val (docLine, docChar) = fileText.getLineAndCharacterOffset(docRangeInFile.first)
-        val (exceptionLine, exceptionChar) = fileText.getLineAndCharacterOffset(rangeInCurrentDoc.first)
+    fun renderDoc(): String =
+        buildString {
+            val docRangeInFile = documentable.docFileTextRange
+            val fileText = documentable.file.readText()
+            val (docLine, docChar) = fileText.getLineAndCharacterOffset(docRangeInFile.first)
+            val (exceptionLine, exceptionChar) = fileText.getLineAndCharacterOffset(rangeInCurrentDoc.first)
 
-        fun highlightException(it: String) = "!!!$it!!!"
+            fun highlightException(it: String) = "!!!$it!!!"
 
-        val indent = "&nbsp;&nbsp;&nbsp;&nbsp;"
-        val lineBreak = "\n$indent\n"
+            val indent = "&nbsp;&nbsp;&nbsp;&nbsp;"
+            val lineBreak = "\n$indent\n"
 
-        appendLine("# Error in DocProcessor")
-        appendLine("## Doc processor $processorName failed processing doc.")
-        appendLine()
-        appendLine("### Doc location:")
-        appendLine()
-        appendLine("`${documentable.file.path}:$docLine:$docChar`")
-        appendLine(lineBreak)
-        appendLine("### Exception location:")
-        appendLine()
-        appendLine("`${documentable.file.absolutePath}:$exceptionLine:$exceptionChar`")
-        appendLine(lineBreak)
-        appendLine("### Tag throwing the exception:")
-        appendLine()
-        appendLine("**`" + currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)) + "`**")
-        appendLine(lineBreak)
-        appendLine("### Reason for the exception:")
-        appendLine()
-        cause?.message?.let {
-            for (line in it.lines()) {
-                appendLine(line)
-                appendLine()
+            appendLine("# Error in DocProcessor")
+            appendLine("## Doc processor $processorName failed processing doc.")
+            appendLine()
+            appendLine("### Doc location:")
+            appendLine()
+            appendLine("`${documentable.file.path}:$docLine:$docChar`")
+            appendLine(lineBreak)
+            appendLine("### Exception location:")
+            appendLine()
+            appendLine("`${documentable.file.absolutePath}:$exceptionLine:$exceptionChar`")
+            appendLine(lineBreak)
+            appendLine("### Tag throwing the exception:")
+            appendLine()
+            appendLine("**`" + currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)) + "`**")
+            appendLine(lineBreak)
+            appendLine("### Reason for the exception:")
+            appendLine()
+            cause?.message?.let {
+                for (line in it.lines()) {
+                    appendLine(line)
+                    appendLine()
+                }
             }
+            appendLine(lineBreak)
+            appendLine("### Stack Trace")
+            cause?.stackTrace?.let {
+                for (line in it.joinToString("\n").lines()) {
+                    appendLine(line)
+                    appendLine()
+                }
+            }
+            appendLine(lineBreak)
+            appendLine("Current state of the doc with the `${highlightException("cause for the exception")}`:")
+            appendLine()
+            appendLine("--------------------------------------------------")
+            appendLine("```")
+            appendLine(
+                try {
+                    currentDoc.replaceRange(
+                        range = rangeInCurrentDoc,
+                        replacement = highlightException(
+                            currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)),
+                        ),
+                    )
+                } catch (e: Throwable) {
+                    currentDoc
+                }.toDoc(),
+            )
+            appendLine("```")
+            appendLine("--------------------------------------------------")
         }
-        appendLine(lineBreak)
-        appendLine("Current state of the doc with the `${highlightException("cause for the exception")}`:")
-        appendLine()
-        appendLine("--------------------------------------------------")
-        appendLine("```")
-        appendLine(
-            try {
-                currentDoc.replaceRange(
-                    range = rangeInCurrentDoc,
-                    replacement = highlightException(currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex))),
-                )
-            } catch (e: Throwable) {
-                currentDoc
-            }.toDoc()
-        )
-        appendLine("```")
-        appendLine("--------------------------------------------------")
-    }
 }

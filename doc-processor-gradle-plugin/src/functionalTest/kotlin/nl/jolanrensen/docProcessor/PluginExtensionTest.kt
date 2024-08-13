@@ -93,7 +93,7 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
                     relativePath = "src/main/resources/META-INF/services/nl.jolanrensen.docProcessor.DocProcessor",
                     content = "nl.jolanrensen.extension.Extension",
                 ),
-            )
+            ),
         )
 
         GradleRunner.create()
@@ -180,5 +180,4 @@ class PluginExtensionTest : DocProcessorFunctionalTest("extension") {
             plugins = plugins,
         ) shouldBe expectedOutput
     }
-
 }

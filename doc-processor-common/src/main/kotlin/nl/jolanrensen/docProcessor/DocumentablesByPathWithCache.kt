@@ -4,21 +4,22 @@ import nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocAnalyzer
 import org.jgrapht.graph.SimpleDirectedGraph
 import org.jgrapht.traverse.BreadthFirstIterator
 import org.jgrapht.traverse.TopologicalOrderIterator
-import java.util.*
-
+import java.util.UUID
 
 open class DocumentablesByPathWithCache(
     val processLimit: Int,
     val queryNew: (context: DocumentableWrapper, link: String) -> List<DocumentableWrapper>?,
     val logDebug: (message: () -> String) -> Unit,
-) : DocumentablesByPath, MutableDocumentablesByPath {
+) : DocumentablesByPath,
+    MutableDocumentablesByPath {
 
     override var queryFilter: DocumentableWrapperFilter = NO_FILTER
 
     override var documentablesToProcessFilter: DocumentableWrapperFilter = NO_FILTER
 
     // graph representing the dependencies between documentables
-    private var dependencyGraph = SimpleDirectedGraph<UUID, _>(Edge::class.java as Class<out Edge<UUID>>)
+    @Suppress("UNCHECKED_CAST")
+    private var dependencyGraph = SimpleDirectedGraph<UUID, Edge<UUID>>(Edge::class.java as Class<out Edge<UUID>>)
 
     // holds the hashcodes of the source of the documentables, to be updated each time a documentable is queried
     private val docContentSourceHashCodeCache: MutableMap<UUID, Int> = mutableMapOf()
@@ -39,7 +40,9 @@ open class DocumentablesByPathWithCache(
     override val documentablesToProcess: Map<String, List<MutableDocumentableWrapper>>
         get() = when {
             docToProcess == null -> emptyMap()
+
             documentablesToProcessFilter == NO_FILTER -> docsToProcess
+
             else -> docsToProcess.mapValues { (_, documentables) ->
                 documentables.filter(documentablesToProcessFilter)
             }
@@ -72,13 +75,16 @@ open class DocumentablesByPathWithCache(
             analyzeQueriesToo = true,
         )
         for (vertex in graph.vertexSet()) {
-            if (!dependencyGraph.containsVertex(vertex.identifier))
+            if (!dependencyGraph.containsVertex(vertex.identifier)) {
                 dependencyGraph.addVertex(vertex.identifier)
+            }
 
             val oldIncomingEdges = dependencyGraph.incomingEdgesOf(vertex.identifier)
-            val newIncomingEdges = graph.incomingEdgesOf(vertex).map {
-                Edge(it.from.identifier, it.to.identifier)
-            }.toSet()
+            val newIncomingEdges = graph
+                .incomingEdgesOf(vertex)
+                .map {
+                    Edge(it.from.identifier, it.to.identifier)
+                }.toSet()
 
             for (newEdge in (newIncomingEdges - oldIncomingEdges)) {
                 dependencyGraph.addVertex(newEdge.from)
@@ -91,13 +97,14 @@ open class DocumentablesByPathWithCache(
         }
 
         // graph may not contain doc if it has no dependencies, so add it to the list
-        val orderedList = TopologicalOrderIterator(graph).asSequence().toList()
+        val orderedList = TopologicalOrderIterator(graph)
+            .asSequence()
+            .toList()
             .let { if (doc !in it) it + doc else it }
 
         // rebuild docsToProcess, this time ordered and with dependent docs for PostIncludeDocProcessor that are not
         // up to date. Also update query cache
         for (dependencyDoc in orderedList) {
-
             // put doc into query cache
             dependencyDoc.paths.forEach {
                 queryCache.add(
@@ -152,7 +159,11 @@ open class DocumentablesByPathWithCache(
                 val docContentResult = postIncludeDocContentCache[doc.identifier]
                 if (docContentResult != null) {
                     doc.modifyDocContentAndUpdate(docContentResult)
-                    logDebug { "loading post-include cached ${doc.fullyQualifiedPath}/${doc.fullyQualifiedExtensionPath}: $docContentResult" }
+                    logDebug {
+                        "loading post-include cached ${
+                            doc.fullyQualifiedPath
+                        }/${doc.fullyQualifiedExtensionPath}: $docContentResult"
+                    }
                 }
             }
         }
@@ -178,12 +189,11 @@ open class DocumentablesByPathWithCache(
             .any { it }
 
         val needsRebuild = sourceHasChanged ||
-                doesNotContainVertex ||
-                doesNotContainResultCache ||
-                dependenciesNeedsRebuild
+            doesNotContainVertex ||
+            doesNotContainResultCache ||
+            dependenciesNeedsRebuild
 
         if (needsRebuild) {
-
             // update the caches
             docContentSourceHashCodeCache[doc.identifier] = doc.getDocHashcode()
 

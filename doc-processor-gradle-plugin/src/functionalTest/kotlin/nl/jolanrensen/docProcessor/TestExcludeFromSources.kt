@@ -8,12 +8,11 @@ import org.junit.Test
 class TestExcludeFromSources : DocProcessorFunctionalTest(name = "excl") {
 
     private val processors = listOf(
-        ::INCLUDE_DOC_PROCESSOR
+        ::INCLUDE_DOC_PROCESSOR,
     ).map { it.name }
 
     @Test
     fun `Simple interface exclusion test`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -57,7 +56,6 @@ class TestExcludeFromSources : DocProcessorFunctionalTest(name = "excl") {
 
     @Test
     fun `Simple interface exclusion test one line`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -99,9 +97,9 @@ class TestExcludeFromSources : DocProcessorFunctionalTest(name = "excl") {
             ),
         ) shouldBe expectedOutput
     }
+
     @Test
     fun `Nested exclusion test`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin

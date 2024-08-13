@@ -15,7 +15,6 @@ class TestRemoveEscapeChar : DocProcessorFunctionalTest("escape-char") {
 
     @Test
     fun `Escaped arg`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin

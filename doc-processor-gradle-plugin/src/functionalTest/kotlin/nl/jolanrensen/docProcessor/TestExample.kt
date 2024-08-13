@@ -16,7 +16,6 @@ class TestExample : DocProcessorFunctionalTest(name = "example") {
 
     @Test
     fun `Example block tag`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -46,7 +45,6 @@ class TestExample : DocProcessorFunctionalTest(name = "example") {
 
     @Test
     fun `Example inline tag`() {
-
         @Language("kt")
         val content = """
             package com.example.plugin
@@ -73,5 +71,4 @@ class TestExample : DocProcessorFunctionalTest(name = "example") {
             processors = processors,
         ) shouldBe expectedOutput
     }
-
 }

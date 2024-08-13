@@ -23,51 +23,12 @@ open class MutableDocumentableWrapper(
     annotations: List<AnnotationWrapper>,
     fileTextRange: IntRange,
     origin: Any,
-
     override var docContent: DocContent,
     override var tags: Set<String>,
     override var isModified: Boolean,
-
     override var htmlRangeEnd: Int?,
     override var htmlRangeStart: Int?,
 ) : DocumentableWrapper(
-    programmingLanguage = programmingLanguage,
-    imports = imports,
-    rawSource = rawSource,
-    sourceHasDocumentation = sourceHasDocumentation,
-    fullyQualifiedPath = fullyQualifiedPath,
-    fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
-    fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
-    file = file,
-    docFileTextRange = docFileTextRange,
-    docIndent = docIndent,
-    docContent = docContent,
-    tags = tags,
-    isModified = isModified,
-    identifier = identifier,
-    annotations = annotations,
-    fileTextRange = fileTextRange,
-    origin = origin,
-    htmlRangeStart = htmlRangeStart,
-    htmlRangeEnd = htmlRangeEnd,
-) {
-
-    /**
-     * Overwrites [docContent] and updates [isModified] and [tags] if
-     * it's different from the current [docContent].
-     */
-    fun modifyDocContentAndUpdate(newDocContent: DocContent) {
-        if (newDocContent == docContent) return
-        docContent = newDocContent
-        isModified = true
-        tags = docContent.findTagNamesInDocContent().toSet()
-    }
-}
-
-/** Cast or convert current [DocumentableWrapper] to [MutableDocumentableWrapper]. */
-fun DocumentableWrapper.toMutable(): MutableDocumentableWrapper =
-    if (this is MutableDocumentableWrapper) this
-    else MutableDocumentableWrapper(
         programmingLanguage = programmingLanguage,
         imports = imports,
         rawSource = rawSource,
@@ -87,4 +48,44 @@ fun DocumentableWrapper.toMutable(): MutableDocumentableWrapper =
         origin = origin,
         htmlRangeStart = htmlRangeStart,
         htmlRangeEnd = htmlRangeEnd,
-    )
+    ) {
+
+    /**
+     * Overwrites [docContent] and updates [isModified] and [tags] if
+     * it's different from the current [docContent].
+     */
+    fun modifyDocContentAndUpdate(newDocContent: DocContent) {
+        if (newDocContent == docContent) return
+        docContent = newDocContent
+        isModified = true
+        tags = docContent.findTagNamesInDocContent().toSet()
+    }
+}
+
+/** Cast or convert current [DocumentableWrapper] to [MutableDocumentableWrapper]. */
+fun DocumentableWrapper.toMutable(): MutableDocumentableWrapper =
+    if (this is MutableDocumentableWrapper) {
+        this
+    } else {
+        MutableDocumentableWrapper(
+            programmingLanguage = programmingLanguage,
+            imports = imports,
+            rawSource = rawSource,
+            sourceHasDocumentation = sourceHasDocumentation,
+            fullyQualifiedPath = fullyQualifiedPath,
+            fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+            fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
+            file = file,
+            docFileTextRange = docFileTextRange,
+            docIndent = docIndent,
+            docContent = docContent,
+            tags = tags,
+            isModified = isModified,
+            identifier = identifier,
+            annotations = annotations,
+            fileTextRange = fileTextRange,
+            origin = origin,
+            htmlRangeStart = htmlRangeStart,
+            htmlRangeEnd = htmlRangeEnd,
+        )
+    }

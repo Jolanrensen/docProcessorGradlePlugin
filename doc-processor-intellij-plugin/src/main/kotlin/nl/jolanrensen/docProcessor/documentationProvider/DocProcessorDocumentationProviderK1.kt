@@ -12,7 +12,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil.processElements
 import nl.jolanrensen.docProcessor.docComment
-import nl.jolanrensen.docProcessor.services.DocProcessorService
+import nl.jolanrensen.docProcessor.services.DocProcessorServiceK1
 import org.jetbrains.annotations.Nls
 import org.jetbrains.kotlin.idea.KotlinDocumentationProvider
 import org.jetbrains.kotlin.psi.KtDeclaration
@@ -20,8 +20,10 @@ import org.jetbrains.kotlin.psi.KtFile
 import java.awt.Image
 import java.util.function.Consumer
 
-// TODO migrate to [DocumentationTarget]
-class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), ExternalDocumentationProvider {
+// K1
+class DocProcessorDocumentationProviderK1 :
+    AbstractDocumentationProvider(),
+    ExternalDocumentationProvider {
 
     init {
         println("DocProcessorDocumentationProvider created")
@@ -29,9 +31,10 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
 
     private val kotlin = KotlinDocumentationProvider()
 
-    private val serviceInstances: MutableMap<Project, DocProcessorService> = mutableMapOf()
+    private val serviceInstances: MutableMap<Project, DocProcessorServiceK1> = mutableMapOf()
+
     private fun getService(project: Project) =
-        serviceInstances.getOrPut(project) { DocProcessorService.getInstance(project) }
+        serviceInstances.getOrPut(project) { DocProcessorServiceK1.getInstance(project) }
 
     override fun getQuickNavigateInfo(element: PsiElement?, originalElement: PsiElement?): String? =
         kotlin.getQuickNavigateInfo(element, originalElement)
@@ -68,9 +71,8 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
     override fun generateHoverDoc(element: PsiElement, originalElement: PsiElement?): String? =
         super.generateDoc(element, originalElement)
 
-    @Nls // todo takes about 5 minutes for a simple file XD
+    @Nls
     override fun generateRenderedDoc(comment: PsiDocCommentBase): String? {
-//        return kotlin.generateRenderedDoc(comment)
         val service = getService(comment.project)
         if (!service.isEnabled) return null
         val modifiedElement = service.getModifiedElement(comment.owner ?: return null)
@@ -89,23 +91,20 @@ class DocProcessorDocumentationProvider : AbstractDocumentationProvider(), Exter
         psiManager: PsiManager,
         `object`: Any?,
         element: PsiElement?,
-    ): PsiElement? =
-        kotlin.getDocumentationElementForLookupItem(psiManager, `object`, element)
+    ): PsiElement? = kotlin.getDocumentationElementForLookupItem(psiManager, `object`, element)
 
     override fun getDocumentationElementForLink(
         psiManager: PsiManager,
         link: String,
         context: PsiElement?,
-    ): PsiElement? =
-        kotlin.getDocumentationElementForLink(psiManager, link, context)
+    ): PsiElement? = kotlin.getDocumentationElementForLink(psiManager, link, context)
 
     @Deprecated("Deprecated in Java")
     override fun getCustomDocumentationElement(
         editor: Editor,
         file: PsiFile,
         contextElement: PsiElement?,
-    ): PsiElement? =
-        kotlin.getCustomDocumentationElement(editor, file, contextElement)
+    ): PsiElement? = kotlin.getCustomDocumentationElement(editor, file, contextElement)
 
     override fun getCustomDocumentationElement(
         editor: Editor,

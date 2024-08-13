@@ -17,7 +17,6 @@ class TestInclude : DocProcessorTest("include") {
     @Test
     @Ignore
     fun `Include with and without package kotlin`() {
-
         @Language("kt")
         val file = """
             package com.example.plugin
@@ -32,19 +31,19 @@ class TestInclude : DocProcessorTest("include") {
              * @include [com.example.plugin.helloWorld]  
              */
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val documentationHelloWorld = """
             /**
              * Hello World!
              */
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val documentableSourceNoDocHelloWorld = """
                 fun helloWorld() {}
-            """.trimIndent()
+        """.trimIndent()
 
         val helloWorld = createDocumentableWrapper(
             documentation = documentationHelloWorld,
@@ -60,12 +59,12 @@ class TestInclude : DocProcessorTest("include") {
              * @include [helloWorld]
              * @include [com.example.plugin.helloWorld]  
              */
-            """.trimIndent()
+        """.trimIndent()
 
         @Language("kt")
         val documentableSourceNoDocHelloWorld2 = """
             fun helloWorld2() {}
-            """.trimIndent()
+        """.trimIndent()
 
         val helloWorld2 = createDocumentableWrapper(
             documentation = documentationHelloWorld2,
@@ -81,7 +80,7 @@ class TestInclude : DocProcessorTest("include") {
              * Hello World!
              * Hello World! 
              */
-            """.trimIndent()
+        """.trimIndent()
 
         processContent(
             documentableWrapper = helloWorld2,
@@ -91,5 +90,4 @@ class TestInclude : DocProcessorTest("include") {
             ),
         ) shouldBe expectedOutput
     }
-
 }

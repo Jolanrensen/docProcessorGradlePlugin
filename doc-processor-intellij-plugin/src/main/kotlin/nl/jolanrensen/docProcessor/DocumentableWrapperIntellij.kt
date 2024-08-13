@@ -3,19 +3,19 @@ package nl.jolanrensen.docProcessor
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.analysis.api.analyze
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
 import org.jetbrains.kotlin.idea.base.utils.fqname.fqName
-import org.jetbrains.kotlin.idea.base.utils.fqname.getKotlinFqName
-import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
 import org.jetbrains.kotlin.idea.search.usagesSearch.descriptor
-import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDeclaration
+import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.psiUtil.isExtensionDeclaration
 import java.io.File
 
 fun DocumentableWrapper.Companion.createFromIntellijOrNull(
     documentable: PsiElement,
+    useK2: Boolean,
 ): DocumentableWrapper? {
     require(documentable is KtDeclaration || documentable is PsiDocCommentOwner) {
         "Documentable must be a KtDeclaration or PsiDocCommentOwner, but was ${documentable::class.simpleName}"
@@ -23,18 +23,44 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
 
     val path = documentable.kotlinFqName?.asString() ?: return null
     val extensionPath: String? = if (documentable.isExtensionDeclaration()) {
-        (documentable as? KtDeclaration)
-            ?.descriptor
-            ?.let { it as CallableDescriptor }
-            ?.extensionReceiverParameter
-            ?.type
-            ?.fqName
-            ?.asString()
-            ?.let { "$it.${documentable.name}" }
-    } else null
+        if (useK2) {
+            // k2 method
+            (documentable as? KtElement)?.let {
+                analyze(it) {
+                    (documentable as? org.jetbrains.kotlin.psi.KtCallableDeclaration)
+                        ?.receiverTypeReference
+                        ?.type
+                        ?.fullyExpandedType
+                        ?.expandedSymbol
+                        ?.psi
+                        ?.kotlinFqName
+                        ?.toString()
+                        ?.let { "$it.${documentable.name}" }
+                }
+            }
+        } else {
+            // k1 method
+            (documentable as? KtDeclaration)
+                ?.descriptor
+                ?.let { it as CallableDescriptor }
+                ?.extensionReceiverParameter
+                ?.type
+                ?.fqName
+                ?.asString()
+                ?.let { "$it.${documentable.name}" }
+        }
+    } else {
+        null
+    }
     val paths = listOfNotNull(path, extensionPath)
 
-    val file = File(documentable.containingFile.originalFile.virtualFile.path)
+    val file = File(
+        documentable
+            .containingFile
+            .originalFile
+            .virtualFile
+            .path,
+    )
 
 //    if (!file.exists()) {
 //        return null
@@ -56,14 +82,16 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
                     |Could not find start of comment.
                     |Paths: $paths
                     |Comment Content: "${docComment.text.getDocContentOrNull()}"
-                    |Query: "$query"""".trimMargin()
+                    |Query: "$query"
+            """.trimMargin()
         }
         require(endComment != -1) {
             """
                     |Could not find end of comment.
                     |Paths: $paths
                     |Comment Content: "${docComment.text.getDocContentOrNull()}"
-                    |Query: "$query"""".trimMargin()
+                    |Query: "$query"
+            """.trimMargin()
         }
 
         TextRange(ogRange.startOffset + startComment, ogRange.startOffset + endComment + 2)
@@ -78,9 +106,10 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
 
     // calculate the indent of the doc comment by looking at how many spaces are on the first line before /**
     val docIndent = try {
-        (docFileTextRange.startOffset -
+        (
+            docFileTextRange.startOffset -
                 fileText.lastIndexOfNot('\n', docFileTextRange.startOffset)
-                ).coerceAtLeast(0)
+        ).coerceAtLeast(0)
     } catch (_: Throwable) {
         0
     }
@@ -106,7 +135,8 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
         rawSource = rawSource,
         fullyQualifiedPath = path,
         fullyQualifiedExtensionPath = extensionPath,
-        fullyQualifiedSuperPaths = emptyList(), // not needed, resolution is done by intellij engine
+        // not needed, resolution is done by intellij engine
+        fullyQualifiedSuperPaths = emptyList(),
         file = file,
         docFileTextRange = docFileTextRange.toIntRange(),
         docIndent = docIndent,

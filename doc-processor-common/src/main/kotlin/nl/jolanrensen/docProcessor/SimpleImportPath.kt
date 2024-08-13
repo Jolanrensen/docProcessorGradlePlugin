@@ -1,6 +1,5 @@
 package nl.jolanrensen.docProcessor
 
-
 /**
  * Unsafe and simple mirror of
  * https://github.com/JetBrains/kotlin/blob/master/compiler/frontend.common/src/org/jetbrains/kotlin/resolve/ImportPath.kt
@@ -14,8 +13,7 @@ data class SimpleImportPath(val fqName: String, val isAllUnder: Boolean, val ali
     val pathStr: String
         get() = fqName + if (isAllUnder) ".*" else ""
 
-    override fun toString(): String =
-        pathStr + if (alias != null) " as $alias" else ""
+    override fun toString(): String = pathStr + if (alias != null) " as $alias" else ""
 
     fun hasAlias(): Boolean = alias != null
 

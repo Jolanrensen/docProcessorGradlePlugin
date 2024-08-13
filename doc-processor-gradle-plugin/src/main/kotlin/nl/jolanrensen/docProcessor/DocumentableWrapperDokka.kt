@@ -54,14 +54,16 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
                     |Could not find start of comment.
                     |Paths: $paths
                     |Comment Content: "${docComment.documentString}"
-                    |Query: "$query"""".trimMargin()
+                    |Query: "$query"
+            """.trimMargin()
         }
         require(endComment != -1) {
             """
                     |Could not find end of comment.
                     |Paths: $paths
                     |Comment Content: "${docComment.documentString}"
-                    |Query: "$query"""".trimMargin()
+                    |Query: "$query"
+            """.trimMargin()
         }
 
         TextRange(ogRange.startOffset + startComment, ogRange.startOffset + endComment + 2)
@@ -75,9 +77,10 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
     }
 
     // calculate the indent of the doc comment by looking at how many spaces are on the first line before /**
-    val docIndent = (docFileTextRange.startOffset -
+    val docIndent = (
+        docFileTextRange.startOffset -
             fileText.lastIndexOfNot('\n', docFileTextRange.startOffset)
-            ).coerceAtLeast(0)
+    ).coerceAtLeast(0)
 
     // grab just the contents of the doc without the *-stuff
     val docContent = docFileTextRange.substring(fileText).getDocContentOrNull() ?: ""

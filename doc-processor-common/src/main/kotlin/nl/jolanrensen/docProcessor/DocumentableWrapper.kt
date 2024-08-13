@@ -3,7 +3,7 @@ package nl.jolanrensen.docProcessor
 import nl.jolanrensen.docProcessor.DocumentableWrapper.Companion
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import java.io.File
-import java.util.*
+import java.util.UUID
 
 /**
  * Wrapper around a [Dokka's Documentable][org.jetbrains.dokka.model.Documentable], that adds easy access
@@ -72,11 +72,9 @@ open class DocumentableWrapper(
         textRangeStart = fileTextRange.first,
     ),
     val origin: Any,
-
     open val docContent: DocContent,
     open val tags: Set<String>,
     open val isModified: Boolean,
-
     open val htmlRangeStart: Int?,
     open val htmlRangeEnd: Int?,
 ) {
@@ -94,16 +92,17 @@ open class DocumentableWrapper(
             fullyQualifiedExtensionPath: String?,
             fullyQualifiedSuperPaths: List<String>,
             textRangeStart: Int,
-        ): UUID = UUID.nameUUIDFromBytes(
-            byteArrayOf(
-                file.path.hashCode().toByte(),
-                fullyQualifiedPath.hashCode().toByte(),
-                fullyQualifiedExtensionPath.hashCode().toByte(),
-                textRangeStart.hashCode().toByte(),
-                *imports.map { it.hashCode().toByte() }.toByteArray(),
-                *fullyQualifiedSuperPaths.map { it.hashCode().toByte() }.toByteArray(),
+        ): UUID =
+            UUID.nameUUIDFromBytes(
+                byteArrayOf(
+                    file.path.hashCode().toByte(),
+                    fullyQualifiedPath.hashCode().toByte(),
+                    fullyQualifiedExtensionPath.hashCode().toByte(),
+                    textRangeStart.hashCode().toByte(),
+                    *imports.map { it.hashCode().toByte() }.toByteArray(),
+                    *fullyQualifiedSuperPaths.map { it.hashCode().toByte() }.toByteArray(),
+                ),
             )
-        )
     }
 
     val paths = listOfNotNull(fullyQualifiedPath, fullyQualifiedExtensionPath)
@@ -151,18 +150,19 @@ open class DocumentableWrapper(
     /**
      * Returns all possible paths using [targetPath] and the imports in this file.
      */
-    private fun getPathsUsingImports(targetPath: String): List<String> = buildList {
-        for (import in imports) {
-            val qualifiedName = import.pathStr
-            val identifier = import.importedName
+    private fun getPathsUsingImports(targetPath: String): List<String> =
+        buildList {
+            for (import in imports) {
+                val qualifiedName = import.pathStr
+                val identifier = import.importedName
 
-            if (import.isAllUnder) {
-                this += qualifiedName.removeSuffix("*") + targetPath
-            } else if (targetPath.startsWith(identifier!!)) {
-                this += targetPath.replaceFirst(identifier, qualifiedName)
+                if (import.isAllUnder) {
+                    this += qualifiedName.removeSuffix("*") + targetPath
+                } else if (targetPath.startsWith(identifier!!)) {
+                    this += targetPath.replaceFirst(identifier, qualifiedName)
+                }
             }
         }
-    }
 
     private var allTypes: Set<DocumentableWrapper>? = null
 
@@ -229,7 +229,7 @@ open class DocumentableWrapper(
 
             // check imports too
             this.addAll(
-                getPathsUsingImports(targetPath)
+                getPathsUsingImports(targetPath),
             )
 
             // finally, add the path itself in case it's a top level/fq path
@@ -243,7 +243,8 @@ open class DocumentableWrapper(
             }
 
             // if that is the case, we need to find the type of the receiver and get all full paths from there too
-            @Suppress("NamedArgsPositionMismatch") val targetType = queryDocumentables(
+            @Suppress("NamedArgsPositionMismatch")
+            val targetType = queryDocumentables(
                 query = targetPathReceiver,
                 documentablesNoFilters = documentablesNoFilters,
                 documentables = documentablesNoFilters,
@@ -276,9 +277,9 @@ open class DocumentableWrapper(
         val queries: List<String> = buildList {
             if (documentables.needToQueryAllPaths) {
                 this += getAllFullPathsFromHereForTargetPath(
-                        targetPath = query,
-                        documentablesNoFilters = documentablesNoFilters,
-                        canBeExtension = canBeExtension,
+                    targetPath = query,
+                    documentablesNoFilters = documentablesNoFilters,
+                    canBeExtension = canBeExtension,
                 )
 
                 if (programmingLanguage == JAVA) { // support KotlinFileKt.Notation from java
@@ -287,7 +288,7 @@ open class DocumentableWrapper(
                         this += getAllFullPathsFromHereForTargetPath(
                             targetPath = splitQuery.drop(1).joinToString("."),
                             documentablesNoFilters = documentablesNoFilters,
-                            canBeExtension = canBeExtension
+                            canBeExtension = canBeExtension,
                         )
                     }
                 }
@@ -367,25 +368,26 @@ open class DocumentableWrapper(
         docContent: DocContent = this.docContent,
         tags: Set<String> = this.tags,
         isModified: Boolean = this.isModified,
-    ): DocumentableWrapper = DocumentableWrapper(
-        programmingLanguage = programmingLanguage,
-        imports = imports,
-        rawSource = rawSource,
-        sourceHasDocumentation = sourceHasDocumentation,
-        fullyQualifiedPath = fullyQualifiedPath,
-        fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
-        fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
-        file = file,
-        docFileTextRange = docFileTextRange,
-        docIndent = docIndent,
-        docContent = docContent,
-        tags = tags,
-        isModified = isModified,
-        annotations = annotations,
-        identifier = identifier,
-        fileTextRange = fileTextRange,
-        origin = origin,
-        htmlRangeStart = htmlRangeStart,
-        htmlRangeEnd = htmlRangeEnd,
-    )
+    ): DocumentableWrapper =
+        DocumentableWrapper(
+            programmingLanguage = programmingLanguage,
+            imports = imports,
+            rawSource = rawSource,
+            sourceHasDocumentation = sourceHasDocumentation,
+            fullyQualifiedPath = fullyQualifiedPath,
+            fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
+            fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
+            file = file,
+            docFileTextRange = docFileTextRange,
+            docIndent = docIndent,
+            docContent = docContent,
+            tags = tags,
+            isModified = isModified,
+            annotations = annotations,
+            identifier = identifier,
+            fileTextRange = fileTextRange,
+            origin = origin,
+            htmlRangeStart = htmlRangeStart,
+            htmlRangeEnd = htmlRangeEnd,
+        )
 }
