@@ -34,7 +34,7 @@ intellijPlatform {
         name = "DocProcessor"
         ideaVersion {
             sinceBuild = "231"
-            untilBuild = "242.*"
+            untilBuild = "243.*"
         }
     }
 }
