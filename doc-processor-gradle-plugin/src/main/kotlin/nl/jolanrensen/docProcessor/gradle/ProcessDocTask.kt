@@ -210,13 +210,12 @@ abstract class ProcessDocTask
         private fun Project.maybeCreateRuntimeConfiguration(): Configuration =
             project.configurations.maybeCreate("kotlinKdocIncludePluginRuntime") {
                 isCanBeConsumed = true
-                val kotlinVersion = "1.8.10"
-                dependencies.add(project.dependencies.create("org.jetbrains.kotlin:kotlin-compiler:$kotlinVersion"))
-                dependencies.add(
-                    project.dependencies.create("org.jetbrains.dokka:dokka-analysis:$kotlinVersion"),
-                ) // compileOnly in base plugin
-                dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:$kotlinVersion"))
-                dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:$kotlinVersion"))
+                val dokkaVersion = "2.0.0-Beta"
+
+                dependencies.add(project.dependencies.create("org.jetbrains.dokka:analysis-kotlin-api:$dokkaVersion"))
+                dependencies.add(project.dependencies.create("org.jetbrains.dokka:analysis-kotlin-symbols:$dokkaVersion"))
+                dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:$dokkaVersion"))
+                dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:$dokkaVersion"))
             }
 
         private fun <T : Any> NamedDomainObjectContainer<T>.maybeCreate(name: String, configuration: T.() -> Unit): T =

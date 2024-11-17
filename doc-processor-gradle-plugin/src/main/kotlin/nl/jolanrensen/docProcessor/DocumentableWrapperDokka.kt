@@ -1,6 +1,8 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.PsiNamedElement
+import org.jetbrains.dokka.InternalDokkaApi
 import org.jetbrains.dokka.base.signatures.KotlinSignatureUtils.annotations
 import org.jetbrains.dokka.model.AnnotationValue
 import org.jetbrains.dokka.model.Documentable
@@ -21,13 +23,14 @@ import java.io.File
  *   This represents the source of the [documentable] pointing to a language-specific AST/PSI.
  * @param [logger] [Dokka logger][DokkaLogger] that's needed for [findClosestDocComment]. Should be given.
  */
+@OptIn(InternalDokkaApi::class)
 fun DocumentableWrapper.Companion.createFromDokkaOrNull(
     documentable: Documentable,
     source: DocumentableSource,
     logger: DokkaLogger,
 ): DocumentableWrapper? {
     val docComment = findClosestDocComment(
-        element = source.psi,
+        element = source.psi as PsiNamedElement,
         logger = logger,
     )
 

@@ -81,7 +81,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
         import nl.jolanrensen.docProcessor.defaultProcessors.*
         
         plugins {  
-            kotlin("jvm") version "1.9.21"
+            kotlin("jvm") version "2.0.20"
             id("nl.jolanrensen.docProcessor") version "$version"
         }
         

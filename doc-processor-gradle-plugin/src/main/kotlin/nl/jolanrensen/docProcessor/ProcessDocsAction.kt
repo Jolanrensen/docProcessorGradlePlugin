@@ -2,7 +2,6 @@ package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
 import mu.KotlinLogging
-import nl.jolanrensen.docProcessor.ProcessDocsAction.Parameters
 import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
 import nl.jolanrensen.docProcessor.gradle.lifecycle
 import org.jetbrains.dokka.CoreExtensions
@@ -11,8 +10,6 @@ import org.jetbrains.dokka.DokkaConfigurationImpl
 import org.jetbrains.dokka.DokkaGenerator
 import org.jetbrains.dokka.DokkaSourceSetImpl
 import org.jetbrains.dokka.base.DokkaBase
-import org.jetbrains.dokka.base.translators.descriptors.DefaultDescriptorToDocumentableTranslator
-import org.jetbrains.dokka.base.translators.psi.DefaultPsiToDocumentableTranslator
 import org.jetbrains.dokka.model.WithSources
 import org.jetbrains.dokka.model.withDescendants
 import java.io.File
@@ -123,18 +120,9 @@ abstract class ProcessDocsAction {
         // get the sourceToDocumentableTranslators from DokkaBase, both for java and kotlin files
         val context = dokkaGenerator.initializePlugins(configuration, logger, listOf(DokkaBase()))
         val translators = context[CoreExtensions.sourceToDocumentableTranslator]
-            .filter {
-                it is DefaultPsiToDocumentableTranslator ||
-                    // java
-                    it is DefaultDescriptorToDocumentableTranslator // kotlin
-            }
 
-        require(translators.any { it is DefaultPsiToDocumentableTranslator }) {
-            "Could not find DefaultPsiToDocumentableTranslator"
-        }
-
-        require(translators.any { it is DefaultDescriptorToDocumentableTranslator }) {
-            "Could not find DefaultDescriptorToDocumentableTranslator"
+        require(translators.isNotEmpty()) {
+            "Could not find any translators"
         }
 
         // execute the translators on the sources to gather the modules
