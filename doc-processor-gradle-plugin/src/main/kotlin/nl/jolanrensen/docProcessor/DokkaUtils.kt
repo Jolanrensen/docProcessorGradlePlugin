@@ -113,13 +113,19 @@ val DocComment.textRange: TextRange
  */
 val DocumentableSource.psi: PsiElement?
     get() = when (this::class.qualifiedName) {
-        PsiDocumentableSource::class.qualifiedName -> (this as PsiDocumentableSource).psi
-        "org.jetbrains.dokka.analysis.kotlin.symbols.services.KtPsiDocumentableSource" ->
+        PsiDocumentableSource::class.qualifiedName -> {
+            (this as PsiDocumentableSource).psi
+        }
+
+        "org.jetbrains.dokka.analysis.kotlin.symbols.services.KtPsiDocumentableSource" -> {
             Class.forName("org.jetbrains.dokka.analysis.kotlin.symbols.services.KtPsiDocumentableSource")
                 .getMethod("getPsi")
                 .invoke(this) as PsiElement?
+        }
 
-        else -> null
+        else -> {
+            null
+        }
     }
 
 /**
@@ -129,25 +135,24 @@ val DocumentableSource.textRange: TextRange?
     get() = psi?.textRange
 
 internal class JavaDocComment(val comment: PsiDocComment) : DocComment {
-    override fun hasTag(tag: JavadocTag): Boolean {
-        return when (tag) {
+    override fun hasTag(tag: JavadocTag): Boolean =
+        when (tag) {
             is ThrowingExceptionJavadocTag -> hasTag(tag)
             else -> comment.hasTag(tag)
         }
-    }
 
     private fun hasTag(tag: ThrowingExceptionJavadocTag): Boolean =
-        comment.hasTag(tag) && comment.resolveTag(tag).firstIsInstanceOrNull<PsiDocTag>()
-            ?.resolveToElement()
-            ?.getKotlinFqName() == tag.exceptionQualifiedName
+        comment.hasTag(tag) &&
+            comment.resolveTag(tag).firstIsInstanceOrNull<PsiDocTag>()
+                ?.resolveToElement()
+                ?.getKotlinFqName() == tag.exceptionQualifiedName
 
-    override fun resolveTag(tag: JavadocTag): List<DocumentationContent> {
-        return when (tag) {
+    override fun resolveTag(tag: JavadocTag): List<DocumentationContent> =
+        when (tag) {
             is ParamJavadocTag -> resolveParamTag(tag)
             is ThrowingExceptionJavadocTag -> resolveThrowingTag(tag)
             else -> comment.resolveTag(tag).map { PsiDocumentationContent(it, tag) }
         }
-    }
 
     private fun resolveParamTag(tag: ParamJavadocTag): List<DocumentationContent> {
         val resolvedParamElements = comment.resolveTag(tag)
@@ -174,12 +179,11 @@ internal class JavaDocComment(val comment: PsiDocComment) : DocComment {
             .map { PsiDocumentationContent(it, tag) }
     }
 
-    private fun PsiDocComment.resolveTag(tag: JavadocTag): List<PsiElement> {
-        return when (tag) {
+    private fun PsiDocComment.resolveTag(tag: JavadocTag): List<PsiElement> =
+        when (tag) {
             DescriptionJavadocTag -> this.descriptionElements.toList()
             else -> this.findTagsByName(tag.name).toList()
         }
-    }
 
     private fun List<PsiElement>.withoutReferenceLink(): List<PsiElement> = drop(1)
 
@@ -194,42 +198,46 @@ internal class JavaDocComment(val comment: PsiDocComment) : DocComment {
         return true
     }
 
-    override fun hashCode(): Int {
-        return comment.hashCode()
-    }
+    override fun hashCode(): Int = comment.hashCode()
 }
 
-class KotlinDocComment(
-    val comment: KDocTag,
-    val resolveDocContext: ResolveDocContext
-) : DocComment {
+class KotlinDocComment(val comment: KDocTag, val resolveDocContext: ResolveDocContext) : DocComment {
 
     private val tagsWithContent: List<KDocTag> = comment.children.mapNotNull { (it as? KDocTag) }
 
-    override fun hasTag(tag: JavadocTag): Boolean {
-        return when (tag) {
+    override fun hasTag(tag: JavadocTag): Boolean =
+        when (tag) {
             is DescriptionJavadocTag -> comment.getContent().isNotEmpty()
             is ThrowingExceptionJavadocTag -> tagsWithContent.any { it.hasException(tag) }
             else -> tagsWithContent.any { it.text.startsWith("@${tag.name}") }
         }
-    }
 
     private fun KDocTag.hasException(tag: ThrowingExceptionJavadocTag) =
         text.startsWith("@${tag.name}") && getSubjectName() == tag.exceptionQualifiedName
 
-    override fun resolveTag(tag: JavadocTag): List<DocumentationContent> {
-        return when (tag) {
-            is DescriptionJavadocTag -> listOf(DescriptorDocumentationContent(resolveDocContext, comment, tag))
+    override fun resolveTag(tag: JavadocTag): List<DocumentationContent> =
+        when (tag) {
+            is DescriptionJavadocTag -> {
+                listOf(DescriptorDocumentationContent(resolveDocContext, comment, tag))
+            }
+
             is ParamJavadocTag -> {
                 val resolvedContent = resolveGeneric(tag)
                 listOf(resolvedContent[tag.paramIndex])
             }
 
-            is ThrowsJavadocTag -> resolveThrowingException(tag)
-            is ExceptionJavadocTag -> resolveThrowingException(tag)
-            else -> resolveGeneric(tag)
+            is ThrowsJavadocTag -> {
+                resolveThrowingException(tag)
+            }
+
+            is ExceptionJavadocTag -> {
+                resolveThrowingException(tag)
+            }
+
+            else -> {
+                resolveGeneric(tag)
+            }
         }
-    }
 
     private fun resolveThrowingException(tag: ThrowingExceptionJavadocTag): List<DescriptorDocumentationContent> {
         val exceptionName = tag.exceptionQualifiedName ?: return resolveGeneric(tag)
@@ -240,15 +248,14 @@ class KotlinDocComment(
             .map { DescriptorDocumentationContent(resolveDocContext, it, tag) }
     }
 
-    private fun resolveGeneric(tag: JavadocTag): List<DescriptorDocumentationContent> {
-        return comment.children.mapNotNull { element ->
+    private fun resolveGeneric(tag: JavadocTag): List<DescriptorDocumentationContent> =
+        comment.children.mapNotNull { element ->
             if (element is KDocTag && element.name == tag.name) {
                 DescriptorDocumentationContent(resolveDocContext, element, tag)
             } else {
                 null
             }
         }
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -257,7 +264,7 @@ class KotlinDocComment(
         other as KotlinDocComment
 
         if (comment != other.comment) return false
-        //if (resolveDocContext.name != other.resolveDocContext.name) return false
+        // if (resolveDocContext.name != other.resolveDocContext.name) return false
         if (tagsWithContent != other.tagsWithContent) return false
 
         return true
@@ -275,30 +282,27 @@ interface DocumentationContent {
     val tag: JavadocTag
 }
 
-data class PsiDocumentationContent(
-    val psiElement: PsiElement,
-    override val tag: JavadocTag
-) : DocumentationContent {
+data class PsiDocumentationContent(val psiElement: PsiElement, override val tag: JavadocTag) : DocumentationContent {
 
-    override fun resolveSiblings(): List<DocumentationContent> {
-        return if (psiElement is PsiDocTag) {
+    override fun resolveSiblings(): List<DocumentationContent> =
+        if (psiElement is PsiDocTag) {
             psiElement.contentElementsWithSiblingIfNeeded()
                 .map { content -> PsiDocumentationContent(content, tag) }
         } else {
             listOf(this)
         }
-    }
 }
 
-fun PsiDocTag.contentElementsWithSiblingIfNeeded(): List<PsiElement> = if (dataElements.isNotEmpty()) {
-    listOfNotNull(
-        dataElements[0],
-        dataElements[0].nextSibling?.takeIf { it.text != dataElements.drop(1).firstOrNull()?.text },
-        *dataElements.drop(1).toTypedArray()
-    )
-} else {
-    emptyList()
-}
+fun PsiDocTag.contentElementsWithSiblingIfNeeded(): List<PsiElement> =
+    if (dataElements.isNotEmpty()) {
+        listOfNotNull(
+            dataElements[0],
+            dataElements[0].nextSibling?.takeIf { it.text != dataElements.drop(1).firstOrNull()?.text },
+            *dataElements.drop(1).toTypedArray(),
+        )
+    } else {
+        emptyList()
+    }
 
 class ResolveDocContext(val ktElement: KtElement)
 
@@ -307,9 +311,7 @@ data class DescriptorDocumentationContent(
     val element: KDocTag,
     override val tag: JavadocTag,
 ) : DocumentationContent {
-    override fun resolveSiblings(): List<DocumentationContent> {
-        return listOf(this)
-    }
+    override fun resolveSiblings(): List<DocumentationContent> = listOf(this)
 }
 
 internal fun PsiDocComment.hasTag(tag: JavadocTag): Boolean =
@@ -326,17 +328,21 @@ fun PsiDocComment.tagsByName(tag: JavadocTag): List<PsiElement> =
 
 internal fun PsiElement.getKotlinFqName(): String? = this.kotlinFqNameProp
 
-//// from import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
+// // from import org.jetbrains.kotlin.idea.base.psi.kotlinFqName
 internal val PsiElement.kotlinFqNameProp: String?
     get() = when (val element = this) {
         is PsiPackage -> element.qualifiedName
+
         is PsiClass -> element.qualifiedName
+
         is PsiMember -> element.name?.let { name ->
             val prefix = element.containingClass?.qualifiedName
             if (prefix != null) "$prefix.$name" else name
         }
-//        is KtNamedDeclaration -> element.fqName TODO [beresnev] decide what to do with it
+
+        //        is KtNamedDeclaration -> element.fqName TODO [beresnev] decide what to do with it
         is PsiQualifiedNamedElement -> element.qualifiedName
+
         else -> null
     }
 
@@ -378,22 +384,19 @@ fun PsiMethod.findSuperMethodsOrEmptyArray(logger: DokkaLogger): Array<PsiMethod
     }
 }
 
-internal data class KDocContent(
-    val contentTag: KDocTag,
-    val sections: List<KDocSection>
-)
+internal data class KDocContent(val contentTag: KDocTag, val sections: List<KDocSection>)
 
 internal fun KtElement.findKDoc(): KDocContent? = this.lookupOwnedKDoc()
-    ?: this.lookupKDocInContainer()
+// We're only interested in directly owned KDocs, actually written next to the documentable
+// ?: this.lookupKDocInContainer()
 
 /**
  * Looks for sections that have a deeply nested [tag],
  * as opposed to [KDoc.findSectionByTag], which only looks among the top level
  */
-private fun KDoc.findSectionsContainingTag(tag: KDocKnownTag): List<KDocSection> {
-    return getChildrenOfType<KDocSection>()
+private fun KDoc.findSectionsContainingTag(tag: KDocKnownTag): List<KDocSection> =
+    getChildrenOfType<KDocSection>()
         .filter { it.findTagByName(tag.name.toLowerCaseAsciiOnly()) != null }
-}
 
 private fun KtElement.lookupOwnedKDoc(): KDocContent? {
     // KDoc for primary constructor is located inside of its class KDoc
@@ -424,28 +427,39 @@ private fun KtElement.lookupOwnedKDoc(): KDocContent? {
     return null
 }
 
+/**
+ * Can find KDoc for properties, functions, classes, and type parameters written
+ * in the class's KDoc, like `@property s: String`.
+ */
 private fun KtElement.lookupKDocInContainer(): KDocContent? {
     val subjectName = name
     val containingDeclaration =
         PsiTreeUtil.findFirstParent(this, true) {
-            it is KtDeclarationWithBody && it !is KtPrimaryConstructor
-                || it is KtClassOrObject
+            it is KtDeclarationWithBody &&
+                it !is KtPrimaryConstructor ||
+                it is KtClassOrObject
         }
 
     val containerKDoc = containingDeclaration?.getChildOfType<KDoc>()
     if (containerKDoc == null || subjectName == null) return null
     val propertySection = containerKDoc.findSectionByTag(KDocKnownTag.PROPERTY, subjectName)
     val paramTag =
-        containerKDoc.findDescendantOfType<KDocTag> { it.knownTag == KDocKnownTag.PARAM && it.getSubjectName() == subjectName }
+        containerKDoc.findDescendantOfType<KDocTag> {
+            it.knownTag == KDocKnownTag.PARAM &&
+                it.getSubjectName() == subjectName
+        }
 
     val primaryContent = when {
         // class Foo(val <caret>s: String)
         this is KtParameter && this.isPropertyParameter() -> propertySection ?: paramTag
+
         // fun some(<caret>f: String) || class Some<<caret>T: Base> || Foo(<caret>s = "argument")
         this is KtParameter || this is KtTypeParameter -> paramTag
+
         // if this property is declared separately (outside primary constructor), but it's for some reason
         // annotated as @property in class's description, instead of having its own KDoc
         this is KtProperty && containingDeclaration is KtClassOrObject -> propertySection
+
         else -> null
     }
     return primaryContent?.let {
@@ -675,5 +689,4 @@ fun AnnotationParameterValue.getValue(): Any? =
                 name to paramValue.getValue()
             },
         )
-
     }

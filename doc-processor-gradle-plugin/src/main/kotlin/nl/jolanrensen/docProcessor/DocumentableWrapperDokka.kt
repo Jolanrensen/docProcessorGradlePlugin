@@ -30,7 +30,7 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
     logger: DokkaLogger,
 ): DocumentableWrapper? {
     val docComment = findClosestDocComment(
-        element = source.psi as PsiNamedElement,
+        element = source.psi as PsiNamedElement?,
         logger = logger,
     )
 

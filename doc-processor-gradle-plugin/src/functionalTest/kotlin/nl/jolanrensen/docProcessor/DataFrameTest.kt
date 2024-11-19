@@ -1,9 +1,9 @@
 package nl.jolanrensen.docProcessor
 
 import org.gradle.testkit.runner.GradleRunner
+import org.junit.Ignore
 import org.junit.Test
 import java.io.File
-import kotlin.test.Ignore
 
 class DataFrameTest : DocProcessorFunctionalTest("df") {
 
@@ -24,8 +24,8 @@ class DataFrameTest : DocProcessorFunctionalTest("df") {
         tomlFile.write(txt)
     }
 
-    @Test
     @Ignore
+    @Test
     fun `build DataFrame`() {
         GradleRunner.create()
             .forwardOutput()

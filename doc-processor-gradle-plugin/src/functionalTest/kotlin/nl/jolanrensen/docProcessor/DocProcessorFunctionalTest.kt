@@ -63,8 +63,15 @@ abstract class DocProcessorFunctionalTest(name: String) {
         annotation class ${ExcludeFromSources::class.simpleName}
     """.trimIndent()
 
+    @Language("properties")
+    private val propertiesFile =
+        """
+        org.gradle.jvmargs=-Xmx6g
+        """.trimIndent()
+
     @Language("kts")
-    private val settingsFile = """
+    private val settingsFile =
+        """
         pluginManagement {
             repositories {
                 mavenLocal()
@@ -72,7 +79,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
                 mavenCentral()
             }
         }
-    """.trimIndent()
+        """.trimIndent()
 
     @Language("kts")
     private fun getBuildFileContent(processors: List<String>, plugins: List<String>): String =
@@ -194,6 +201,9 @@ abstract class DocProcessorFunctionalTest(name: String) {
 
         File(projectDirectory, "settings.gradle.kts")
             .write(settingsFile)
+
+        File(projectDirectory, "gradle.properties")
+            .write(propertiesFile)
 
         File(projectDirectory, "build.gradle.kts")
             .write(getBuildFileContent(processors, plugins))
