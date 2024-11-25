@@ -109,7 +109,7 @@ abstract class ProcessDocsAction {
                     "debug" -> debug { message }
                     "info" -> info { message }
                     "progress" -> lifecycle { message }
-                    "warn" -> warn { message }
+                    "warn" -> if (!message.startsWith("Couldn't resolve link for")) warn { message }
                     "error" -> error { message }
                     else -> info { message }
                 }
@@ -137,7 +137,6 @@ abstract class ProcessDocsAction {
         val pathsWithoutSources = mutableSetOf<String>()
         val documentables = mutableListOf<DocumentableWrapper>()
         modules.flatMap { it.withDescendants() }.let { rawDocs ->
-            // TODO: issue #12: support Type Aliases
             // TODO: issue #13: support read-only docs
             val (withSources, withoutSources) = rawDocs.partition { it is WithSources }
 
