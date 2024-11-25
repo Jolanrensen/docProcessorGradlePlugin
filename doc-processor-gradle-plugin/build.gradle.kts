@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -38,15 +39,15 @@ dependencies {
     shadow(gradleKotlinDsl())
 
     // Dokka dependencies
-    val dokkaVersion = "1.8.10"
-    shadow("org.jetbrains.dokka:dokka-analysis:$dokkaVersion")
+    val dokkaVersion = "2.0.0-Beta"
+    shadow("org.jetbrains.dokka:analysis-kotlin-symbols:$dokkaVersion")
     shadow("org.jetbrains.dokka:dokka-base:$dokkaVersion")
     shadow("org.jetbrains.dokka:dokka-core:$dokkaVersion")
     shadow("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
     shadow("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
     // logging
-    api("io.github.microutils:kotlin-logging:3.0.5")
+    api("io.github.oshai:kotlin-logging:7.0.0")
 
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))
@@ -111,7 +112,7 @@ tasks.check {
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
+    compilerOptions.jvmTarget = JvmTarget.JVM_11
 }
 
 java {

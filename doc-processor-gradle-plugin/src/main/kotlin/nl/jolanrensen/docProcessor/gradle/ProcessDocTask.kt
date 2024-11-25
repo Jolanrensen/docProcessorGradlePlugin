@@ -49,7 +49,7 @@ abstract class ProcessDocTask
         /** Source root folders for preprocessing. This needs to be set! */
         @get:InputFiles
         val sources: ListProperty<File> = factory
-            .listProperty(File::class)
+            .listProperty()
 
         /** Source root folders for preprocessing. This needs to be set! */
         fun sources(files: Iterable<File>): Unit = sources.set(files)
@@ -60,7 +60,7 @@ abstract class ProcessDocTask
          */
         @get:Input
         val baseDir: Property<File> = factory
-            .property(File::class)
+            .property<File>()
             .convention(project.projectDir)
 
         /**
@@ -74,7 +74,7 @@ abstract class ProcessDocTask
          */
         @get:Input
         val target: Property<File> = factory
-            .property(File::class)
+            .property<File>()
             .convention(File(project.buildDir, "docProcessor${File.separatorChar}${taskIdentity.name}"))
 
         /**
@@ -88,7 +88,7 @@ abstract class ProcessDocTask
          */
         @get:Input
         val outputReadOnly: Property<Boolean> = factory
-            .property(Boolean::class)
+            .property<Boolean>()
             .convention(true)
 
         /**
@@ -104,7 +104,7 @@ abstract class ProcessDocTask
          */
         @get:Input
         val exportAsHtmlDir: Property<File> = factory
-            .property(File::class)
+            .property<File>()
             .convention(File(target.get(), "htmlExports"))
 
         /**
@@ -120,7 +120,7 @@ abstract class ProcessDocTask
          */
         @get:Input
         val htmlOutputReadOnly: Property<Boolean> = factory
-            .property(Boolean::class)
+            .property<Boolean>()
             .convention(true)
 
         /**
@@ -140,7 +140,7 @@ abstract class ProcessDocTask
          */
         @get:Input
         val processLimit: Property<Int> = factory
-            .property(Int::class)
+            .property<Int>()
             .convention(10_000)
 
         /**
@@ -162,7 +162,7 @@ abstract class ProcessDocTask
          */
         @get:Input
         val processors: ListProperty<String> = factory
-            .listProperty(String::class)
+            .listProperty<String>()
             .convention(
                 listOf(
                     INCLUDE_DOC_PROCESSOR,
@@ -186,7 +186,7 @@ abstract class ProcessDocTask
          */
         @get:Input
         val arguments: MapProperty<String, Any?> = factory
-            .mapProperty(String::class, Any::class)
+            .mapProperty<String, Any>()
             .convention(emptyMap())
 
         /**
@@ -210,13 +210,14 @@ abstract class ProcessDocTask
         private fun Project.maybeCreateRuntimeConfiguration(): Configuration =
             project.configurations.maybeCreate("kotlinKdocIncludePluginRuntime") {
                 isCanBeConsumed = true
-                val kotlinVersion = "1.8.10"
-                dependencies.add(project.dependencies.create("org.jetbrains.kotlin:kotlin-compiler:$kotlinVersion"))
+                val dokkaVersion = "2.0.0-Beta"
+
+                dependencies.add(project.dependencies.create("org.jetbrains.dokka:analysis-kotlin-api:$dokkaVersion"))
                 dependencies.add(
-                    project.dependencies.create("org.jetbrains.dokka:dokka-analysis:$kotlinVersion"),
-                ) // compileOnly in base plugin
-                dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:$kotlinVersion"))
-                dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:$kotlinVersion"))
+                    project.dependencies.create("org.jetbrains.dokka:analysis-kotlin-symbols:$dokkaVersion"),
+                )
+                dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-base:$dokkaVersion"))
+                dependencies.add(project.dependencies.create("org.jetbrains.dokka:dokka-core:$dokkaVersion"))
             }
 
         private fun <T : Any> NamedDomainObjectContainer<T>.maybeCreate(name: String, configuration: T.() -> Unit): T =
@@ -321,6 +322,7 @@ abstract class ProcessDocTask
                 sourceRoots.forEach {
                     if (it.exists()) sourceRoot(it)
                 }
+                apiVersion.set("2.0")
             }.build()
 
             val workQueue = workerExecutor.classLoaderIsolation {

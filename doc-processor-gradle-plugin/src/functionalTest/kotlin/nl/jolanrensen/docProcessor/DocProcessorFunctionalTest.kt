@@ -63,8 +63,15 @@ abstract class DocProcessorFunctionalTest(name: String) {
         annotation class ${ExcludeFromSources::class.simpleName}
     """.trimIndent()
 
+    @Language("properties")
+    private val propertiesFile =
+        """
+        org.gradle.jvmargs=-Xmx6g
+        """.trimIndent()
+
     @Language("kts")
-    private val settingsFile = """
+    private val settingsFile =
+        """
         pluginManagement {
             repositories {
                 mavenLocal()
@@ -72,7 +79,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
                 mavenCentral()
             }
         }
-    """.trimIndent()
+        """.trimIndent()
 
     @Language("kts")
     private fun getBuildFileContent(processors: List<String>, plugins: List<String>): String =
@@ -81,7 +88,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
         import nl.jolanrensen.docProcessor.defaultProcessors.*
         
         plugins {  
-            kotlin("jvm") version "1.9.21"
+            kotlin("jvm") version "2.0.20"
             id("nl.jolanrensen.docProcessor") version "$version"
         }
         
@@ -113,7 +120,7 @@ abstract class DocProcessorFunctionalTest(name: String) {
         tasks.compileKotlin { dependsOn(processKdocMain) }
         
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-            kotlinOptions.jvmTarget = "1.8"
+            compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8
         }
         java {
             toolchain {
@@ -194,6 +201,9 @@ abstract class DocProcessorFunctionalTest(name: String) {
 
         File(projectDirectory, "settings.gradle.kts")
             .write(settingsFile)
+
+        File(projectDirectory, "gradle.properties")
+            .write(propertiesFile)
 
         File(projectDirectory, "build.gradle.kts")
             .write(getBuildFileContent(processors, plugins))

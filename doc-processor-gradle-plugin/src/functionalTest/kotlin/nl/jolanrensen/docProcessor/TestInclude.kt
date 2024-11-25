@@ -1010,4 +1010,74 @@ class TestInclude : DocProcessorFunctionalTest(name = "include") {
             processors = processors,
         ) shouldBe expectedOutput
     }
+
+    @Test
+    fun `type alias reading`() {
+        @Language("kt")
+        val content = """
+            /**
+             * Hello World!
+             */
+            typealias HelloWorld = String
+            
+            /**
+             * @include [HelloWorld]
+             */
+            fun helloWorld2() {}
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            /**
+             * Hello World!
+             */
+            typealias HelloWorld = String
+            
+            /**
+             * Hello World!
+             */
+            fun helloWorld2() {}
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
+
+    @Test
+    fun `type alias writing`() {
+        @Language("kt")
+        val content = """
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+            
+            /**
+             * @include [helloWorld]
+             */
+            typealias HelloWorld2 = String
+        """.trimIndent()
+
+        @Language("kt")
+        val expectedOutput = """
+            /**
+             * Hello World!
+             */
+            fun helloWorld() {}
+            
+            /**
+             * Hello World!
+             */
+            typealias HelloWorld2 = String
+        """.trimIndent()
+
+        processContent(
+            content = content,
+            packageName = "",
+            processors = processors,
+        ) shouldBe expectedOutput
+    }
 }
