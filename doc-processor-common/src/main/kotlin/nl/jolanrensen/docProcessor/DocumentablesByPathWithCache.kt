@@ -70,7 +70,7 @@ open class DocumentablesByPathWithCache(
 
         // build local dependency graph from docToProcess and update the global dependencyGraph
         val graph = IncludeDocAnalyzer.getAnalyzedResult(
-            processLimit = processLimit,
+            processLimit = processLimit - 1, // catch circular dependencies
             documentablesByPath = this,
             analyzeQueriesToo = true,
         )

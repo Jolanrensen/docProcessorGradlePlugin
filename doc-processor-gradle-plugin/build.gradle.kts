@@ -46,9 +46,6 @@ dependencies {
     shadow("org.jetbrains.dokka:dokka-base-test-utils:$dokkaVersion")
     shadow("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
 
-    // logging
-    api("io.github.oshai:kotlin-logging:7.0.0")
-
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))
     testImplementation("io.kotest:kotest-assertions-core:5.5.5")

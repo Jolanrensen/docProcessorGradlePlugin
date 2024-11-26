@@ -41,7 +41,7 @@ intellijPlatform {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    implementation(project(":doc-processor-common"))
+    api(project(":doc-processor-common"))
 
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))

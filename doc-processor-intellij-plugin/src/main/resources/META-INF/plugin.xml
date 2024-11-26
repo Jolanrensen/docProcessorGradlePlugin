@@ -37,16 +37,17 @@
         <!-- K2 -->
 
         <platform.backend.documentation.psiTargetProvider
-            id="KotlinDocumentationTargetProvider"
+            id="DocProcessorPsiDocumentationTargetProvider"
             order="first"
             implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorPsiDocumentationTargetProvider"/>
 
-        <platform.backend.documentation.targetProvider
-            id="KotlinDocumentationTargetProvider"
-            order="first"
-            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationTargetProvider"/>
+<!--        <platform.backend.documentation.targetProvider-->
+<!--            id="DocProcessorDocumentationTargetProvider"-->
+<!--            order="first"-->
+<!--            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationTargetProvider"/>-->
 
         <platform.backend.documentation.inlineDocumentationProvider
+            id="DocProcessorInlineDocumentationProvider"
             order="first"
             implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorInlineDocumentationProvider"/>
 
