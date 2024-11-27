@@ -83,7 +83,7 @@ const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
  */
 class ArgDocProcessor : TagDocProcessor() {
 
-    internal companion object {
+    companion object {
         internal val OLD_RETRIEVE_ARGUMENT_TAGS = listOf(
             "includeArg",
             "getArg",
@@ -94,12 +94,12 @@ class ArgDocProcessor : TagDocProcessor() {
             "setArg",
         )
 
-        internal val RETRIEVE_ARGUMENT_TAGS = listOf(
+        val RETRIEVE_ARGUMENT_TAGS = listOf(
             "get",
             // $, handled in process()
         ) + OLD_RETRIEVE_ARGUMENT_TAGS
 
-        internal val DECLARE_ARGUMENT_TAGS = listOf(
+        val DECLARE_ARGUMENT_TAGS = listOf(
             "set",
         ) + OLD_DECLARE_ARGUMENT_TAGS
     }
@@ -411,7 +411,7 @@ fun DocContent.`replace ${}'s`(): DocContent {
  * "${}" marks are ignored if "\" escaped.
  */
 @Suppress("ktlint:standard:function-naming")
-private fun DocContent.`find ${}'s`(): List<IntRange> {
+fun DocContent.`find ${}'s`(): List<IntRange> {
     var text = this
 
     /*
@@ -492,7 +492,7 @@ fun DocContent.`replace $tags`(): DocContent {
  * The function also returns the absolute index of the `=` sign if it exists
  */
 @Suppress("ktlint:standard:function-naming")
-private fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
+fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
     val text = this
 
     return buildList {

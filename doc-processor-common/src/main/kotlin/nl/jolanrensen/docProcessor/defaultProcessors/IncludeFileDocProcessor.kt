@@ -25,13 +25,15 @@ const val INCLUDE_FILE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProce
  */
 class IncludeFileDocProcessor : TagDocProcessor() {
 
-    private val tag = "includeFile"
+    companion object {
+        const val TAG = "includeFile"
+    }
 
-    override fun tagIsSupported(tag: String): Boolean = tag == this.tag
+    override fun tagIsSupported(tag: String): Boolean = tag == TAG
 
     private fun processContent(line: String, documentable: DocumentableWrapper): String {
         val includeFileArguments = line.getTagArguments(
-            tag = tag,
+            tag = TAG,
             numberOfArguments = 2,
         )
         val filePath = includeFileArguments

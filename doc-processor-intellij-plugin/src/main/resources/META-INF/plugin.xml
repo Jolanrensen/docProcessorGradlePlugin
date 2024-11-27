@@ -74,6 +74,17 @@
             id="DocProcessorK2"
             order="first"/>
 
+        <!-- Highlighting -->
+        <lang.documentation.syntaxHighlightingHandlerFactory
+            language="kotlin"
+            id="KDocSyntaxHighlightingHandler"
+            order="first"
+            factoryClass="nl.jolanrensen.docProcessor.syntaxHighlighting.KDocSyntaxHighlightingHandlerFactory"
+            implementationClass="nl.jolanrensen.docProcessor.syntaxHighlighting.KDocSyntaxHighlightingHandlerFactory"/>
+
+        <highlightVisitor
+            id="KDocHighlightVisitor"
+            implementation="nl.jolanrensen.docProcessor.syntaxHighlighting.KDocHighlightVisitor"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.kotlin">

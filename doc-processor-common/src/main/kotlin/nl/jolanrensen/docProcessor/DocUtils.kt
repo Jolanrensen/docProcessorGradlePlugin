@@ -517,6 +517,15 @@ fun DocContent.findBlockTagNamesInDocContent(): List<String> =
         .filter { it.trimStart().startsWith("@") }
         .mapNotNull { it.getTagNameOrNull() }
 
+/** Finds all block tags with ranges. */
+fun DocContent.findBlockTagsInDocContentWithRanges(): List<Pair<String, IntRange>> =
+    splitDocContentPerBlockWithRanges()
+        .filter { it.first.trimStart().startsWith("@") }
+        .mapNotNull {
+            val tagName = it.first.getTagNameOrNull() ?: return@mapNotNull null
+            tagName to it.second
+        }
+
 /** Finds all tag names, including inline and block tags. */
 fun DocContent.findTagNamesInDocContent(): List<String> =
     findInlineTagNamesInDocContent() +

@@ -35,23 +35,25 @@ const val SAMPLE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors.
  */
 class SampleDocProcessor : TagDocProcessor() {
 
-    private val sampleTag = "sample"
-    private val sampleNoComments = "sampleNoComments"
-    private val supportedTags = listOf(sampleTag, sampleNoComments)
+    companion object {
+        const val SAMPLE_TAG = "sample"
+        const val SAMPLE_NO_COMMENTS_TAG = "sampleNoComments"
+        val TAGS = listOf(SAMPLE_TAG, SAMPLE_NO_COMMENTS_TAG)
+    }
 
-    override fun tagIsSupported(tag: String): Boolean = tag in supportedTags
+    override fun tagIsSupported(tag: String): Boolean = tag in TAGS
 
     private val sampleStartRegex = Regex(" *// *SampleStart *\n")
     private val sampleEndRegex = Regex(" *// *SampleEnd *\n")
 
     private fun processContent(tagWithContent: String, documentable: DocumentableWrapper): String {
         val unfilteredDocumentablesByPath by lazy { documentablesByPath.withoutFilters() }
-        val noComments = tagWithContent.startsWith("{@$sampleNoComments") ||
-            tagWithContent.trimStart().startsWith("@$sampleNoComments ")
+        val noComments = tagWithContent.startsWith("{@$SAMPLE_NO_COMMENTS_TAG") ||
+            tagWithContent.trimStart().startsWith("@$SAMPLE_NO_COMMENTS_TAG ")
 
         // get the full @sample / @sampleNoComments path
         val sampleArguments = tagWithContent.getTagArguments(
-            tag = if (noComments) sampleNoComments else sampleTag,
+            tag = if (noComments) SAMPLE_NO_COMMENTS_TAG else SAMPLE_TAG,
             numberOfArguments = 2,
         )
 

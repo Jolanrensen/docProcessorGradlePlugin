@@ -48,7 +48,7 @@ dependencies {
     testImplementation("io.kotest:kotest-assertions-core:5.5.5")
 
     intellijPlatform {
-        intellijIdeaCommunity("2024.2")
+        intellijIdeaCommunity("2024.3")
         bundledPlugins(
             "org.jetbrains.kotlin",
             "com.intellij.java",

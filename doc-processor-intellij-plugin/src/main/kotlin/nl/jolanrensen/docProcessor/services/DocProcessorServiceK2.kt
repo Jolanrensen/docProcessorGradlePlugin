@@ -23,18 +23,9 @@ import nl.jolanrensen.docProcessor.TagDocProcessorFailedException
 import nl.jolanrensen.docProcessor.annotationNames
 import nl.jolanrensen.docProcessor.copiedWithFile
 import nl.jolanrensen.docProcessor.createFromIntellijOrNull
-import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR_LOG_NOT_FOUND
-import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.EXPORT_AS_HTML_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR_PRE_SORT
-import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.docComment
 import nl.jolanrensen.docProcessor.docProcessorIsEnabled
-import nl.jolanrensen.docProcessor.findProcessors
+import nl.jolanrensen.docProcessor.getLoadedProcessors
 import nl.jolanrensen.docProcessor.getOrigin
 import nl.jolanrensen.docProcessor.mode
 import nl.jolanrensen.docProcessor.programmingLanguage
@@ -277,12 +268,12 @@ class DocProcessorServiceK2(private val project: Project) {
             return null
         } catch (e: TagDocProcessorFailedException) {
             println(e.renderMessage())
-            e.printStackTrace()
+            // e.printStackTrace()
             // render fancy :)
             e.renderDoc()
         } catch (e: Throwable) {
             println(e.message)
-            e.printStackTrace()
+            // e.printStackTrace()
 
             // instead of throwing the exception, render it inside the kdoc
             """
@@ -327,23 +318,7 @@ class DocProcessorServiceK2(private val project: Project) {
 
     private fun processDocumentablesByPath(sourceDocsByPath: DocumentablesByPath): DocumentablesByPath {
         // Find all processors
-        Thread.currentThread().contextClassLoader = this.javaClass.classLoader
-        // TODO make customizable
-        val processors = findProcessors(
-            fullyQualifiedNames = listOf(
-                INCLUDE_DOC_PROCESSOR,
-                INCLUDE_FILE_DOC_PROCESSOR,
-                ARG_DOC_PROCESSOR,
-                COMMENT_DOC_PROCESSOR,
-                SAMPLE_DOC_PROCESSOR,
-                EXPORT_AS_HTML_DOC_PROCESSOR,
-                REMOVE_ESCAPE_CHARS_PROCESSOR,
-            ),
-            arguments = mapOf(
-                ARG_DOC_PROCESSOR_LOG_NOT_FOUND to false,
-                INCLUDE_DOC_PROCESSOR_PRE_SORT to false,
-            ),
-        ).toMutableList()
+        val processors = getLoadedProcessors().toMutableList()
 
         // for cache collecting after include doc processor
         processors.add(1, PostIncludeDocProcessorCacheCollector(documentableCache))
