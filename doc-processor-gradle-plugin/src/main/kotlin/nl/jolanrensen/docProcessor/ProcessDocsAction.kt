@@ -1,7 +1,7 @@
 package nl.jolanrensen.docProcessor
 
 import com.intellij.openapi.util.TextRange
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import nl.jolanrensen.docProcessor.gradle.ProcessDocsGradleAction
 import nl.jolanrensen.docProcessor.gradle.lifecycle
 import org.jetbrains.dokka.CoreExtensions
