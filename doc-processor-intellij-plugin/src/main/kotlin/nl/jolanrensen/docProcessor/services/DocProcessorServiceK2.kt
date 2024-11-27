@@ -48,7 +48,6 @@ import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.resolve.calls.util.getValueArgumentsInParentheses
 import java.io.File
 import java.util.concurrent.CancellationException
-import kotlin.collections.flatMap
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 
@@ -199,6 +198,8 @@ class DocProcessorServiceK2(private val project: Project) {
                     KDocElementFactory(project)
                         .createKDocFromText(newDocContent.toDoc())
 
+                // TODO can crash here?
+
                 ProgrammingLanguage.JAVA ->
                     PsiElementFactory.getInstance(project)
                         .createDocCommentFromText(newDocContent.toDoc())
@@ -275,11 +276,13 @@ class DocProcessorServiceK2(private val project: Project) {
         } catch (_: CancellationException) {
             return null
         } catch (e: TagDocProcessorFailedException) {
-//            e.printStackTrace()
+            println(e.renderMessage())
+            e.printStackTrace()
             // render fancy :)
             e.renderDoc()
         } catch (e: Throwable) {
-//            e.printStackTrace()
+            println(e.message)
+            e.printStackTrace()
 
             // instead of throwing the exception, render it inside the kdoc
             """

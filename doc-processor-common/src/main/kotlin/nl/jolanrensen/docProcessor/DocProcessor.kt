@@ -1,10 +1,9 @@
 package nl.jolanrensen.docProcessor
 
-import mu.KLogger
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.Serializable
 import java.util.ServiceLoader
-import kotlin.jvm.Throws
 
 /**
  * Abstract class that can be used to create a doc processor.
@@ -60,15 +59,6 @@ abstract class DocProcessor : Serializable {
         }
     }
 }
-
-/**
- * Exception that is thrown when a [DocProcessor] fails.
- */
-open class DocProcessorFailedException(
-    val processorName: String,
-    cause: Throwable? = null,
-    message: String = "Doc processor $processorName failed: ${cause?.message}",
-) : RuntimeException(message, cause)
 
 fun findProcessors(fullyQualifiedNames: List<String>, arguments: Map<String, Any?>): List<DocProcessor> {
     val availableProcessors: Set<DocProcessor> = ServiceLoader.load(DocProcessor::class.java).toSet()

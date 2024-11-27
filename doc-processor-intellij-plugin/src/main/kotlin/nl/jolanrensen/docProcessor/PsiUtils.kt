@@ -35,7 +35,9 @@ val PsiElement.annotationNames: List<String>
 val PsiElement.programmingLanguage: ProgrammingLanguage
     get() = when (language) {
         is KotlinLanguage -> ProgrammingLanguage.KOTLIN
+
         is JavaLanguage -> ProgrammingLanguage.JAVA
+
         else -> error(
             "Documentable must be using KotlinLanguage or JavaLanguage, but was ${language::class.simpleName}",
         )
@@ -91,11 +93,12 @@ fun PsiElement.getImports(): List<ImportPath> =
                     "kotlin.math",
                 )
 
-                for (import in implicitImports)
+                for (import in implicitImports) {
                     this += ImportPath(
                         fqName = FqName(import),
                         isAllUnder = true,
                     )
+                }
             }
         }
     }

@@ -25,7 +25,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1-Beta")
 
     // logging
-    api("io.github.microutils:kotlin-logging:3.0.5")
+    api("io.github.oshai:kotlin-logging:7.0.0")
 
     // Use JUnit test framework for unit tests
     testImplementation(kotlin("test"))
