@@ -30,10 +30,6 @@ class DocProcessorToolWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
 
     class DocProcessorToolWindow(toolWindow: ToolWindow) {
-
-//        private val serviceK1 = toolWindow.project.service<DocProcessorServiceK1>()
-//        private val serviceK2 = toolWindow.project.service<DocProcessorServiceK2>()
-
         private fun JToggleButton.updateState() {
             isSelected = true
             text = MessageBundle.message(
