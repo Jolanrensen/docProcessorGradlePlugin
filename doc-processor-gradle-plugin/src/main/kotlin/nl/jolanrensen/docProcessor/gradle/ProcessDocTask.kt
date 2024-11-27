@@ -1,6 +1,6 @@
 package nl.jolanrensen.docProcessor.gradle
 
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.EXPORT_AS_HTML_DOC_PROCESSOR
