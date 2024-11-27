@@ -3,7 +3,23 @@
     <id>nl.jolanrensen.docProcessor</id>
     <name>KDoc/JavaDoc Processor</name>
     <vendor>Jolan Rensen</vendor>
-    <description>WIP IntelliJ plugin counterpart for KDoc / JavaDoc Preprocessor Gradle Plugin.</description>
+    <description><![CDATA[
+    IntelliJ plugin counterpart for <a href="https://github.com/Jolanrensen/docProcessorGradlePlugin">KDoc / JavaDoc Preprocessor Gradle Plugin<a/>.<br>
+    This can be considered an alpha version.<br>
+    For now, the order of default processors is unconfigurable, but this will be added in the future.<br>
+    The order is like the recommended order:
+    <ul>
+      <li>INCLUDE_DOC_PROCESSOR: The @include processor</li>
+      <li>INCLUDE_FILE_DOC_PROCESSOR: The @includeFile processor</li>
+      <li>ARG_DOC_PROCESSOR: The @set and @get / $ processor. This runs @set first and then @get / $.</li>
+      <li>COMMENT_DOC_PROCESSOR: The @comment processor</li>
+      <li>SAMPLE_DOC_PROCESSOR: The @sample and @sampleNoComments processor</li>
+      <li>EXPORT_AS_HTML_DOC_PROCESSOR: The @exportAsHtmlStart and @exportAsHtmlEnd tags for @ExportAsHtml</li>
+      <li>REMOVE_ESCAPE_CHARS_PROCESSOR: The processor that removes escape characters</li>
+    </ul>
+    The plugin works both in K1 and K2 mode of the IDE, but should be turned off when viewing the sources of
+    libraries or when inside a Kotlin notebooks.
+    ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.kotlin</depends>
@@ -41,10 +57,10 @@
             order="first"
             implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorPsiDocumentationTargetProvider"/>
 
-<!--        <platform.backend.documentation.targetProvider-->
-<!--            id="DocProcessorDocumentationTargetProvider"-->
-<!--            order="first"-->
-<!--            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationTargetProvider"/>-->
+        <!--        <platform.backend.documentation.targetProvider-->
+        <!--            id="DocProcessorDocumentationTargetProvider"-->
+        <!--            order="first"-->
+        <!--            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationTargetProvider"/>-->
 
         <platform.backend.documentation.inlineDocumentationProvider
             id="DocProcessorInlineDocumentationProvider"
