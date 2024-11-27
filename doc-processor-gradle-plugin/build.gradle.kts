@@ -14,7 +14,7 @@ plugins {
 }
 
 group = "nl.jolanrensen.docProcessor"
-version = "0.3.11-SNAPSHOT"
+version = "0.4.0-SNAPSHOT"
 
 publishing {
     repositories {
