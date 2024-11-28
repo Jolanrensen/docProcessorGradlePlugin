@@ -1,6 +1,8 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.HighlightInfo
+import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
@@ -113,4 +115,34 @@ class IncludeFileDocProcessor : TagDocProcessor() {
             line = tagWithContent,
             documentable = documentable,
         )
+
+    override fun getHighlightsForInlineTag(
+        tagName: String,
+        rangeInDocText: IntRange,
+        docText: String,
+    ): List<HighlightInfo> =
+        super.getHighlightsForInlineTag(tagName, rangeInDocText, docText) +
+            getArgumentHighlightFor(
+                argumentIndex = 0,
+                docText = docText,
+                rangeInDocText = rangeInDocText,
+                tagName = tagName,
+                numberOfArguments = 2,
+                type = HighlightType.TAG_KEY,
+            )
+
+    override fun getHighlightsForBlockTag(
+        tagName: String,
+        docContentRangesInDocText: List<IntRange>,
+        docText: String,
+    ): List<HighlightInfo> =
+        super.getHighlightsForBlockTag(tagName, docContentRangesInDocText, docText) +
+            getArgumentHighlightFor(
+                argumentIndex = 0,
+                docText = docText,
+                rangeInDocText = docContentRangesInDocText.first(),
+                tagName = tagName,
+                numberOfArguments = 2,
+                type = HighlightType.TAG_KEY,
+            )
 }

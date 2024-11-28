@@ -1,124 +1,100 @@
 package nl.jolanrensen.docProcessor.syntaxHighlighting
 
-import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.codeInsight.daemon.impl.HighlightInfoType
 import com.intellij.codeInsight.daemon.impl.HighlightVisitor
 import com.intellij.codeInsight.daemon.impl.analysis.HighlightInfoHolder
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.markup.EffectType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.startOffset
-import nl.jolanrensen.docProcessor.defaultProcessors.`find $tags`
-import nl.jolanrensen.docProcessor.defaultProcessors.`find ${}'s`
-import nl.jolanrensen.docProcessor.defaultProcessors.findKeyAndValueFromDollarSign
+import nl.jolanrensen.docProcessor.HighlightInfo
+import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.docProcessorIsEnabled
-import nl.jolanrensen.docProcessor.findBlockTagsInDocContentWithRanges
-import nl.jolanrensen.docProcessor.findInlineTagNamesInDocContentWithRanges
-import nl.jolanrensen.docProcessor.getTagsInUse
+import nl.jolanrensen.docProcessor.getLoadedProcessors
+import org.jetbrains.kotlin.idea.highlighter.KotlinHighlightingColors
 import org.jetbrains.kotlin.kdoc.psi.api.KDoc
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtFile
+import java.awt.Font
+import com.intellij.codeInsight.daemon.impl.HighlightInfo as IjHighlightInfo
 
 /**
  * This class is responsible for highlighting KDoc tags in the editor.
  */
 class KDocHighlightVisitor : HighlightVisitor {
 
-    val bracketElement = HighlightInfoType.HighlightInfoTypeImpl(
-        HighlightSeverity.INFORMATION,
-        DefaultLanguageHighlighterColors.DOC_COMMENT_MARKUP,
-    )
-
-    val tagElement = HighlightInfoType.HighlightInfoTypeImpl(
-        HighlightSeverity.INFORMATION,
-        DefaultLanguageHighlighterColors.DOC_COMMENT_TAG,
-    )
-
     val isEnabled get() = docProcessorIsEnabled
 
     private var highlightInfoHolder: HighlightInfoHolder? = null
-    val tagsInUse = getTagsInUse()
+
+    val loadedProcessors = getLoadedProcessors()
 
     override fun suitableForFile(file: PsiFile): Boolean = isEnabled && file is KtFile
 
-    fun getHighlightInfoForKDoc(kDoc: KDoc): List<HighlightInfo> =
-        buildList<HighlightInfo?> {
-            val startOffset = kDoc.startOffset
+    @Suppress("ktlint:standard:comment-wrapping")
+    fun HighlightInfo.toIntelliJHighlightInfoOrNull(kdoc: KDoc): IjHighlightInfo? {
+        val scheme = EditorColorsManager.getInstance().globalScheme
 
-            // {@inline tags}
-            val inlineTags = kDoc.text.findInlineTagNamesInDocContentWithRanges()
-            for ((tagName, range) in inlineTags) {
-                if (tagName !in tagsInUse) continue
+        val metadataAttributes = scheme.getAttributes(DefaultLanguageHighlighterColors.METADATA)
+        val kdocLinkAttributes = scheme.getAttributes(KotlinHighlightingColors.KDOC_LINK)
+        val commentAttributes = scheme.getAttributes(KotlinHighlightingColors.BLOCK_COMMENT)
+        val declarationAttributes = scheme.getAttributes(DefaultLanguageHighlighterColors.CLASS_NAME)
 
-                // Left '{'
-                this += HighlightInfo.newHighlightInfo(bracketElement)
-                    .range(kDoc, startOffset + range.first, startOffset + range.first + 1)
-                    .create()
+        return IjHighlightInfo.newHighlightInfo(
+            HighlightInfoType.HighlightInfoTypeImpl(
+                HighlightSeverity.WEAK_WARNING,
+                DefaultLanguageHighlighterColors.METADATA,
+                true,
+            ),
+        ).textAttributes(
+            when (type) {
+                HighlightType.BRACKET ->
+                    metadataAttributes.clone().apply {
+                        fontType = Font.BOLD + Font.ITALIC
+                    }
 
-                // '@' and tag name
-                this += HighlightInfo.newHighlightInfo(tagElement)
-                    .range(kDoc, startOffset + range.first + 1, startOffset + range.first + 2 + tagName.length)
-                    .create()
+                HighlightType.TAG ->
+                    metadataAttributes.clone().apply {
+                        fontType = Font.BOLD + Font.ITALIC
+                        effectType = EffectType.LINE_UNDERSCORE
+                        effectColor = metadataAttributes.foregroundColor
+                    }
 
-                // Right '}'
-                this += HighlightInfo.newHighlightInfo(bracketElement)
-                    .range(kDoc, startOffset + range.last, startOffset + range.last + 1)
-                    .create()
-            }
+                HighlightType.TAG_KEY ->
+                    kdocLinkAttributes.clone().apply {}
 
-            // @block tags
-            val blockTags = kDoc.text.findBlockTagsInDocContentWithRanges()
-            for ((tagName, range) in blockTags) {
-                if (tagName !in tagsInUse) continue
+                HighlightType.TAG_VALUE ->
+                    declarationAttributes.clone().apply {}
 
-                // '@' and tag name
-                this += HighlightInfo.newHighlightInfo(tagElement)
-                    .range(kDoc, startOffset + range.first, startOffset + range.first + 1 + tagName.length)
-                    .create()
-            }
+                HighlightType.COMMENT ->
+                    commentAttributes.clone().apply {
+                        fontType = Font.BOLD + Font.ITALIC
+                    }
 
-            // ${tags}
-            val bracedDollarTags = kDoc.text.`find ${}'s`()
-            for (range in bracedDollarTags) {
-                // '$'
-                this += HighlightInfo.newHighlightInfo(tagElement)
-                    .range(kDoc, startOffset + range.first, startOffset + range.first + 1)
-                    .create()
+                HighlightType.COMMENT_TAG ->
+                    commentAttributes.clone().apply {
+                        fontType = Font.BOLD + Font.ITALIC
+                        effectType = EffectType.LINE_UNDERSCORE
+                        effectColor = commentAttributes.foregroundColor
+                    }
+            },
+        )
+            .range(kdoc, kdoc.startOffset + range.first, kdoc.startOffset + range.last + 1)
+            .create()
+    }
 
-                // '{'
-                this += HighlightInfo.newHighlightInfo(bracketElement)
-                    .range(kDoc, startOffset + range.first + 1, startOffset + range.first + 2)
-                    .create()
-
-                // `=`
-                val (key, value) = kDoc.text.substring(range).findKeyAndValueFromDollarSign()
-                if (value != null) { // null if there is no '='
-                    val equalsPosition = range.first + 2 + key.length
-                    this += HighlightInfo.newHighlightInfo(tagElement)
-                        .range(kDoc, startOffset + equalsPosition, startOffset + equalsPosition + 1)
-                        .create()
-                }
-
-                // '}'
-                this += HighlightInfo.newHighlightInfo(bracketElement)
-                    .range(kDoc, startOffset + range.last, startOffset + range.last + 1)
-                    .create()
-            }
-
-            // $tags=...
-            val dollarTags = kDoc.text.`find $tags`()
-            for ((range, equalsLocation) in dollarTags) {
-                // '$'
-                this += HighlightInfo.newHighlightInfo(tagElement)
-                    .range(kDoc, startOffset + range.first, startOffset + range.first + 1)
-                    .create()
-
-                // '='
-                if (equalsLocation != null) {
-                    this += HighlightInfo.newHighlightInfo(tagElement)
-                        .range(kDoc, startOffset + equalsLocation, startOffset + equalsLocation + 1)
-                        .create()
+    fun getHighlightInfoForKDoc(kDoc: KDoc): List<IjHighlightInfo> =
+        buildList<IjHighlightInfo?> {
+            for (processor in loadedProcessors) {
+                val highlightInfo = processor.getHighlightsFor(kDoc.text)
+                for (info in highlightInfo) {
+                    val ijHighlightInfo = info.toIntelliJHighlightInfoOrNull(kDoc)
+                    if (ijHighlightInfo != null) {
+                        this += ijHighlightInfo
+                    }
                 }
             }
         }.filterNotNull()
@@ -146,7 +122,7 @@ class KDocHighlightVisitor : HighlightVisitor {
         try {
             action.run()
         } catch (e: Throwable) {
-            e.printStackTrace()
+            // e.printStackTrace()
         } finally {
             highlightInfoHolder = null
         }

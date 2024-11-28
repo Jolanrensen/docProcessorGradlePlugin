@@ -8,6 +8,8 @@ import nl.jolanrensen.docProcessor.CURLY_BRACES
 import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
+import nl.jolanrensen.docProcessor.HighlightInfo
+import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.SQUARE_BRACKETS
 import nl.jolanrensen.docProcessor.TagDocProcessor
@@ -354,6 +356,121 @@ class ArgDocProcessor : TagDocProcessor() {
 
         return keys
     }
+
+    override fun getHighlightsForInlineTag(
+        tagName: String,
+        rangeInDocText: IntRange,
+        docText: String,
+    ): List<HighlightInfo> =
+        super.getHighlightsForInlineTag(tagName, rangeInDocText, docText) +
+            getArgumentHighlightFor(
+                argumentIndex = 0,
+                docText = docText,
+                rangeInDocText = rangeInDocText,
+                tagName = tagName,
+                numberOfArguments = 2,
+                type = HighlightType.TAG_VALUE,
+            ) +
+            getArgumentHighlightFor(
+                argumentIndex = 1,
+                docText = docText,
+                rangeInDocText = rangeInDocText,
+                tagName = tagName,
+                numberOfArguments = 2,
+                type = HighlightType.TAG_VALUE,
+            )
+
+    // TODO
+    override fun getHighlightsForBlockTag(
+        tagName: String,
+        docContentRangesInDocText: List<IntRange>,
+        docText: String,
+    ): List<HighlightInfo> = super.getHighlightsForBlockTag(tagName, docContentRangesInDocText, docText)
+
+    override fun getHighlightsFor(docText: String): List<HighlightInfo> =
+        super.getHighlightsFor(docText) + buildList {
+            // ${tags}
+            val bracedDollarTags = docText.`find ${}'s`()
+            for (range in bracedDollarTags) {
+                // '$'
+                this += HighlightInfo(
+                    range = range.first..range.first,
+                    type = HighlightType.TAG,
+                )
+
+                // '{'
+                this += HighlightInfo(
+                    range = (range.first + 1)..(range.first + 1),
+                    type = HighlightType.BRACKET,
+                )
+                val (key, value) = docText.substring(range).findKeyAndValueFromDollarSign()
+
+                // key
+                this += HighlightInfo(
+                    range = (range.first + 2)..(range.first + 2 + key.length),
+                    type = HighlightType.TAG_KEY,
+                )
+
+                // `=`
+                if (value != null) { // null if there is no '='
+                    val equalsPosition = range.first + 2 + key.length
+                    this += HighlightInfo(
+                        range = equalsPosition..equalsPosition,
+                        type = HighlightType.BRACKET,
+                    )
+
+                    // value
+                    this += HighlightInfo(
+                        range = equalsPosition + 1..range.last - 1,
+                        type = HighlightType.TAG_VALUE,
+                    )
+                }
+
+                // '}'
+                this += HighlightInfo(
+                    range = range.last..range.last,
+                    type = HighlightType.BRACKET,
+                )
+            }
+
+            // $tags=...
+            val dollarTags = docText.`find $tags`()
+            for ((range, equalsPosition) in dollarTags) {
+                if (docText[range.first + 1] == '{') continue // skip ${...} tags
+
+                // '$'
+                this += HighlightInfo(
+                    range = range.first..range.first,
+                    type = HighlightType.TAG,
+                )
+
+                if (equalsPosition != null) {
+                    // key
+                    this += HighlightInfo(
+                        range = range.first + 1..equalsPosition - 1,
+                        type = HighlightType.TAG_KEY,
+                    )
+
+                    // `=`
+                    this += HighlightInfo(
+                        range = equalsPosition..equalsPosition,
+                        type = HighlightType.BRACKET,
+                    )
+
+                    // value
+                    this += HighlightInfo(
+                        range = equalsPosition + 1..range.last,
+                        type = HighlightType.TAG_VALUE,
+                    )
+                } else {
+                    // key
+                    this += HighlightInfo(
+                        range = range.first + 1..range.last,
+                        type = HighlightType.TAG_KEY,
+                    )
+                }
+            }
+        }
 }
 
 /**
@@ -411,7 +528,7 @@ fun DocContent.`replace ${}'s`(): DocContent {
  * "${}" marks are ignored if "\" escaped.
  */
 @Suppress("ktlint:standard:function-naming")
-fun DocContent.`find ${}'s`(): List<IntRange> {
+internal fun DocContent.`find ${}'s`(): List<IntRange> {
     var text = this
 
     /*
@@ -466,7 +583,7 @@ fun DocContent.`find ${}'s`(): List<IntRange> {
  * and "$KEY=DEFAULT" with "{@get KEY DEFAULT}"
  */
 @Suppress("ktlint:standard:function-naming")
-fun DocContent.`replace $tags`(): DocContent {
+internal fun DocContent.`replace $tags`(): DocContent {
     val text = this
     val locations = `find $tags`()
 
@@ -492,7 +609,7 @@ fun DocContent.`replace $tags`(): DocContent {
  * The function also returns the absolute index of the `=` sign if it exists
  */
 @Suppress("ktlint:standard:function-naming")
-fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
+internal fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
     val text = this
 
     return buildList {

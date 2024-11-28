@@ -1,6 +1,8 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.HighlightInfo
+import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.TagDocProcessor
 
 /**
@@ -53,4 +55,53 @@ class CommentDocProcessor : TagDocProcessor() {
         path: String,
         documentable: DocumentableWrapper,
     ): String = ""
+
+    override fun getHighlightsForInlineTag(tagName: String, rangeInDocText: IntRange, docText: String): List<HighlightInfo> =
+        buildList {
+            // '{'
+            this += HighlightInfo(
+                range = rangeInDocText.first..rangeInDocText.first,
+                type = HighlightType.COMMENT,
+            )
+
+            // '@' and tag name
+            this += HighlightInfo(
+                range = (rangeInDocText.first + 1)..(rangeInDocText.first + 1 + tagName.length),
+                type = HighlightType.COMMENT_TAG,
+            )
+
+            // comment contents and '}'
+            this += HighlightInfo(
+                range = (rangeInDocText.first + 1 + tagName.length + 1)..rangeInDocText.last,
+                type = HighlightType.COMMENT,
+            )
+        }
+
+    override fun getHighlightsForBlockTag(
+        tagName: String,
+        docContentRangesInDocText: List<IntRange>,
+        docText: String,
+    ): List<HighlightInfo> =
+        buildList {
+            // '@' and tag name
+            val firstLineDocContentRange = docContentRangesInDocText.first()
+            this += HighlightInfo(
+                range = firstLineDocContentRange.first..(firstLineDocContentRange.first + 1 + tagName.length),
+                type = HighlightType.COMMENT_TAG,
+            )
+
+            // comment contents first line
+            this += HighlightInfo(
+                range = (firstLineDocContentRange.first + 1 + tagName.length)..firstLineDocContentRange.last,
+                type = HighlightType.COMMENT,
+            )
+
+            // comment contents other lines
+            docContentRangesInDocText.drop(1).forEach { range ->
+                this += HighlightInfo(
+                    range = range.first..range.last,
+                    type = HighlightType.COMMENT,
+                )
+            }
+        }
 }

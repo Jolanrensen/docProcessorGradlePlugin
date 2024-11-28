@@ -58,6 +58,13 @@ abstract class DocProcessor : Serializable {
             hasRun = true
         }
     }
+
+    /**
+     * Can be overridden to provide custom highlighting for doc text given by [docText].
+     *
+     * NOTE: this can contain '*' characters and indents, so make sure to handle that.
+     */
+    open fun getHighlightsFor(docText: String): List<HighlightInfo> = emptyList()
 }
 
 fun findProcessors(fullyQualifiedNames: List<String>, arguments: Map<String, Any?>): List<DocProcessor> {

@@ -322,5 +322,80 @@ abstract class TagDocProcessor : DocProcessor() {
 
         return processedDoc
     }
-}
 
+    fun getArgumentHighlightFor(
+        argumentIndex: Int,
+        rangeInDocText: IntRange,
+        docText: String,
+        tagName: String,
+        numberOfArguments: Int,
+        type: HighlightType,
+    ): HighlightInfo {
+        val (_, rangeInSubstring) = docText.substring(rangeInDocText).getTagArgumentWithRangeByIndex(
+            index = argumentIndex,
+            tag = tagName,
+            numberOfArguments = numberOfArguments,
+        )
+        return HighlightInfo(
+            range = rangeInSubstring.first + rangeInDocText.first..rangeInSubstring.last + rangeInDocText.first,
+            type = type,
+        )
+    }
+
+    protected open fun getHighlightsForInlineTag(
+        tagName: String,
+        rangeInDocText: IntRange,
+        docText: String,
+    ): List<HighlightInfo> =
+        buildList {
+            // Left '{'
+            this += HighlightInfo(
+                range = rangeInDocText.first..rangeInDocText.first,
+                type = HighlightType.BRACKET,
+            )
+
+            // '@' and tag name
+            this += HighlightInfo(
+                range = (rangeInDocText.first + 1)..(rangeInDocText.first + 1 + tagName.length),
+                type = HighlightType.TAG,
+            )
+
+            // Right '}'
+            this += HighlightInfo(
+                range = rangeInDocText.last..rangeInDocText.last,
+                type = HighlightType.BRACKET,
+            )
+        }
+
+    protected open fun getHighlightsForBlockTag(
+        tagName: String,
+        docContentRangesInDocText: List<IntRange>,
+        docText: String,
+    ): List<HighlightInfo> =
+        buildList {
+            // '@' and tag name
+            val firstLineDocContentRange = docContentRangesInDocText.first()
+            this += HighlightInfo(
+                range = firstLineDocContentRange.first..(firstLineDocContentRange.first + 1 + tagName.length),
+                type = HighlightType.TAG,
+            )
+        }
+
+    override fun getHighlightsFor(docText: String): List<HighlightInfo> =
+        buildList {
+            // {@inline tags}
+            val inlineTags = docText.findInlineTagNamesInDocTextWithRanges()
+            for ((tagName, range) in inlineTags) {
+                if (!tagIsSupported(tagName)) continue
+                this += getHighlightsForInlineTag(tagName, range, docText)
+            }
+
+            // @block tags TODO cannot find block tags in doc text yet
+//            val blockTags = docText.findBlockTagsInDocTextWithDocContentRanges()
+//            for ((tagName, docContentRanges) in blockTags) {
+//                if (!tagIsSupported(tagName)) continue
+//
+//                getHighlightsForBlockTag(tagName, docContentRanges, docText)
+//            }
+        }
+}

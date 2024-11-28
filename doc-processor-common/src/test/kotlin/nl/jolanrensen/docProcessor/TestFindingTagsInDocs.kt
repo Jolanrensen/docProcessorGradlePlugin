@@ -216,4 +216,20 @@ class TestFindingTagsInDocs {
             .getDocContentOrNull()!!
             .findTagNamesInDocContent()
     }
+
+    @Test
+    fun `split doc text instead`() {
+        val kdoc = """
+            /**
+             * Hello World! 
+             * @include [Some aliased link][helloWorld2]
+             * ewrmklwerm
+             */
+        """.trimIndent()
+
+        val split = kdoc.splitDocTextPerBlock()
+        val splitWithRanges = kdoc.splitDocTextPerBlockWithRangesOfDocContent()
+        val namesWithRanges = kdoc.findBlockTagsInDocTextWithDocContentRanges()
+        split.joinToString("\n") shouldBe kdoc
+    }
 }
