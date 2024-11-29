@@ -58,8 +58,8 @@ class DocProcessorPsiDocumentationTargetProvider : PsiDocumentationTargetProvide
         val service = getService(element.project)
         if (!service.isEnabled) return kotlinPsi.documentationTarget(element, originalElement)
 
-        val modifiedElement = service.getModifiedElement(element)
         return try {
+            val modifiedElement = service.getModifiedElement(element)
             kotlinPsi.documentationTarget(modifiedElement ?: element, originalElement)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -168,40 +168,50 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
         val service = getService(file.project)
         if (!service.isEnabled) return kotlin.inlineDocumentationItems(file)
 
-        val result = mutableListOf<InlineDocumentation>()
-        PsiTreeUtil.processElements(file) {
-            val owner = it as? KtDeclaration ?: return@processElements true
-            val originalDocumentation = owner.docComment as KDoc? ?: return@processElements true
-            result += findInlineDocumentation(file, originalDocumentation.textRange) ?: return@processElements true
+        try {
+            val result = mutableListOf<InlineDocumentation>()
+            PsiTreeUtil.processElements(file) {
+                val owner = it as? KtDeclaration ?: return@processElements true
+                val originalDocumentation = owner.docComment as KDoc? ?: return@processElements true
+                result += findInlineDocumentation(file, originalDocumentation.textRange) ?: return@processElements true
 
-            true
+                true
+            }
+
+            return result
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            return emptyList()
         }
-
-        return result
     }
 
     override fun findInlineDocumentation(file: PsiFile, textRange: TextRange): InlineDocumentation? {
         val service = getService(file.project)
         if (!service.isEnabled) return kotlin.findInlineDocumentation(file, textRange)
 
-        val comment = PsiTreeUtil.getParentOfType(
-            file.findElementAt(textRange.startOffset),
-            PsiDocCommentBase::class.java,
-        ) ?: return null
+        try {
+            val comment = PsiTreeUtil.getParentOfType(
+                file.findElementAt(textRange.startOffset),
+                PsiDocCommentBase::class.java,
+            ) ?: return null
 
-        if (comment.textRange != textRange) return null
+            if (comment.textRange != textRange) return null
 
-        val declaration = comment.owner as? KtDeclaration ?: return null
-        val modified = service.getModifiedElement(declaration)
+            val declaration = comment.owner as? KtDeclaration ?: return null
+            val modified = service.getModifiedElement(declaration)
 
-        if (modified == null) return null
+            if (modified == null) return null
 
-        return DocProcessorInlineDocumentation(
-            originalDocumentation = declaration.docComment as KDoc,
-            originalOwner = declaration,
-            modifiedDocumentation = modified.docComment as KDoc,
-            modifiedOwner = modified as KtDeclaration,
-        )
+            return DocProcessorInlineDocumentation(
+                originalDocumentation = declaration.docComment as KDoc,
+                originalOwner = declaration,
+                modifiedDocumentation = modified.docComment as KDoc,
+                modifiedOwner = modified as KtDeclaration,
+            )
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            return null
+        }
     }
 }
 
@@ -227,21 +237,25 @@ class DocProcessorDocumentationProvider :
         if (file !is KtFile) return
         if (!getService(file.project).isEnabled) return
 
-        // capture all comments in the file
-        processElements(file) {
-            val comment = (it as? KtDeclaration)?.docComment
-            if (comment != null) {
-                sink.accept(comment)
+        try {
+            // capture all comments in the file
+            processElements(file) {
+                val comment = (it as? KtDeclaration)?.docComment
+                if (comment != null) {
+                    sink.accept(comment)
+                }
+                true
             }
-            true
+        } catch (e: Throwable) {
+            e.printStackTrace()
         }
     }
 
     override fun generateDoc(element: PsiElement, originalElement: PsiElement?): String? {
         val service = getService(element.project)
         if (!service.isEnabled) return null
-        val modifiedElement = service.getModifiedElement(element)
         return try {
+            val modifiedElement = service.getModifiedElement(element)
             kotlin.generateDoc(modifiedElement ?: element, originalElement)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -256,8 +270,8 @@ class DocProcessorDocumentationProvider :
     override fun generateRenderedDoc(comment: PsiDocCommentBase): String? {
         val service = getService(comment.project)
         if (!service.isEnabled) return null
-        val modifiedElement = service.getModifiedElement(comment.owner ?: return null)
         return try {
+            val modifiedElement = service.getModifiedElement(comment.owner ?: return null)
             kotlin.generateRenderedDoc(modifiedElement?.docComment ?: comment)
         } catch (e: Exception) {
             e.printStackTrace()

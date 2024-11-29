@@ -1,6 +1,11 @@
 package nl.jolanrensen.docProcessor
 
-data class HighlightInfo(val range: IntRange, val type: HighlightType)
+data class HighlightInfo(
+    val range: IntRange,
+    val type: HighlightType,
+    val related: List<HighlightInfo> = emptyList(),
+    val tagProcessorName: String,
+)
 
 enum class HighlightType {
     BRACKET,

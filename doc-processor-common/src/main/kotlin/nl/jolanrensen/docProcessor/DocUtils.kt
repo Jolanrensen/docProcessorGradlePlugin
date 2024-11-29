@@ -212,8 +212,8 @@ fun String.getTagArgumentsWithRanges(tag: String, numberOfArguments: Int): List<
     return trimmedArguments
 }
 
-fun String.getTagArgumentWithRangeByIndex(index: Int, tag: String, numberOfArguments: Int): Pair<String, IntRange> =
-    getTagArgumentsWithRanges(tag, numberOfArguments)[index]
+fun String.getTagArgumentWithRangeByIndexOrNull(index: Int, tag: String, numberOfArguments: Int): Pair<String, IntRange>? =
+    getTagArgumentsWithRanges(tag, numberOfArguments).getOrNull(index)
 
 /**
  * Can retrieve the arguments of an inline- or block-tag.

@@ -121,28 +121,33 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         rangeInDocText: IntRange,
         docText: String,
     ): List<HighlightInfo> =
-        super.getHighlightsForInlineTag(tagName, rangeInDocText, docText) +
-            getArgumentHighlightFor(
+        buildList {
+            this += super.getHighlightsForInlineTag(tagName, rangeInDocText, docText)
+            getArgumentHighlightForOrNull(
                 argumentIndex = 0,
                 docText = docText,
                 rangeInDocText = rangeInDocText,
                 tagName = tagName,
                 numberOfArguments = 2,
                 type = HighlightType.TAG_KEY,
-            )
+            )?.let(::add)
+        }
 
     override fun getHighlightsForBlockTag(
         tagName: String,
         docContentRangesInDocText: List<IntRange>,
         docText: String,
     ): List<HighlightInfo> =
-        super.getHighlightsForBlockTag(tagName, docContentRangesInDocText, docText) +
-            getArgumentHighlightFor(
+        buildList {
+            this += super.getHighlightsForBlockTag(tagName, docContentRangesInDocText, docText)
+
+            getArgumentHighlightForOrNull(
                 argumentIndex = 0,
                 docText = docText,
                 rangeInDocText = docContentRangesInDocText.first(),
                 tagName = tagName,
                 numberOfArguments = 2,
                 type = HighlightType.TAG_KEY,
-            )
+            )?.let(::add)
+        }
 }

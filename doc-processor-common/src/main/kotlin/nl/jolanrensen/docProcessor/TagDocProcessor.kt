@@ -323,19 +323,19 @@ abstract class TagDocProcessor : DocProcessor() {
         return processedDoc
     }
 
-    fun getArgumentHighlightFor(
+    fun getArgumentHighlightForOrNull(
         argumentIndex: Int,
         rangeInDocText: IntRange,
         docText: String,
         tagName: String,
         numberOfArguments: Int,
         type: HighlightType,
-    ): HighlightInfo {
-        val (_, rangeInSubstring) = docText.substring(rangeInDocText).getTagArgumentWithRangeByIndex(
+    ): HighlightInfo? {
+        val (_, rangeInSubstring) = docText.substring(rangeInDocText).getTagArgumentWithRangeByIndexOrNull(
             index = argumentIndex,
             tag = tagName,
             numberOfArguments = numberOfArguments,
-        )
+        ) ?: return null
         return HighlightInfo(
             range = rangeInSubstring.first + rangeInDocText.first..rangeInSubstring.last + rangeInDocText.first,
             type = type,
@@ -349,7 +349,7 @@ abstract class TagDocProcessor : DocProcessor() {
     ): List<HighlightInfo> =
         buildList {
             // Left '{'
-            this += HighlightInfo(
+            val leftBracket = HighlightInfo(
                 range = rangeInDocText.first..rangeInDocText.first,
                 type = HighlightType.BRACKET,
             )
@@ -361,10 +361,14 @@ abstract class TagDocProcessor : DocProcessor() {
             )
 
             // Right '}'
-            this += HighlightInfo(
+            val rightBracket = HighlightInfo(
                 range = rangeInDocText.last..rangeInDocText.last,
                 type = HighlightType.BRACKET,
             )
+
+            // Linking brackets
+            this += leftBracket.copy(related = listOf(rightBracket))
+            this += rightBracket.copy(related = listOf(leftBracket))
         }
 
     protected open fun getHighlightsForBlockTag(
@@ -383,7 +387,7 @@ abstract class TagDocProcessor : DocProcessor() {
 
     override fun getHighlightsFor(docText: String): List<HighlightInfo> =
         buildList {
-            // {@inline tags}
+            // {@inline tags} // TODO does not handle multiple lines well, includes * chars
             val inlineTags = docText.findInlineTagNamesInDocTextWithRanges()
             for ((tagName, range) in inlineTags) {
                 if (!tagIsSupported(tagName)) continue
