@@ -56,10 +56,14 @@ class CommentDocProcessor : TagDocProcessor() {
         documentable: DocumentableWrapper,
     ): String = ""
 
-    override fun getHighlightsForInlineTag(tagName: String, rangeInDocText: IntRange, docText: String): List<HighlightInfo> =
+    override fun getHighlightsForInlineTag(
+        tagName: String,
+        rangeInDocText: IntRange,
+        docText: String,
+    ): List<HighlightInfo> =
         buildList {
             // '{'
-            this += HighlightInfo(
+            val leftBracket = HighlightInfo(
                 range = rangeInDocText.first..rangeInDocText.first,
                 type = HighlightType.COMMENT,
             )
@@ -70,11 +74,21 @@ class CommentDocProcessor : TagDocProcessor() {
                 type = HighlightType.COMMENT_TAG,
             )
 
-            // comment contents and '}'
+            // comment contents
             this += HighlightInfo(
-                range = (rangeInDocText.first + 1 + tagName.length + 1)..rangeInDocText.last,
+                range = (rangeInDocText.first + 1 + tagName.length + 1)..rangeInDocText.last - 1,
                 type = HighlightType.COMMENT,
             )
+
+            // '}
+            val rightBracket = HighlightInfo(
+                range = rangeInDocText.last..rangeInDocText.last,
+                type = HighlightType.COMMENT,
+            )
+
+            // link left and right brackets
+            this += leftBracket.copy(related = listOf(rightBracket))
+            this += rightBracket.copy(related = listOf(leftBracket))
         }
 
     override fun getHighlightsForBlockTag(

@@ -65,6 +65,18 @@ abstract class DocProcessor : Serializable {
      * NOTE: this can contain '*' characters and indents, so make sure to handle that.
      */
     open fun getHighlightsFor(docText: String): List<HighlightInfo> = emptyList()
+
+    protected fun HighlightInfo(
+        range: IntRange,
+        type: HighlightType,
+        related: List<HighlightInfo> = emptyList(),
+    ): HighlightInfo =
+        HighlightInfo(
+            range = range,
+            type = type,
+            related = related,
+            tagProcessorName = name,
+        )
 }
 
 fun findProcessors(fullyQualifiedNames: List<String>, arguments: Map<String, Any?>): List<DocProcessor> {

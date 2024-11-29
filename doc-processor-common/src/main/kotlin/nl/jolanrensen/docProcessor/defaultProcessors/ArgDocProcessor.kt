@@ -362,23 +362,29 @@ class ArgDocProcessor : TagDocProcessor() {
         rangeInDocText: IntRange,
         docText: String,
     ): List<HighlightInfo> =
-        super.getHighlightsForInlineTag(tagName, rangeInDocText, docText) +
-            getArgumentHighlightFor(
+        buildList {
+            this += super.getHighlightsForInlineTag(tagName, rangeInDocText, docText)
+
+            getArgumentHighlightForOrNull(
                 argumentIndex = 0,
                 docText = docText,
                 rangeInDocText = rangeInDocText,
                 tagName = tagName,
                 numberOfArguments = 2,
-                type = HighlightType.TAG_VALUE,
-            ) +
-            getArgumentHighlightFor(
-                argumentIndex = 1,
-                docText = docText,
-                rangeInDocText = rangeInDocText,
-                tagName = tagName,
-                numberOfArguments = 2,
-                type = HighlightType.TAG_VALUE,
-            )
+                type = HighlightType.TAG_KEY,
+            )?.let(::add)
+
+            if (tagName in RETRIEVE_ARGUMENT_TAGS) {
+                getArgumentHighlightForOrNull(
+                    argumentIndex = 1,
+                    docText = docText,
+                    rangeInDocText = rangeInDocText,
+                    tagName = tagName,
+                    numberOfArguments = 2,
+                    type = HighlightType.TAG_VALUE,
+                )?.let(::add)
+            }
+        }
 
     // TODO
     override fun getHighlightsForBlockTag(
@@ -399,7 +405,7 @@ class ArgDocProcessor : TagDocProcessor() {
                 )
 
                 // '{'
-                this += HighlightInfo(
+                val left = HighlightInfo(
                     range = (range.first + 1)..(range.first + 1),
                     type = HighlightType.BRACKET,
                 )
@@ -427,10 +433,14 @@ class ArgDocProcessor : TagDocProcessor() {
                 }
 
                 // '}'
-                this += HighlightInfo(
+                val right = HighlightInfo(
                     range = range.last..range.last,
                     type = HighlightType.BRACKET,
                 )
+
+                // link left and right brackets
+                this += left.copy(related = listOf(right))
+                this += right.copy(related = listOf(left))
             }
 
             // $tags=...
