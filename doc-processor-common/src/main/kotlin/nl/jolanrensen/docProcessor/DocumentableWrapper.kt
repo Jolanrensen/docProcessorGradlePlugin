@@ -127,7 +127,7 @@ open class DocumentableWrapper(
         programmingLanguage = programmingLanguage,
         imports = imports,
         rawSource = rawSource,
-        sourceHasDocumentation = docContent.isNotEmpty() && docFileTextRange.size > 1,
+        sourceHasDocumentation = docContent.value.isNotEmpty() && docFileTextRange.size > 1,
         fullyQualifiedPath = fullyQualifiedPath,
         fullyQualifiedExtensionPath = fullyQualifiedExtensionPath,
         fullyQualifiedSuperPaths = fullyQualifiedSuperPaths,
@@ -137,7 +137,7 @@ open class DocumentableWrapper(
         docIndent = docIndent,
         docContent = docContent,
         annotations = annotations,
-        tags = docContent.findTagNamesInDocContent().toSet(),
+        tags = docContent.findTagNames().toSet(),
         isModified = false,
         htmlRangeStart = htmlRangeStart,
         htmlRangeEnd = htmlRangeEnd,
@@ -355,10 +355,10 @@ open class DocumentableWrapper(
     }
 
     fun getDocContentForHtmlRange(): DocContent {
-        val lines = docContent.lines()
+        val lines = docContent.value.lines()
         val start = htmlRangeStart ?: 0
         val end = htmlRangeEnd ?: lines.lastIndex
-        return lines.subList(start, end + 1).joinToString("\n")
+        return lines.subList(start, end + 1).joinToString("\n").asDocContent()
     }
 
     fun getDocHashcode(): Int = docContent.hashCode()

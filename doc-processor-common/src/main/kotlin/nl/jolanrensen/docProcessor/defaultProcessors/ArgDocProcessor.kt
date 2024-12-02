@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import nl.jolanrensen.docProcessor.BACKTICKS
 import nl.jolanrensen.docProcessor.CURLY_BRACES
 import nl.jolanrensen.docProcessor.DocContent
+import nl.jolanrensen.docProcessor.DocText
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.HighlightInfo
@@ -13,8 +14,9 @@ import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.SQUARE_BRACKETS
 import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.asDocContent
 import nl.jolanrensen.docProcessor.decodeCallableTarget
-import nl.jolanrensen.docProcessor.findTagNamesInDocContent
+import nl.jolanrensen.docProcessor.findTagNames
 import nl.jolanrensen.docProcessor.getLineAndCharacterOffset
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.getTagNameOrNull
@@ -222,7 +224,7 @@ class ArgDocProcessor : TagDocProcessor() {
         val tagName = tagWithContent.getTagNameOrNull()
         val isDeclareArgumentDeclaration = tagName in DECLARE_ARGUMENT_TAGS
 
-        val tagNames = documentable.docContent.findTagNamesInDocContent()
+        val tagNames = documentable.docContent.findTagNames()
 
         val declareArgTagsStillPresent = DECLARE_ARGUMENT_TAGS.any { it in tagNames }
         val retrieveArgTagsPresent = RETRIEVE_ARGUMENT_TAGS.any { it in tagNames }
@@ -393,10 +395,12 @@ class ArgDocProcessor : TagDocProcessor() {
         docText: String,
     ): List<HighlightInfo> = super.getHighlightsForBlockTag(tagName, docContentRangesInDocText, docText)
 
-    override fun getHighlightsFor(docText: String): List<HighlightInfo> =
+    override fun getHighlightsFor(docText: DocText): List<HighlightInfo> =
         super.getHighlightsFor(docText) + buildList {
             // ${tags}
-            val bracedDollarTags = docText.`find ${}'s`()
+            val bracedDollarTags = docText
+                .value.asDocContent() // pretend we removed * and indents
+                .`find ${}'s`()
             for (range in bracedDollarTags) {
                 // '$'
                 this += HighlightInfo(
@@ -409,7 +413,7 @@ class ArgDocProcessor : TagDocProcessor() {
                     range = (range.first + 1)..(range.first + 1),
                     type = HighlightType.BRACKET,
                 )
-                val (key, value) = docText.substring(range).findKeyAndValueFromDollarSign()
+                val (key, value) = docText.value.substring(range).findKeyAndValueFromDollarSign()
 
                 // key
                 this += HighlightInfo(
@@ -444,9 +448,11 @@ class ArgDocProcessor : TagDocProcessor() {
             }
 
             // $tags=...
-            val dollarTags = docText.`find $tags`()
+            val dollarTags = docText
+                .value.asDocContent() // pretend we removed * and indents
+                .`find $tags`()
             for ((range, equalsPosition) in dollarTags) {
-                if (docText[range.first + 1] == '{') continue // skip ${...} tags
+                if (docText.value[range.first + 1] == '{') continue // skip ${...} tags
 
                 // '$'
                 this += HighlightInfo(
@@ -511,7 +517,7 @@ fun DocContent.`replace ${}'s`(): DocContent {
     val text = this
     val locations = `find ${}'s`()
     val locationsWithKeyValues = locations
-        .associateWith { text.substring(it).findKeyAndValueFromDollarSign() }
+        .associateWith { text.value.substring(it).findKeyAndValueFromDollarSign() }
 
     val nonOverlappingRangesWithReplacement = locationsWithKeyValues
         .flatMap { (range, keyAndValue) ->
@@ -528,7 +534,9 @@ fun DocContent.`replace ${}'s`(): DocContent {
             }
         }
 
-    return text.replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+    return text.value
+        .replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+        .asDocContent()
 }
 
 /**
@@ -549,14 +557,14 @@ internal fun DocContent.`find ${}'s`(): List<IntRange> {
         var depth = 0
         var start: Int? = null
         var escapeNext = false
-        for ((i, char) in this.withIndex()) {
+        for ((i, char) in value.withIndex()) {
             // escape this char
             when {
                 escapeNext -> escapeNext = false
 
                 char == '\\' -> escapeNext = true
 
-                char == '$' && this.getOrNull(i + 1) == '{' -> {
+                char == '$' && value.getOrNull(i + 1) == '{' -> {
                     start = i
                     depth++
                 }
@@ -574,15 +582,15 @@ internal fun DocContent.`find ${}'s`(): List<IntRange> {
     return buildMap<Int, MutableList<IntRange>> {
         while (text.findInlineDollarTagRangesWithDepthOrNull() != null) {
             val (range, depth) = text.findInlineDollarTagRangesWithDepthOrNull()!!
-            val comment = text.substring(range)
+            val comment = text.value.substring(range)
             getOrPut(depth) { mutableListOf() } += range
 
-            text = text.replaceRange(
+            text = text.value.replaceRange(
                 range = range,
                 replacement = comment
                     .replace('{', '<')
                     .replace('}', '>'),
-            )
+            ).asDocContent()
         }
     }.toSortedMap(Comparator.reverseOrder())
         .flatMap { it.value }
@@ -611,7 +619,9 @@ internal fun DocContent.`replace $tags`(): DocContent {
         }
     }
 
-    return text.replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+    return text.value
+        .replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+        .asDocContent()
 }
 
 /**
@@ -624,14 +634,14 @@ internal fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
 
     return buildList {
         var escapeNext = false
-        for ((i, char) in text.withIndex()) {
+        for ((i, char) in text.value.withIndex()) {
             when {
                 escapeNext -> escapeNext = false
 
                 char == '\\' -> escapeNext = true
 
                 char == '$' -> {
-                    val (key, value) = text.substring(startIndex = i).findKeyAndValueFromDollarSign()
+                    val (key, value) = text.value.substring(startIndex = i).findKeyAndValueFromDollarSign()
 
                     this += if (value == null) { // reporting "$key" range
                         Pair(

@@ -45,9 +45,9 @@ open class TagDocProcessorFailedException(
                     appendLine(
                         "Tag throwing the exception: ${
                             highlightException(
-                                currentDoc.substring(
+                                currentDoc.value.substring(
                                     rangeInCurrentDoc.coerceAtMost(
-                                        currentDoc.lastIndex,
+                                        currentDoc.value.lastIndex,
                                     ),
                                 ),
                             )
@@ -61,15 +61,17 @@ open class TagDocProcessorFailedException(
                     appendLine("--------------------------------------------------")
                     appendLine(
                         try {
-                            currentDoc.replaceRange(
-                                range = rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex),
+                            currentDoc.value.replaceRange(
+                                range = rangeInCurrentDoc.coerceAtMost(currentDoc.value.lastIndex),
                                 replacement = highlightException(
-                                    currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)),
+                                    currentDoc.value.substring(
+                                        rangeInCurrentDoc.coerceAtMost(currentDoc.value.lastIndex),
+                                    ),
                                 ),
-                            )
+                            ).asDocContent()
                         } catch (e: Throwable) {
                             currentDoc
-                        }.toDoc(),
+                        }.toDocText(),
                     )
                     appendLine("--------------------------------------------------")
                 }
@@ -87,7 +89,7 @@ open class TagDocProcessorFailedException(
             cause = cause,
         )
 
-    fun renderDoc(): String =
+    fun renderDoc(): DocContent =
         try {
             buildString {
                 val docRangeInFile = documentable.docFileTextRange
@@ -113,7 +115,9 @@ open class TagDocProcessorFailedException(
                 appendLine(lineBreak)
                 appendLine("### Tag throwing the exception:")
                 appendLine()
-                appendLine("**`" + currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)) + "`**")
+                appendLine(
+                    "**`${currentDoc.value.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.value.lastIndex))}`**",
+                )
                 appendLine(lineBreak)
                 appendLine("### Reason for the exception:")
                 appendLine()
@@ -138,20 +142,20 @@ open class TagDocProcessorFailedException(
                 appendLine("```")
                 appendLine(
                     try {
-                        currentDoc.replaceRange(
+                        currentDoc.value.replaceRange(
                             range = rangeInCurrentDoc,
                             replacement = highlightException(
-                                currentDoc.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.lastIndex)),
+                                currentDoc.value.substring(rangeInCurrentDoc.coerceAtMost(currentDoc.value.lastIndex)),
                             ),
-                        )
+                        ).asDocContent()
                     } catch (e: Throwable) {
                         currentDoc
-                    }.toDoc(),
+                    }.toDocText(),
                 )
                 appendLine("```")
                 appendLine("--------------------------------------------------")
-            }
+            }.asDocContent()
         } catch (e: Throwable) {
-            "Failed to render message as KDoc for TagDocProcessorFailedException: ${e.message}, $message."
+            "Failed to render message as KDoc for TagDocProcessorFailedException: ${e.message}, $message.".asDocContent()
         }
 }

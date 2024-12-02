@@ -61,7 +61,7 @@ class ExportAsHtmlDocProcessor : TagDocProcessor() {
         require(documentable is MutableDocumentableWrapper) {
             "DocumentableWrapper must be MutableDocumentableWrapper to use this processor."
         }
-        val lineInDoc = documentable.docContent.lines().indexOfFirst {
+        val lineInDoc = documentable.docContent.value.lines().indexOfFirst {
             it.contains("@$tag")
         }
         when (tag) {

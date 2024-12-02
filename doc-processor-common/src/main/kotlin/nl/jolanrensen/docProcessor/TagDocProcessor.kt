@@ -232,14 +232,14 @@ abstract class TagDocProcessor : DocProcessor() {
             var i = 0
             while (true) {
                 val inlineTagNames = text
-                    .findInlineTagNamesInDocContentWithRanges()
+                    .findInlineTagNamesWithRanges()
                     .filter { (tagName, _) -> tagIsSupported(tagName) }
 
                 if (inlineTagNames.isEmpty()) break
 
                 var wasModified = false
                 for ((_, range) in inlineTagNames) {
-                    val tagContent = text.substring(range)
+                    val tagContent = text.value.substring(range)
 
                     // sanity check
                     require(tagContent.startsWith("{@") && tagContent.endsWith("}")) {
@@ -261,7 +261,7 @@ abstract class TagDocProcessor : DocProcessor() {
                             cause = e,
                         )
                     }
-                    text = text.replaceRange(range, newTagContent)
+                    text = text.value.replaceRange(range, newTagContent).asDocContent()
 
                     wasModified = tagContent != newTagContent
 
@@ -286,20 +286,20 @@ abstract class TagDocProcessor : DocProcessor() {
 
         // Then process the normal tags
         val processedDoc: DocContent = processedInlineTagsDoc
-            .splitDocContentPerBlockWithRanges()
+            .splitPerBlockWithRanges()
             .map { (split, rangeDocContent) ->
                 val shouldProcess =
-                    split.trimStart().startsWith("@") &&
+                    split.value.trimStart().startsWith("@") &&
                         split.getTagNameOrNull()
                             ?.let(::tagIsSupported) == true
 
                 if (shouldProcess) {
                     try {
                         processBlockTagWithContent(
-                            tagWithContent = split,
+                            tagWithContent = split.value,
                             path = path,
                             documentable = documentable,
-                        )
+                        ).asDocContent()
                     } catch (e: Throwable) {
                         throw TagDocProcessorFailedException(
                             processorName = name,
@@ -316,9 +316,9 @@ abstract class TagDocProcessor : DocProcessor() {
                 // skip empty blocks, making sure to keep the first and last blocks
                 // even if they are empty, to preserve original newlines
                 list.filterIndexed { i, it ->
-                    i == 0 || i == list.lastIndex || it.isNotEmpty()
+                    i == 0 || i == list.lastIndex || it.value.isNotEmpty()
                 }
-            }.joinToString("\n")
+            }.joinToString("\n").asDocContent()
 
         return processedDoc
     }
@@ -385,13 +385,13 @@ abstract class TagDocProcessor : DocProcessor() {
             )
         }
 
-    override fun getHighlightsFor(docText: String): List<HighlightInfo> =
+    override fun getHighlightsFor(docText: DocText): List<HighlightInfo> =
         buildList {
             // {@inline tags} // TODO does not handle multiple lines well, includes * chars
-            val inlineTags = docText.findInlineTagNamesInDocTextWithRanges()
+            val inlineTags = docText.findInlineTagNamesWithRanges()
             for ((tagName, range) in inlineTags) {
                 if (!tagIsSupported(tagName)) continue
-                this += getHighlightsForInlineTag(tagName, range, docText)
+                this += getHighlightsForInlineTag(tagName, range, docText.value)
             }
 
             // @block tags TODO cannot find block tags in doc text yet

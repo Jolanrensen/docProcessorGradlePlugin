@@ -64,7 +64,7 @@ abstract class DocProcessor : Serializable {
      *
      * NOTE: this can contain '*' characters and indents, so make sure to handle that.
      */
-    open fun getHighlightsFor(docText: String): List<HighlightInfo> = emptyList()
+    open fun getHighlightsFor(docText: DocText): List<HighlightInfo> = emptyList()
 
     protected fun HighlightInfo(
         range: IntRange,

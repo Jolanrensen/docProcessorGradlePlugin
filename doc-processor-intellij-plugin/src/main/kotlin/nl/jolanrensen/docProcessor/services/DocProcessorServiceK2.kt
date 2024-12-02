@@ -12,6 +12,7 @@ import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
 import com.intellij.psi.PsiPolyVariantReference
+import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
@@ -21,6 +22,8 @@ import nl.jolanrensen.docProcessor.Mode
 import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.TagDocProcessorFailedException
 import nl.jolanrensen.docProcessor.annotationNames
+import nl.jolanrensen.docProcessor.asDocContent
+import nl.jolanrensen.docProcessor.asDocText
 import nl.jolanrensen.docProcessor.copiedWithFile
 import nl.jolanrensen.docProcessor.createFromIntellijOrNull
 import nl.jolanrensen.docProcessor.docComment
@@ -30,7 +33,7 @@ import nl.jolanrensen.docProcessor.getOrigin
 import nl.jolanrensen.docProcessor.mode
 import nl.jolanrensen.docProcessor.programmingLanguage
 import nl.jolanrensen.docProcessor.renderToHtml
-import nl.jolanrensen.docProcessor.toDoc
+import nl.jolanrensen.docProcessor.toDocText
 import org.jetbrains.kotlin.idea.base.psi.copied
 import org.jetbrains.kotlin.idea.kdoc.KDocElementFactory
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocName
@@ -177,7 +180,7 @@ class DocProcessorServiceK2(private val project: Project) {
         val newDocContent = getDocContent(psiElement) ?: return null
 
         // If the new doc is empty, delete the comment
-        if (newDocContent.isEmpty()) {
+        if (newDocContent.value.isEmpty()) {
             psiElement.docComment?.delete()
             return psiElement
         }
@@ -187,13 +190,13 @@ class DocProcessorServiceK2(private val project: Project) {
             when (originalElement.programmingLanguage) {
                 ProgrammingLanguage.KOTLIN ->
                     KDocElementFactory(project)
-                        .createKDocFromText(newDocContent.toDoc())
+                        .createKDocFromText(newDocContent.toDocText().value)
 
                 // TODO can crash here?
 
                 ProgrammingLanguage.JAVA ->
                     PsiElementFactory.getInstance(project)
-                        .createDocCommentFromText(newDocContent.toDoc())
+                        .createDocCommentFromText(newDocContent.toDocText().value)
             }
         } catch (_: Exception) {
             return null
@@ -217,7 +220,7 @@ class DocProcessorServiceK2(private val project: Project) {
         },
     )
 
-    private fun getDocContent(psiElement: PsiElement): String? {
+    private fun getDocContent(psiElement: PsiElement): DocContent? {
         return try {
             // Create a DocumentableWrapper from the element
             val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement, useK2 = true)
@@ -258,7 +261,7 @@ class DocProcessorServiceK2(private val project: Project) {
 
             if (hasExportAsHtmlTag) {
                 val file = exportToHtmlFile(psiElement, doc)
-                doc.docContent + "\n\n" + "Exported HTML: [${file.name}](file://${file.absolutePath})"
+                (doc.docContent.value + "\n\n" + "Exported HTML: [${file.name}](file://${file.absolutePath})").asDocContent()
             } else {
                 doc.docContent
             }
@@ -282,7 +285,7 @@ class DocProcessorServiceK2(private val project: Project) {
             |
             |${e.stackTrace.joinToString("\n")}
             |```
-            """.trimMargin()
+            """.trimMargin().asDocContent()
         }
     }
 

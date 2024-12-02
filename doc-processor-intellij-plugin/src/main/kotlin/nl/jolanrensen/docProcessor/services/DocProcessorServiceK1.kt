@@ -12,6 +12,7 @@ import com.intellij.psi.PsiDocCommentOwner
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
 import com.intellij.psi.PsiManager
+import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
@@ -21,26 +22,17 @@ import nl.jolanrensen.docProcessor.Mode
 import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.TagDocProcessorFailedException
 import nl.jolanrensen.docProcessor.annotationNames
+import nl.jolanrensen.docProcessor.asDocContent
 import nl.jolanrensen.docProcessor.copiedWithFile
 import nl.jolanrensen.docProcessor.createFromIntellijOrNull
-import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR_LOG_NOT_FOUND
-import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.EXPORT_AS_HTML_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR_PRE_SORT
-import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.docComment
 import nl.jolanrensen.docProcessor.docProcessorIsEnabled
-import nl.jolanrensen.docProcessor.findProcessors
 import nl.jolanrensen.docProcessor.getLoadedProcessors
 import nl.jolanrensen.docProcessor.getOrigin
 import nl.jolanrensen.docProcessor.mode
 import nl.jolanrensen.docProcessor.programmingLanguage
 import nl.jolanrensen.docProcessor.renderToHtml
-import nl.jolanrensen.docProcessor.toDoc
+import nl.jolanrensen.docProcessor.toDocText
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.caches.resolve.safeAnalyzeNonSourceRootCode
 import org.jetbrains.kotlin.idea.codeInsight.DescriptorToSourceUtilsIde
@@ -148,7 +140,7 @@ class DocProcessorServiceK1(private val project: Project) {
         val newDocContent = getDocContent(psiElement) ?: return null
 
         // If the new doc is empty, delete the comment
-        if (newDocContent.isEmpty()) {
+        if (newDocContent.value.isEmpty()) {
             psiElement.docComment?.delete()
             return psiElement
         }
@@ -157,11 +149,11 @@ class DocProcessorServiceK1(private val project: Project) {
         val newComment = when (originalElement.programmingLanguage) {
             ProgrammingLanguage.KOTLIN ->
                 KDocElementFactory(project)
-                    .createKDocFromText(newDocContent.toDoc())
+                    .createKDocFromText(newDocContent.toDocText().value)
 
             ProgrammingLanguage.JAVA ->
                 PsiElementFactory.getInstance(project)
-                    .createDocCommentFromText(newDocContent.toDoc())
+                    .createDocCommentFromText(newDocContent.toDocText().value)
         }
 
         // Replace the old doc element with the new one if it exists, otherwise add a new one
@@ -182,7 +174,7 @@ class DocProcessorServiceK1(private val project: Project) {
         },
     )
 
-    private fun getDocContent(psiElement: PsiElement): String? {
+    private fun getDocContent(psiElement: PsiElement): DocContent? {
         return try {
             // Create a DocumentableWrapper from the element
             val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement, useK2 = false)
@@ -223,7 +215,8 @@ class DocProcessorServiceK1(private val project: Project) {
 
             if (hasExportAsHtmlTag) {
                 val file = exportToHtmlFile(psiElement, doc)
-                doc.docContent + "\n\n" + "Exported HTML: [${file.name}](file://${file.absolutePath})"
+                (doc.docContent.value + "\n\n" + "Exported HTML: [${file.name}](file://${file.absolutePath})")
+                    .asDocContent()
             } else {
                 doc.docContent
             }
@@ -239,7 +232,7 @@ class DocProcessorServiceK1(private val project: Project) {
 //            e.printStackTrace()
 
             // instead of throwing the exception, render it inside the kdoc
-            "```\n$e\n```"
+            "```\n$e\n```".asDocContent()
         }
     }
 

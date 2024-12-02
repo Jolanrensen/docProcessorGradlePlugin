@@ -4,9 +4,11 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import nl.jolanrensen.docProcessor.DocProcessor
+import nl.jolanrensen.docProcessor.DocText
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.HighlightInfo
 import nl.jolanrensen.docProcessor.HighlightType
+import nl.jolanrensen.docProcessor.asDocContent
 import nl.jolanrensen.docProcessor.getIndicesOfEscapeChars
 import nl.jolanrensen.docProcessor.removeEscapeCharacters
 
@@ -37,7 +39,9 @@ class RemoveEscapeCharsProcessor : DocProcessor() {
                     docs.map {
                         launch {
                             it.modifyDocContentAndUpdate(
-                                it.docContent.removeEscapeCharacters(escapeChars),
+                                it.docContent.value
+                                    .removeEscapeCharacters(escapeChars)
+                                    .asDocContent(),
                             )
                         }
                     }
@@ -47,9 +51,9 @@ class RemoveEscapeCharsProcessor : DocProcessor() {
         return mutableDocs
     }
 
-    override fun getHighlightsFor(docText: String): List<HighlightInfo> =
+    override fun getHighlightsFor(docText: DocText): List<HighlightInfo> =
         buildList {
-            docText.getIndicesOfEscapeChars(escapeChars).forEach {
+            docText.value.getIndicesOfEscapeChars(escapeChars).forEach {
                 this += HighlightInfo(
                     range = it..it,
                     type = HighlightType.BRACKET,

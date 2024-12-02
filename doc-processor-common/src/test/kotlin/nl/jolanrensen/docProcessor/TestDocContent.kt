@@ -13,16 +13,17 @@ class TestDocContent {
              *
              * @see [com.example.plugin.KdocIncludePlugin]
              */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         val expected = "\n      Hello World!\n\n@see [com.example.plugin.KdocIncludePlugin]\n"
+            .asDocContent()
 
-        kdoc.getDocContentOrNull() shouldBe expected
+        kdoc.getDocContent() shouldBe expected
 
-        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
+        kdoc.getDocContent().toDocText() shouldBe kdoc
 
-        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoc[y]
+        kdoc.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoc.value[y]
         }
     }
 
@@ -32,16 +33,16 @@ class TestDocContent {
             /** Hello World!
              *
              * @see [com.example.plugin.KdocIncludePlugin] */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         val expected = "Hello World!\n\n@see [com.example.plugin.KdocIncludePlugin]"
+            .asDocContent()
+        kdoc.getDocContent() shouldBe expected
 
-        kdoc.getDocContentOrNull() shouldBe expected
+        kdoc.getDocContent().toDocText() shouldBe kdoc
 
-        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
-
-        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoc[y]
+        kdoc.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoc.value[y]
         }
     }
 
@@ -50,16 +51,16 @@ class TestDocContent {
         val kdoc = """
             /** Hello World!
              * @see [com.example.plugin.KdocIncludePlugin] */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         val expected = "Hello World!\n@see [com.example.plugin.KdocIncludePlugin]"
+            .asDocContent()
+        kdoc.getDocContent() shouldBe expected
 
-        kdoc.getDocContentOrNull() shouldBe expected
+        kdoc.getDocContent().toDocText() shouldBe kdoc
 
-        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
-
-        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoc[y]
+        kdoc.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoc.value[y]
         }
     }
 
@@ -67,16 +68,16 @@ class TestDocContent {
     fun `Single line doc`() {
         val kdoc = """
             /** Hello World! */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         val expected = "Hello World!"
+            .asDocContent()
+        kdoc.getDocContent() shouldBe expected
 
-        kdoc.getDocContentOrNull() shouldBe expected
+        kdoc.getDocContent().toDocText() shouldBe kdoc
 
-        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
-
-        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoc[y]
+        kdoc.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoc.value[y]
         }
     }
 
@@ -86,16 +87,16 @@ class TestDocContent {
             /**
              * Hello World!
              */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         val expected = "\nHello World!\n"
+            .asDocContent()
+        kdoc.getDocContent() shouldBe expected
 
-        kdoc.getDocContentOrNull() shouldBe expected
+        kdoc.getDocContent().toDocText() shouldBe kdoc
 
-        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
-
-        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoc[y]
+        kdoc.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoc.value[y]
         }
     }
 
@@ -105,26 +106,26 @@ class TestDocContent {
             /**
              *Hello World!
              */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         val expected = "\nHello World!\n"
+            .asDocContent()
+        kdoc.getDocContent() shouldBe expected
 
-        kdoc.getDocContentOrNull() shouldBe expected
-
-        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoc[y]
+        kdoc.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoc.value[y]
         }
 
         val kdoca = """
             /**
              * Hello World!
              */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
-        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoca
+        kdoc.getDocContent().toDocText() shouldBe kdoca
 
-        kdoca.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoca[y]
+        kdoca.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoca.value[y]
         }
     }
 
@@ -134,16 +135,16 @@ class TestDocContent {
             /**
              * Hello World! /** Some doc inside the doc */
              */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         val expected = "\nHello World! /** Some doc inside the doc */\n"
+            .asDocContent()
+        kdoc.getDocContent() shouldBe expected
 
-        kdoc.getDocContentOrNull() shouldBe expected
+        kdoc.getDocContent().toDocText() shouldBe kdoc
 
-        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
-
-        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoc[y]
+        kdoc.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoc.value[y]
         }
     }
 
@@ -155,26 +156,24 @@ class TestDocContent {
              * Wrong kdoc
              */
              
-        """.trimIndent()
+        """.trimIndent().asDocTextOrNull()
 
-        kdoc.getDocContentOrNull() shouldBe null
-
-        kdoc.getDocContentWithMapOrNull() shouldBe null
+        kdoc shouldBe null
     }
 
     @Test
     fun `Empty doc`() {
         val kdoc = """
             /** */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         val expected = ""
+            .asDocContent()
+        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContent().toDocText() shouldBe kdoc
 
-        kdoc.getDocContentOrNull() shouldBe expected
-        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
-
-        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoc[y]
+        kdoc.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoc.value[y]
         }
     }
 
@@ -184,15 +183,15 @@ class TestDocContent {
             /**
              *
              */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         val expected = "\n\n"
+            .asDocContent()
+        kdoc.getDocContent() shouldBe expected
+        kdoc.getDocContent().toDocText() shouldBe kdoc
 
-        kdoc.getDocContentOrNull() shouldBe expected
-        kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
-
-        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
-            expected[x] shouldBe kdoc[y]
+        kdoc.getDocContentWithMap().second.forEachIndexed { x, y ->
+            expected.value[x] shouldBe kdoc.value[y]
         }
     }
 }

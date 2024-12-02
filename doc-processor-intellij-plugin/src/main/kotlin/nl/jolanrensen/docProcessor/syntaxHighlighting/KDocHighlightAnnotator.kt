@@ -21,6 +21,7 @@ import com.intellij.psi.util.findParentOfType
 import com.intellij.psi.util.startOffset
 import nl.jolanrensen.docProcessor.HighlightInfo
 import nl.jolanrensen.docProcessor.HighlightType
+import nl.jolanrensen.docProcessor.asDocTextOrNull
 import nl.jolanrensen.docProcessor.docProcessorIsEnabled
 import nl.jolanrensen.docProcessor.getLoadedProcessors
 import org.jetbrains.kotlin.idea.base.codeInsight.handlers.fixers.range
@@ -167,8 +168,10 @@ class KDocHighlightAnnotator :
 
     private fun getHighlightInfosFor(kdoc: KDoc): List<HighlightInfo> =
         buildList {
+            val docText = kdoc.text.asDocTextOrNull() ?: return@buildList
+
             for (processor in loadedProcessors) {
-                val highlightInfo = processor.getHighlightsFor(kdoc.text)
+                val highlightInfo = processor.getHighlightsFor(docText)
                 addAll(highlightInfo)
             }
         }

@@ -58,7 +58,7 @@ open class MutableDocumentableWrapper(
         if (newDocContent == docContent) return
         docContent = newDocContent
         isModified = true
-        tags = docContent.findTagNamesInDocContent().toSet()
+        tags = docContent.findTagNames().toSet()
     }
 }
 
