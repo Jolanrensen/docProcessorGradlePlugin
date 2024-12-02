@@ -23,39 +23,75 @@ internal const val SINGLE_QUOTES = '\''
 /**
  * Returns the actual content of the KDoc/Javadoc comment
  */
-fun String.getDocContentOrNull(): DocContent? {
+fun String.getDocContentOrNull(): DocContent? = getDocContentWithMapOrNull()?.first
+
+/**
+ * Returns the actual content of the KDoc/Javadoc comment
+ *
+ * [Pair.second] contains the mapping from the indices of the result to the indices
+ * of the same character in the original string: `result\[key\] == [this]\[value\]`
+ */
+fun String.getDocContentWithMapOrNull(): Pair<DocContent, List<Int>>? {
     if (isBlank() || !startsWith("/**") || !endsWith("*/")) return null
+
+    // result[key] == this@getDocContentWithMapOrNull[value]
+    val resultToOriginalMap = mutableMapOf<Int, Int>()
 
     val lines = split('\n').withIndex()
 
-    val result = lines.joinToString("\n") { (i, it) ->
+    var originalCharIndex = 0
+    var resultCharIndex = 0
+    val result = lines.joinToString("\n") { (lineIndex, it) ->
         var line = it
 
-        if (i == 0) {
+        // adds the number of removed characters in the result line to originalCharIndex
+        fun String.alsoUpdateOriginalCharIndex(): String = also { originalCharIndex += line.length - length }
+
+        // start of the comment
+        if (lineIndex == 0) {
             line = line.trimStart().removePrefix("/**")
+                .alsoUpdateOriginalCharIndex()
         }
-        if (i == lines.count() - 1) {
+        // end of the comment
+        if (lineIndex == lines.count() - 1) {
             val lastLine = line.trimStart()
 
             line = if (lastLine == "*/") {
                 ""
             } else {
-                lastLine
-                    .removePrefix("*")
+                lastLine.removePrefix("*").alsoUpdateOriginalCharIndex()
                     .removeSuffix("*/")
                     .removeSuffix(" ") // optional extra space at the end
             }
         }
-        if (i != 0 && i != lines.count() - 1) {
+        // middle of the comment (not start nor end)
+        if (lineIndex != 0 && lineIndex != lines.count() - 1) {
             line = line.trimStart().removePrefix("*")
+                .alsoUpdateOriginalCharIndex()
         }
 
-        line = line.removePrefix(" ") // optional extra space at the start
+        // remove optional extra space at the start
+        line = line.removePrefix(" ")
+            .alsoUpdateOriginalCharIndex()
+
+        // update the map for all characters now in the result line
+        for (j in line.indices) {
+            resultToOriginalMap[resultCharIndex + j] = originalCharIndex + lineIndex + j
+        }
+        // ..and the \n character
+        resultToOriginalMap[resultCharIndex + line.length] = originalCharIndex + lineIndex + line.length
+
+        // update the two indices for the next iteration
+        resultCharIndex += line.length + 1
+        originalCharIndex += line.length
 
         line
     }
 
-    return result
+    // remove the final \n character
+    resultToOriginalMap.remove(resultToOriginalMap.size - 1)
+
+    return result to resultToOriginalMap.values.toList()
 }
 
 /**
@@ -212,8 +248,11 @@ fun String.getTagArgumentsWithRanges(tag: String, numberOfArguments: Int): List<
     return trimmedArguments
 }
 
-fun String.getTagArgumentWithRangeByIndexOrNull(index: Int, tag: String, numberOfArguments: Int): Pair<String, IntRange>? =
-    getTagArgumentsWithRanges(tag, numberOfArguments).getOrNull(index)
+fun String.getTagArgumentWithRangeByIndexOrNull(
+    index: Int,
+    tag: String,
+    numberOfArguments: Int,
+): Pair<String, IntRange>? = getTagArgumentsWithRanges(tag, numberOfArguments).getOrNull(index)
 
 /**
  * Can retrieve the arguments of an inline- or block-tag.

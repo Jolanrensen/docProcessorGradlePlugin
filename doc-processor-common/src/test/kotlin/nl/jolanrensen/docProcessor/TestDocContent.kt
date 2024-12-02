@@ -20,6 +20,10 @@ class TestDocContent {
         kdoc.getDocContentOrNull() shouldBe expected
 
         kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
+
+        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoc[y]
+        }
     }
 
     @Test
@@ -35,6 +39,10 @@ class TestDocContent {
         kdoc.getDocContentOrNull() shouldBe expected
 
         kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
+
+        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoc[y]
+        }
     }
 
     @Test
@@ -49,6 +57,10 @@ class TestDocContent {
         kdoc.getDocContentOrNull() shouldBe expected
 
         kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
+
+        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoc[y]
+        }
     }
 
     @Test
@@ -62,6 +74,10 @@ class TestDocContent {
         kdoc.getDocContentOrNull() shouldBe expected
 
         kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
+
+        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoc[y]
+        }
     }
 
     @Test
@@ -77,6 +93,10 @@ class TestDocContent {
         kdoc.getDocContentOrNull() shouldBe expected
 
         kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
+
+        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoc[y]
+        }
     }
 
     @Test
@@ -91,6 +111,10 @@ class TestDocContent {
 
         kdoc.getDocContentOrNull() shouldBe expected
 
+        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoc[y]
+        }
+
         val kdoca = """
             /**
              * Hello World!
@@ -98,6 +122,10 @@ class TestDocContent {
         """.trimIndent()
 
         kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoca
+
+        kdoca.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoca[y]
+        }
     }
 
     @Test
@@ -113,6 +141,10 @@ class TestDocContent {
         kdoc.getDocContentOrNull() shouldBe expected
 
         kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
+
+        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoc[y]
+        }
     }
 
     @Test
@@ -126,6 +158,8 @@ class TestDocContent {
         """.trimIndent()
 
         kdoc.getDocContentOrNull() shouldBe null
+
+        kdoc.getDocContentWithMapOrNull() shouldBe null
     }
 
     @Test
@@ -138,6 +172,10 @@ class TestDocContent {
 
         kdoc.getDocContentOrNull() shouldBe expected
         kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
+
+        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoc[y]
+        }
     }
 
     @Test
@@ -152,5 +190,9 @@ class TestDocContent {
 
         kdoc.getDocContentOrNull() shouldBe expected
         kdoc.getDocContentOrNull()?.toDoc() shouldBe kdoc
+
+        kdoc.getDocContentWithMapOrNull()?.second?.forEachIndexed { x, y ->
+            expected[x] shouldBe kdoc[y]
+        }
     }
 }
