@@ -272,11 +272,13 @@ class DocProcessorServiceK2(private val project: Project) {
             return null
         } catch (e: TagDocProcessorFailedException) {
             println(e.message)
+            println(e.cause)
             // e.printStackTrace()
             // render fancy :)
             e.renderDoc()
         } catch (e: Throwable) {
             println(e.message)
+            println(e.cause)
             // e.printStackTrace()
 
             // instead of throwing the exception, render it inside the kdoc
