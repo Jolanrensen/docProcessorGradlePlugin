@@ -323,46 +323,48 @@ abstract class TagDocProcessor : DocProcessor() {
         return processedDoc
     }
 
-    fun getArgumentHighlightForOrNull(
+    fun getArgumentHighlightOrNull(
         argumentIndex: Int,
-        rangeInDocText: IntRange,
-        docText: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
         tagName: String,
         numberOfArguments: Int,
         type: HighlightType,
     ): HighlightInfo? {
-        val (_, rangeInSubstring) = docText.substring(rangeInDocText).getTagArgumentWithRangeByIndexOrNull(
+        val line = docContent.value.substring(rangeInDocContent)
+        val (_, rangeInLine) = line.getTagArgumentWithRangeByIndexOrNull(
             index = argumentIndex,
             tag = tagName,
             numberOfArguments = numberOfArguments,
         ) ?: return null
+
         return HighlightInfo(
-            range = rangeInSubstring.first + rangeInDocText.first..rangeInSubstring.last + rangeInDocText.first,
+            range = rangeInLine.first + rangeInDocContent.first..rangeInLine.last + rangeInDocContent.first,
             type = type,
         )
     }
 
     protected open fun getHighlightsForInlineTag(
         tagName: String,
-        rangeInDocText: IntRange,
-        docText: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
     ): List<HighlightInfo> =
         buildList {
             // Left '{'
             val leftBracket = HighlightInfo(
-                range = rangeInDocText.first..rangeInDocText.first,
+                range = rangeInDocContent.first..rangeInDocContent.first,
                 type = HighlightType.BRACKET,
             )
 
             // '@' and tag name
             this += HighlightInfo(
-                range = (rangeInDocText.first + 1)..(rangeInDocText.first + 1 + tagName.length),
+                range = (rangeInDocContent.first + 1)..(rangeInDocContent.first + 1 + tagName.length),
                 type = HighlightType.TAG,
             )
 
             // Right '}'
             val rightBracket = HighlightInfo(
-                range = rangeInDocText.last..rangeInDocText.last,
+                range = rangeInDocContent.last..rangeInDocContent.last,
                 type = HighlightType.BRACKET,
             )
 
@@ -373,33 +375,31 @@ abstract class TagDocProcessor : DocProcessor() {
 
     protected open fun getHighlightsForBlockTag(
         tagName: String,
-        docContentRangesInDocText: List<IntRange>,
-        docText: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
     ): List<HighlightInfo> =
         buildList {
             // '@' and tag name
-            val firstLineDocContentRange = docContentRangesInDocText.first()
             this += HighlightInfo(
-                range = firstLineDocContentRange.first..(firstLineDocContentRange.first + 1 + tagName.length),
+                range = rangeInDocContent.first..(rangeInDocContent.first + tagName.length),
                 type = HighlightType.TAG,
             )
         }
 
-    override fun getHighlightsFor(docText: DocText): List<HighlightInfo> =
+    override fun getHighlightsFor(docContent: DocContent): List<HighlightInfo> =
         buildList {
-            // {@inline tags} // TODO does not handle multiple lines well, includes * chars
-            val inlineTags = docText.findInlineTagNamesWithRanges()
+            // {@inline tags}
+            val inlineTags = docContent.findInlineTagNamesWithRanges()
             for ((tagName, range) in inlineTags) {
                 if (!tagIsSupported(tagName)) continue
-                this += getHighlightsForInlineTag(tagName, range, docText.value)
+                this += getHighlightsForInlineTag(tagName, range, docContent)
             }
 
-            // @block tags TODO cannot find block tags in doc text yet
-//            val blockTags = docText.findBlockTagsInDocTextWithDocContentRanges()
-//            for ((tagName, docContentRanges) in blockTags) {
-//                if (!tagIsSupported(tagName)) continue
-//
-//                getHighlightsForBlockTag(tagName, docContentRanges, docText)
-//            }
+            // @block tags
+            val blockTags = docContent.findBlockTagsWithRanges()
+            for ((tagName, range) in blockTags) {
+                if (!tagIsSupported(tagName)) continue
+                this += getHighlightsForBlockTag(tagName, range, docContent)
+            }
         }
 }

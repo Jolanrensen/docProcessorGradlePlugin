@@ -107,7 +107,8 @@ class DocProcessorServiceK2(private val project: Project) {
                     }
                 }
         } catch (e: Exception) {
-            e.printStackTrace()
+            println(e.message)
+//            e.printStackTrace()
             return emptyList()
         } finally {
             // restore the original docComment state so the text range is still correct
@@ -270,7 +271,7 @@ class DocProcessorServiceK2(private val project: Project) {
         } catch (_: CancellationException) {
             return null
         } catch (e: TagDocProcessorFailedException) {
-            println(e.renderMessage())
+            println(e.message)
             // e.printStackTrace()
             // render fancy :)
             e.renderDoc()

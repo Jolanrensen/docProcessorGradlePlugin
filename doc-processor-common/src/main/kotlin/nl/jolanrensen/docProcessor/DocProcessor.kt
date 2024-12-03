@@ -60,11 +60,11 @@ abstract class DocProcessor : Serializable {
     }
 
     /**
-     * Can be overridden to provide custom highlighting for doc text given by [docText].
+     * Can be overridden to provide custom highlighting for doc content given by [docContent].
      *
      * NOTE: this can contain '*' characters and indents, so make sure to handle that.
      */
-    open fun getHighlightsFor(docText: DocText): List<HighlightInfo> = emptyList()
+    open fun getHighlightsFor(docContent: DocContent): List<HighlightInfo> = emptyList()
 
     protected fun HighlightInfo(
         range: IntRange,

@@ -23,7 +23,9 @@ import nl.jolanrensen.docProcessor.HighlightInfo
 import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.asDocTextOrNull
 import nl.jolanrensen.docProcessor.docProcessorIsEnabled
+import nl.jolanrensen.docProcessor.getDocContentWithMap
 import nl.jolanrensen.docProcessor.getLoadedProcessors
+import nl.jolanrensen.docProcessor.map
 import org.jetbrains.kotlin.idea.base.codeInsight.handlers.fixers.range
 import org.jetbrains.kotlin.idea.codeinsight.utils.findExistingEditor
 import org.jetbrains.kotlin.idea.highlighter.KotlinHighlightingColors
@@ -170,8 +172,13 @@ class KDocHighlightAnnotator :
         buildList {
             val docText = kdoc.text.asDocTextOrNull() ?: return@buildList
 
+            // convert the doc text to doc content to retrieve the highlights from the processors
+            val (docContent, mapping) = docText.getDocContentWithMap()
+
             for (processor in loadedProcessors) {
-                val highlightInfo = processor.getHighlightsFor(docText)
+                val highlightInfo = processor.getHighlightsFor(docContent)
+                    .map(mapping::get) // map back to doc text indices
+
                 addAll(highlightInfo)
             }
         }

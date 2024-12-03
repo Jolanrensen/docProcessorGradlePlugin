@@ -1,5 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.HighlightInfo
 import nl.jolanrensen.docProcessor.HighlightType
@@ -118,15 +119,15 @@ class IncludeFileDocProcessor : TagDocProcessor() {
 
     override fun getHighlightsForInlineTag(
         tagName: String,
-        rangeInDocText: IntRange,
-        docText: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
     ): List<HighlightInfo> =
         buildList {
-            this += super.getHighlightsForInlineTag(tagName, rangeInDocText, docText)
-            getArgumentHighlightForOrNull(
+            this += super.getHighlightsForInlineTag(tagName, rangeInDocContent, docContent)
+            getArgumentHighlightOrNull(
                 argumentIndex = 0,
-                docText = docText,
-                rangeInDocText = rangeInDocText,
+                docContent = docContent,
+                rangeInDocContent = rangeInDocContent,
                 tagName = tagName,
                 numberOfArguments = 2,
                 type = HighlightType.TAG_KEY,
@@ -135,16 +136,16 @@ class IncludeFileDocProcessor : TagDocProcessor() {
 
     override fun getHighlightsForBlockTag(
         tagName: String,
-        docContentRangesInDocText: List<IntRange>,
-        docText: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
     ): List<HighlightInfo> =
         buildList {
-            this += super.getHighlightsForBlockTag(tagName, docContentRangesInDocText, docText)
+            this += super.getHighlightsForBlockTag(tagName, rangeInDocContent, docContent)
 
-            getArgumentHighlightForOrNull(
+            getArgumentHighlightOrNull(
                 argumentIndex = 0,
-                docText = docText,
-                rangeInDocText = docContentRangesInDocText.first(),
+                docContent = docContent,
+                rangeInDocContent = rangeInDocContent,
                 tagName = tagName,
                 numberOfArguments = 2,
                 type = HighlightType.TAG_KEY,

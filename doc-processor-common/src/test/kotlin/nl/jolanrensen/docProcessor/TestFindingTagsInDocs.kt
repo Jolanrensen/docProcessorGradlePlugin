@@ -208,31 +208,4 @@ class TestFindingTagsInDocs {
             .asDocContent()
             .toDocText() shouldBe kdoc
     }
-
-    @Test
-    fun `Test temp`() {
-        val kdoc = """
-            /** @{[Hello]} World! */
-        """.trimIndent().asDocText()
-
-        kdoc
-            .getDocContent()
-            .findTagNames()
-    }
-
-    @Test
-    fun `split doc text instead`() {
-        val kdoc = """
-            /**
-             * Hello World! 
-             * @include [Some aliased link][helloWorld2]
-             * ewrmklwerm
-             */
-        """.trimIndent().asDocText()
-
-        val split = kdoc.splitPerBlock()
-        val splitWithRanges = kdoc.splitPerBlockWithRangesOfDocContent()
-        val namesWithRanges = kdoc.findBlockTagsWithDocContentRanges()
-        split.joinToString("\n").asDocText() shouldBe kdoc
-    }
 }

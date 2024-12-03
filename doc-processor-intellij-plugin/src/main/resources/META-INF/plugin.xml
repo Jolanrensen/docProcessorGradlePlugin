@@ -30,7 +30,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow
             factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"
-            icon="com.intellij.icons.ExpUiIcons.Gutter.JavadocRead"
+            icon="AllIcons.Gutter.JavadocRead"
             id="Doc Preprocessor"/>
 
         <!-- K1 -->
@@ -57,11 +57,6 @@
             order="first"
             implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorPsiDocumentationTargetProvider"/>
 
-        <!--        <platform.backend.documentation.targetProvider-->
-        <!--            id="DocProcessorDocumentationTargetProvider"-->
-        <!--            order="first"-->
-        <!--            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationTargetProvider"/>-->
-
         <platform.backend.documentation.inlineDocumentationProvider
             id="DocProcessorInlineDocumentationProvider"
             order="first"
@@ -75,17 +70,6 @@
             order="first"/>
 
         <!-- Highlighting -->
-        <!--        <lang.documentation.syntaxHighlightingHandlerFactory-->
-        <!--            language="kotlin"-->
-        <!--            id="KDocSyntaxHighlightingHandler"-->
-        <!--            order="first"-->
-        <!--            factoryClass="nl.jolanrensen.docProcessor.syntaxHighlighting.KDocSyntaxHighlightingHandlerFactory"-->
-        <!--            implementationClass="nl.jolanrensen.docProcessor.syntaxHighlighting.KDocSyntaxHighlightingHandlerFactory"/>-->
-
-<!--        <highlightVisitor-->
-<!--            id="KDocHighlightVisitor"-->
-<!--            implementation="nl.jolanrensen.docProcessor.syntaxHighlighting.KDocHighlightVisitor"/>-->
-
         <annotator language="kotlin"
                    implementationClass="nl.jolanrensen.docProcessor.syntaxHighlighting.KDocHighlightAnnotator"
                    id="KDocAnnotator"

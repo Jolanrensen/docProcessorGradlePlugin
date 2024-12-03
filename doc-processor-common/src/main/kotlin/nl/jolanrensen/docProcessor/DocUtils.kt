@@ -185,7 +185,7 @@ fun String.getTagArgumentsWithRanges(tag: String, numberOfArguments: Int): List<
 
     i += prevContentLength - content.length
 
-    val arguments = buildList<Pair<String, IntRange>> {
+    val arguments = buildList {
         var currentBlock = ""
         val blocksIndicators = mutableListOf<Char>()
 
@@ -463,19 +463,6 @@ fun String.getTagNameOrNull(): String? =
         ?.takeWhile { !it.isWhitespace() && it != '{' && it != '}' }
 
 /**
- * Split doc text in blocks. Ignores KDoc markers.
- * The tag, if present, (after removing the KDoc markers) can be found with optional (up to max 2) leading spaces
- * in the first line of the block.
- * You can get the name with [String.getTagNameOrNull] after removing the KDoc markers.
- * Splitting takes triple backticks and `{@..}` and `${..}` into account.
- * Block "marks" are ignored if "\" escaped.
- * Can be joint with '\n' to get the original content.
- */
-fun DocText.splitPerBlock(): List<DocContent> =
-    value.asDocContent() // TODO
-        .splitPerBlock(ignoreKDocMarkers = true)
-
-/**
  * Split doc content in blocks of content and text belonging to tags.
  * The tag, if present, can be found with optional (up to max 2) leading spaces in the first line of the block.
  * You can get the name with [String.getTagNameOrNull].
@@ -583,79 +570,18 @@ fun DocContent.splitPerBlockWithRanges(): List<Pair<DocContent, IntRange>> {
     var i = 0
 
     return buildList {
-        for (docContent in splitDocContents) {
-            add(Pair(docContent, i..i + docContent.value.length))
+        for ((index, docContent) in splitDocContents.withIndex()) {
+            val range =
+                if (index == splitDocContents.lastIndex) {
+                    i..<i + docContent.value.length // last element has no trailing \n
+                } else {
+                    i..i + docContent.value.length
+                }
+            this += Pair(docContent, range)
             i += docContent.value.length + 1
         }
     }
 }
-
-fun String.indexOfStartOfDocContent(): Int {
-    var trimmed = this.trimStart()
-    when {
-        trimmed.startsWith("/**") ->
-            trimmed = trimmed.removePrefix("/**").removePrefix(" ")
-
-        trimmed.startsWith("*") ->
-            trimmed = trimmed.removePrefix("*").removePrefix(" ")
-    }
-    val noTrimmedStartChars = this.length - trimmed.length
-    return noTrimmedStartChars
-}
-
-fun String.indexOfEndOfDocContent(): Int {
-    var trimmed = this.trimEnd()
-    when {
-        trimmed.endsWith("*/") ->
-            trimmed = trimmed.removeSuffix("*/").removeSuffix(" ")
-    }
-
-    val noTrimmedEndChars = this.length - trimmed.length
-    return this.lastIndex - noTrimmedEndChars
-}
-
-/**
- * Split doc content in blocks of content and text belonging to tags, with the range of the block.
- * The tag, if present, can be found with optional leading spaces in the first line of the block.
- * You can get the name with [String.getTagNameOrNull].
- * Splitting takes `{}`, `[]`, `()`, and triple backticks into account.
- * Block "marks" are ignored if "\" escaped.
- * Can be joint with '\n' to get the original content.
- *
- * Returns a list of pairs with the raw content of the block and a list of doc content ranges for each line in the block.
- */
-fun DocText.splitPerBlockWithRangesOfDocContent(): List<Pair<String, List<IntRange>>> {
-    val splitDocTextLines = this.splitPerBlock().map { it.value.lines() }
-
-    return buildList {
-        var i = 0
-        for (docTextLines in splitDocTextLines) {
-            var j = 0
-            val contentRanges = buildList<IntRange> {
-                for (line in docTextLines) {
-                    this += (i + j + line.indexOfStartOfDocContent())..(i + j + line.indexOfEndOfDocContent())
-                    j += line.length + 1
-                }
-            }
-
-            this += Pair(
-                first = docTextLines.joinToString("\n"),
-                second = contentRanges,
-            )
-            i += docTextLines.joinToString("\n").length + 1
-        }
-    }
-}
-
-/**
- * Finds all inline tag names, including nested ones,
- * together with their respective range in the doc.
- * The list is sorted by depth, with the deepest tags first and then by order of appearance.
- * "{@}" marks are ignored if "\" escaped.
- */
-fun DocText.findInlineTagNamesWithRanges(): List<Pair<String, IntRange>> =
-    value.asDocContent() // this function doesn't mind if it still has *'s
-        .findInlineTagNamesWithRanges()
 
 /**
  * Finds all inline tag names, including nested ones,
@@ -717,29 +643,6 @@ fun DocContent.findBlockTagsWithRanges(): List<Pair<String, IntRange>> =
         .filter { it.first.value.trimStart().startsWith("@") }
         .mapNotNull {
             val tagName = it.first.getTagNameOrNull() ?: return@mapNotNull null
-            tagName to it.second
-        }
-
-/**
- * Finds all block tags with ranges.
- * Special case of [findBlockTagsWithRanges] that allows for KDocs markers.
- */
-fun DocText.findBlockTagsWithDocContentRanges(): List<Pair<String, List<IntRange>>> =
-    splitPerBlockWithRangesOfDocContent()
-        .filter {
-            it.first
-                .trimStart()
-                .removePrefix("*")
-                .removePrefix("/**")
-                .trimStart()
-                .startsWith("@")
-        }
-        .mapNotNull {
-            val tagName = it.first
-                .trimStart()
-                .removePrefix("*")
-                .removePrefix("/**")
-                .getTagNameOrNull() ?: return@mapNotNull null
             tagName to it.second
         }
 
@@ -952,4 +855,31 @@ fun DocContent.removeKotlinLinks(): DocContent =
         .replace("``", "")
         .asDocContent()
 
+/**
+ * Coerces the start and end of the range to be at most [endInclusive].
+ */
 fun IntRange.coerceAtMost(endInclusive: Int) = first.coerceAtMost(endInclusive)..last.coerceAtMost(endInclusive)
+
+/**
+ * Maps the given range with [mapping] to one or multiple ranges.
+ */
+fun IntRange.mapToRanges(mapping: (Int) -> Int): List<IntRange> {
+    if (isEmpty()) return emptyList()
+
+    val ranges = mutableListOf<IntRange>()
+    val iterator = iterator()
+    var start = mapping(iterator.next())
+    var end = start
+
+    iterator.forEach {
+        val mappedNum = mapping(it)
+        if (mappedNum != end + 1) {
+            ranges.add(start..end)
+            start = mappedNum
+        }
+        end = mappedNum
+    }
+
+    ranges.add(start..end) // Add the last range
+    return ranges
+}

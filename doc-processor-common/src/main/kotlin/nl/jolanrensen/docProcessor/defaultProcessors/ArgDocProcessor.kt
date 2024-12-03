@@ -6,7 +6,6 @@ import kotlinx.coroutines.runBlocking
 import nl.jolanrensen.docProcessor.BACKTICKS
 import nl.jolanrensen.docProcessor.CURLY_BRACES
 import nl.jolanrensen.docProcessor.DocContent
-import nl.jolanrensen.docProcessor.DocText
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.HighlightInfo
@@ -361,26 +360,26 @@ class ArgDocProcessor : TagDocProcessor() {
 
     override fun getHighlightsForInlineTag(
         tagName: String,
-        rangeInDocText: IntRange,
-        docText: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
     ): List<HighlightInfo> =
         buildList {
-            this += super.getHighlightsForInlineTag(tagName, rangeInDocText, docText)
+            this += super.getHighlightsForInlineTag(tagName, rangeInDocContent, docContent)
 
-            getArgumentHighlightForOrNull(
+            getArgumentHighlightOrNull(
                 argumentIndex = 0,
-                docText = docText,
-                rangeInDocText = rangeInDocText,
+                docContent = docContent,
+                rangeInDocContent = rangeInDocContent,
                 tagName = tagName,
                 numberOfArguments = 2,
                 type = HighlightType.TAG_KEY,
             )?.let(::add)
 
             if (tagName in RETRIEVE_ARGUMENT_TAGS) {
-                getArgumentHighlightForOrNull(
+                getArgumentHighlightOrNull(
                     argumentIndex = 1,
-                    docText = docText,
-                    rangeInDocText = rangeInDocText,
+                    docContent = docContent,
+                    rangeInDocContent = rangeInDocContent,
                     tagName = tagName,
                     numberOfArguments = 2,
                     type = HighlightType.TAG_VALUE,
@@ -388,17 +387,39 @@ class ArgDocProcessor : TagDocProcessor() {
             }
         }
 
-    // TODO
     override fun getHighlightsForBlockTag(
         tagName: String,
-        docContentRangesInDocText: List<IntRange>,
-        docText: String,
-    ): List<HighlightInfo> = super.getHighlightsForBlockTag(tagName, docContentRangesInDocText, docText)
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+    ): List<HighlightInfo> =
+        buildList {
+            this += super.getHighlightsForBlockTag(tagName, rangeInDocContent, docContent)
 
-    override fun getHighlightsFor(docText: DocText): List<HighlightInfo> =
-        super.getHighlightsFor(docText) + buildList {
+            getArgumentHighlightOrNull(
+                argumentIndex = 0,
+                docContent = docContent,
+                rangeInDocContent = rangeInDocContent,
+                tagName = tagName,
+                numberOfArguments = 2,
+                type = HighlightType.TAG_KEY,
+            )?.let(::add)
+
+            if (tagName in RETRIEVE_ARGUMENT_TAGS) {
+                getArgumentHighlightOrNull(
+                    argumentIndex = 1,
+                    docContent = docContent,
+                    rangeInDocContent = rangeInDocContent,
+                    tagName = tagName,
+                    numberOfArguments = 2,
+                    type = HighlightType.TAG_VALUE,
+                )?.let(::add)
+            }
+        }
+
+    override fun getHighlightsFor(docContent: DocContent): List<HighlightInfo> =
+        super.getHighlightsFor(docContent) + buildList {
             // ${tags}
-            val bracedDollarTags = docText
+            val bracedDollarTags = docContent
                 .value.asDocContent() // pretend we removed * and indents
                 .`find ${}'s`()
             for (range in bracedDollarTags) {
@@ -413,7 +434,7 @@ class ArgDocProcessor : TagDocProcessor() {
                     range = (range.first + 1)..(range.first + 1),
                     type = HighlightType.BRACKET,
                 )
-                val (key, value) = docText.value.substring(range).findKeyAndValueFromDollarSign()
+                val (key, value) = docContent.value.substring(range).findKeyAndValueFromDollarSign()
 
                 // key
                 this += HighlightInfo(
@@ -448,11 +469,11 @@ class ArgDocProcessor : TagDocProcessor() {
             }
 
             // $tags=...
-            val dollarTags = docText
+            val dollarTags = docContent
                 .value.asDocContent() // pretend we removed * and indents
                 .`find $tags`()
             for ((range, equalsPosition) in dollarTags) {
-                if (docText.value[range.first + 1] == '{') continue // skip ${...} tags
+                if (docContent.value[range.first + 1] == '{') continue // skip ${...} tags
 
                 // '$'
                 this += HighlightInfo(
