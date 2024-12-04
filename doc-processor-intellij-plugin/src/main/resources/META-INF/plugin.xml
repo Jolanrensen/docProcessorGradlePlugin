@@ -72,7 +72,12 @@
         <!-- Highlighting -->
         <annotator language="kotlin"
                    implementationClass="nl.jolanrensen.docProcessor.syntaxHighlighting.KDocHighlightAnnotator"
-                   id="KDocAnnotator"
+                   id="KDocHighlightAnnotator"
+                   order="first"/>
+
+        <annotator language="kotlin"
+                   implementationClass="nl.jolanrensen.docProcessor.syntaxHighlighting.ExportAsHtmlAnnotator"
+                   id="ExportAsHtmlAnnotator"
                    order="first"/>
     </extensions>
 

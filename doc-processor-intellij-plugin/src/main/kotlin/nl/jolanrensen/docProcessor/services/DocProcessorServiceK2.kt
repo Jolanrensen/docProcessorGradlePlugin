@@ -16,14 +16,11 @@ import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.DocumentablesByPathWithCache
-import nl.jolanrensen.docProcessor.ExportAsHtml
 import nl.jolanrensen.docProcessor.MessageBundle
 import nl.jolanrensen.docProcessor.Mode
 import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.TagDocProcessorFailedException
-import nl.jolanrensen.docProcessor.annotationNames
 import nl.jolanrensen.docProcessor.asDocContent
-import nl.jolanrensen.docProcessor.asDocText
 import nl.jolanrensen.docProcessor.copiedWithFile
 import nl.jolanrensen.docProcessor.createFromIntellijOrNull
 import nl.jolanrensen.docProcessor.docComment
@@ -32,15 +29,12 @@ import nl.jolanrensen.docProcessor.getLoadedProcessors
 import nl.jolanrensen.docProcessor.getOrigin
 import nl.jolanrensen.docProcessor.mode
 import nl.jolanrensen.docProcessor.programmingLanguage
-import nl.jolanrensen.docProcessor.renderToHtml
 import nl.jolanrensen.docProcessor.toDocText
 import org.jetbrains.kotlin.idea.base.psi.copied
 import org.jetbrains.kotlin.idea.kdoc.KDocElementFactory
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocName
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
-import org.jetbrains.kotlin.resolve.calls.util.getValueArgumentsInParentheses
-import java.io.File
 import java.util.concurrent.CancellationException
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
@@ -178,7 +172,7 @@ class DocProcessorServiceK2(private val project: Project) {
             return null
         }
 
-        val newDocContent = getDocContent(psiElement) ?: return null
+        val newDocContent = getProcessedDocContent(psiElement) ?: return null
 
         // If the new doc is empty, delete the comment
         if (newDocContent.value.isEmpty()) {
@@ -221,51 +215,69 @@ class DocProcessorServiceK2(private val project: Project) {
         },
     )
 
-    private fun getDocContent(psiElement: PsiElement): DocContent? {
-        return try {
-            // Create a DocumentableWrapper from the element
-            val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement, useK2 = true)
-            if (documentableWrapper == null) {
-                thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
-                return null
-            }
-            val needsRebuild = documentableCache.updatePreProcessing(documentableWrapper)
+    fun getDocumentableWrapperOrNull(psiElement: PsiElement): DocumentableWrapper? {
+        val documentableWrapper = DocumentableWrapper.createFromIntellijOrNull(psiElement, useK2 = true)
+        if (documentableWrapper == null) {
+            thisLogger().warn("Could not create DocumentableWrapper from element: $psiElement")
+        }
+        return documentableWrapper
+    }
 
-            logger.debug { "\n\n" }
+    /**
+     * Returns a processed version of the DocumentableWrapper, or `null` if it could not be processed.
+     * ([DocumentableWrapper.docContent] contains the modified doc content).
+     */
+    fun getProcessedDocumentableWrapperOrNull(documentableWrapper: DocumentableWrapper): DocumentableWrapper? {
+        val needsRebuild = documentableCache.updatePreProcessing(documentableWrapper)
 
-            if (!needsRebuild) {
-                logger.debug {
-                    "loading fully cached ${
-                        documentableWrapper.fullyQualifiedPath
-                    }/${documentableWrapper.fullyQualifiedExtensionPath}"
-                }
-                return documentableCache.getDocContentResult(documentableWrapper.identifier)!!
-            }
+        logger.debug { "\n\n" }
+
+        if (!needsRebuild) {
             logger.debug {
-                "preprocessing ${
+                "loading fully cached ${
                     documentableWrapper.fullyQualifiedPath
                 }/${documentableWrapper.fullyQualifiedExtensionPath}"
             }
 
-            // Process the DocumentablesByPath
-            val results = processDocumentablesByPath(documentableCache)
+            val docContentFromCache = documentableCache.getDocContentResult(documentableWrapper.identifier)
 
-            // Retrieve the original DocumentableWrapper from the results
-            val doc = results[documentableWrapper.identifier] ?: return null
-
-            documentableCache.updatePostProcessing()
-
-            // TODO replace with doc.annotations
-            val hasExportAsHtmlTag = psiElement.annotationNames.any {
-                ExportAsHtml::class.simpleName!! in it
+            // should never be null, but just in case
+            if (docContentFromCache != null) {
+                return documentableWrapper.copy(
+                    docContent = docContentFromCache,
+                    tags = emptySet(),
+                    isModified = true,
+                )
             }
+        }
+        logger.debug {
+            "preprocessing ${
+                documentableWrapper.fullyQualifiedPath
+            }/${documentableWrapper.fullyQualifiedExtensionPath}"
+        }
 
-            if (hasExportAsHtmlTag) {
-                val file = exportToHtmlFile(psiElement, doc)
-                (doc.docContent.value + "\n\n" + "Exported HTML: [${file.name}](file://${file.absolutePath})").asDocContent()
-            } else {
-                doc.docContent
-            }
+        // Process the DocumentablesByPath
+        val results = processDocumentablesByPath(documentableCache)
+
+        // Retrieve the original DocumentableWrapper from the results
+        val doc = results[documentableWrapper.identifier] ?: return null
+
+        documentableCache.updatePostProcessing()
+
+        return doc
+    }
+
+    private fun getProcessedDocContent(psiElement: PsiElement): DocContent? {
+        return try {
+            // Create a DocumentableWrapper from the element
+            val documentableWrapper = getDocumentableWrapperOrNull(psiElement)
+                ?: return null
+
+            // get the processed version of the DocumentableWrapper
+            val processed = getProcessedDocumentableWrapperOrNull(documentableWrapper)
+                ?: return null
+
+            processed.docContent
         } catch (_: ProcessCanceledException) {
             return null
         } catch (_: CancellationException) {
@@ -290,36 +302,6 @@ class DocProcessorServiceK2(private val project: Project) {
             |```
             """.trimMargin().asDocContent()
         }
-    }
-
-    private fun exportToHtmlFile(psiElement: PsiElement, doc: DocumentableWrapper): File {
-        val annotationArgs = (psiElement as? KtDeclaration)
-            ?.annotationEntries
-            ?.firstOrNull { ExportAsHtml::class.simpleName!! in it.shortName!!.asString() }
-            ?.getValueArgumentsInParentheses()
-            ?: emptyList()
-
-        val themeArg = annotationArgs.firstOrNull {
-            it.getArgumentName()?.asName?.toString() == ExportAsHtml::theme.name
-        } ?: annotationArgs.getOrNull(0)?.takeIf {
-            !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
-        }
-        val theme = themeArg?.getArgumentExpression()?.text?.toBoolean() ?: true
-
-        val stripReferencesArg = annotationArgs.firstOrNull {
-            it.getArgumentName()?.asName?.toString() == ExportAsHtml::stripReferences.name
-        } ?: annotationArgs.getOrNull(1)?.takeIf {
-            !it.isNamed() && it.getArgumentExpression()?.text?.toBoolean() != null
-        }
-        val stripReferences = stripReferencesArg?.getArgumentExpression()?.text?.toBoolean() ?: true
-
-        val html = doc
-            .getDocContentForHtmlRange()
-            .renderToHtml(theme = theme, stripReferences = stripReferences)
-        val file = File.createTempFile(doc.fullyQualifiedPath, ".html")
-        file.writeText(html)
-
-        return file
     }
 
     private fun processDocumentablesByPath(sourceDocsByPath: DocumentablesByPath): DocumentablesByPath {

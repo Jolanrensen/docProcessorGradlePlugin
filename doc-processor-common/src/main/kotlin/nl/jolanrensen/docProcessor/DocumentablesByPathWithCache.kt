@@ -57,8 +57,10 @@ open class DocumentablesByPathWithCache(
         postIncludeDocContentCache[documentable.identifier] = documentable.docContent
     }
 
-    // we set a context and a documentable to process
-    // returns whether it needs a rebuild
+    /**
+     * we set a context and a documentable to process
+     * returns whether it needs a rebuild
+     */
     fun updatePreProcessing(docToProcess: DocumentableWrapper): Boolean {
         val doc = docToProcess.toMutable()
         this.docToProcess = doc
@@ -131,7 +133,7 @@ open class DocumentablesByPathWithCache(
         return needsRebuild
     }
 
-    // retrieve a doc by identifier from queryCache or docsToProcess
+    /** retrieve a doc by identifier from queryCache or docsToProcess */
     override fun get(identifier: UUID): MutableDocumentableWrapper? =
         queryCache.values
             .firstNotNullOfOrNull { it.firstOrNull { it.identifier == identifier } }
