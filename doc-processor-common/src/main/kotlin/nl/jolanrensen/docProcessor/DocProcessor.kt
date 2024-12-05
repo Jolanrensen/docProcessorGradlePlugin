@@ -16,7 +16,7 @@ import java.util.ServiceLoader
  */
 abstract class DocProcessor : Serializable {
 
-    protected val name: String = this::class.simpleName ?: "DocProcessor"
+    val name: String = this::class.simpleName ?: "DocProcessor"
 
     /** Main logging access point. */
     val logger: KLogger = KotlinLogging.logger(name)

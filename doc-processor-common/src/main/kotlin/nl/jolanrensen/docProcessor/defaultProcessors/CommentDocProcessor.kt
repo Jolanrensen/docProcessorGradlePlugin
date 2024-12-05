@@ -39,11 +39,7 @@ const val COMMENT_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  */
 class CommentDocProcessor : TagDocProcessor() {
 
-    companion object {
-        const val TAG = "comment"
-    }
-
-    override fun tagIsSupported(tag: String): Boolean = tag == TAG
+    override val providesTags: Set<String> = setOf("comment")
 
     override fun processBlockTagWithContent(
         tagWithContent: String,

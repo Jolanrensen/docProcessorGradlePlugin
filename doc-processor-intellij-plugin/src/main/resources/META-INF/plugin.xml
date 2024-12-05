@@ -79,6 +79,12 @@
                    implementationClass="nl.jolanrensen.docProcessor.syntaxHighlighting.ExportAsHtmlAnnotator"
                    id="ExportAsHtmlAnnotator"
                    order="first"/>
+
+        <completion.contributor
+            language="kotlin"
+            implementationClass="nl.jolanrensen.docProcessor.completion.KDocCompletionContributor"
+            id="DocProcessorCompletionContributor"
+            order="first"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.kotlin">

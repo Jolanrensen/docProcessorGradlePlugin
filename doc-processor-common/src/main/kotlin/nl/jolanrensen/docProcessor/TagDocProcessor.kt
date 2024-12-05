@@ -24,8 +24,16 @@ import kotlinx.coroutines.runBlocking
  */
 abstract class TagDocProcessor : DocProcessor() {
 
-    /** The tags to be replaced, like "sample" */
-    abstract fun tagIsSupported(tag: String): Boolean
+    /**
+     * The tags this processor offers, like "sample".
+     *
+     * This may not be the same as the tags it can actually handle ([tagIsSupported]),
+     * but will be used in autocompletion in the IDE.
+     */
+    abstract val providesTags: Set<String>
+
+    /** The tags to be replaced, like "sample", checks [providesTags] by default but can be overridden. */
+    open fun tagIsSupported(tag: String): Boolean = tag in providesTags
 
     /** Returns true if [tagIsSupported] is in this [DocumentableWrapper]. */
     val DocumentableWrapper.hasSupportedTag

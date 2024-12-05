@@ -95,7 +95,7 @@ class IncludeDocProcessor : TagDocProcessor() {
         const val TAG = "include"
     }
 
-    override fun tagIsSupported(tag: String): Boolean = tag == TAG
+    override val providesTags: Set<String> = setOf(TAG)
 
     /**
      * Filter documentables to only include linkable elements (classes, functions, properties, etc) and

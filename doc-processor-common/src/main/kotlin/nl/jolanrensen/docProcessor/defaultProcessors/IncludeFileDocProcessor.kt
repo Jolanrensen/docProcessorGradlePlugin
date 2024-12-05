@@ -32,7 +32,7 @@ class IncludeFileDocProcessor : TagDocProcessor() {
         const val TAG = "includeFile"
     }
 
-    override fun tagIsSupported(tag: String): Boolean = tag == TAG
+    override val providesTags: Set<String> = setOf(TAG)
 
     private fun processContent(line: String, documentable: DocumentableWrapper): String {
         val includeFileArguments = line.getTagArguments(

@@ -29,12 +29,7 @@ class ExportAsHtmlDocProcessor : TagDocProcessor() {
         const val EXPORT_AS_HTML_END = "exportAsHtmlEnd"
     }
 
-    private val tags = listOf(
-        EXPORT_AS_HTML_START,
-        EXPORT_AS_HTML_END,
-    )
-
-    override fun tagIsSupported(tag: String): Boolean = tag in tags
+    override val providesTags: Set<String> = setOf(EXPORT_AS_HTML_START, EXPORT_AS_HTML_END)
 
     override fun processBlockTagWithContent(
         tagWithContent: String,

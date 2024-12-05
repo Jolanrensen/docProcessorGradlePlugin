@@ -112,6 +112,9 @@ class ArgDocProcessor : TagDocProcessor() {
         DECLARE_ARGUMENT_TAGS,
     ).flatten()
 
+    override val providesTags: Set<String>
+        get() = setOf("get", "set")
+
     override fun tagIsSupported(tag: String): Boolean = tag in supportedTags
 
     data class DocWrapperWithArgMap(

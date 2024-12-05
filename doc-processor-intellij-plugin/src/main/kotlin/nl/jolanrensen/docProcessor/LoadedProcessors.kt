@@ -2,18 +2,13 @@ package nl.jolanrensen.docProcessor
 
 import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.ARG_DOC_PROCESSOR_LOG_NOT_FOUND
-import nl.jolanrensen.docProcessor.defaultProcessors.ArgDocProcessor
 import nl.jolanrensen.docProcessor.defaultProcessors.COMMENT_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.CommentDocProcessor
 import nl.jolanrensen.docProcessor.defaultProcessors.EXPORT_AS_HTML_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_DOC_PROCESSOR_PRE_SORT
 import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor
-import nl.jolanrensen.docProcessor.defaultProcessors.IncludeFileDocProcessor
 import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
-import nl.jolanrensen.docProcessor.defaultProcessors.SampleDocProcessor
 
 /**
  * Loads all processors that are included in the plugin with the correct settings.
@@ -40,14 +35,4 @@ fun Any.getLoadedProcessors(): List<DocProcessor> {
     )
 }
 
-/**
- * TODO make customizable
- */
-fun getTagsInUse(): List<String> =
-    listOf(
-        IncludeDocProcessor.TAG,
-        IncludeFileDocProcessor.TAG,
-        CommentDocProcessor.TAG,
-    ) + ArgDocProcessor.RETRIEVE_ARGUMENT_TAGS +
-        ArgDocProcessor.DECLARE_ARGUMENT_TAGS +
-        SampleDocProcessor.TAGS
+fun Any.getLoadedTagProcessors(): List<TagDocProcessor> = getLoadedProcessors().filterIsInstance<TagDocProcessor>()

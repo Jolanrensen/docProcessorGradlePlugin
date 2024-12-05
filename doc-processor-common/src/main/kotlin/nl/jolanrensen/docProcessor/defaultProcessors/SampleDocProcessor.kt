@@ -38,10 +38,9 @@ class SampleDocProcessor : TagDocProcessor() {
     companion object {
         const val SAMPLE_TAG = "sample"
         const val SAMPLE_NO_COMMENTS_TAG = "sampleNoComments"
-        val TAGS = listOf(SAMPLE_TAG, SAMPLE_NO_COMMENTS_TAG)
     }
 
-    override fun tagIsSupported(tag: String): Boolean = tag in TAGS
+    override val providesTags: Set<String> = setOf(SAMPLE_TAG, SAMPLE_NO_COMMENTS_TAG)
 
     private val sampleStartRegex = Regex(" *// *SampleStart *\n")
     private val sampleEndRegex = Regex(" *// *SampleEnd *\n")

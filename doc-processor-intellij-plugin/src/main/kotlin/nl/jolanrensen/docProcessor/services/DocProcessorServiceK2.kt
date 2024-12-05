@@ -101,8 +101,6 @@ class DocProcessorServiceK2(private val project: Project) {
                     }
                 }
         } catch (e: Exception) {
-            println(e.message)
-//            e.printStackTrace()
             return emptyList()
         } finally {
             // restore the original docComment state so the text range is still correct
@@ -283,14 +281,14 @@ class DocProcessorServiceK2(private val project: Project) {
         } catch (_: CancellationException) {
             return null
         } catch (e: TagDocProcessorFailedException) {
-            println(e.message)
-            println(e.cause)
+//            println(e.message)
+//            println(e.cause)
             // e.printStackTrace()
             // render fancy :)
             e.renderDoc()
         } catch (e: Throwable) {
-            println(e.message)
-            println(e.cause)
+//            println(e.message)
+//            println(e.cause)
             // e.printStackTrace()
 
             // instead of throwing the exception, render it inside the kdoc
