@@ -31,20 +31,29 @@ import javax.swing.Icon
  */
 class ExportAsHtmlAnnotator : Annotator {
 
-    class GutterIcon(val htmlFile: File) : GutterIconRenderer() {
+    @Suppress("UnstableApiUsage")
+    class GutterIcon(val declaration: KtDeclaration, val annotation: KtAnnotationEntry) : GutterIconRenderer() {
         override fun getTooltipText(): String = "Click to preview exported HTML"
 
-        override fun getClickAction(): AnAction {
-            val virtualFile = LocalFileSystem.getInstance().findFileByIoFile(htmlFile)
-            return object : AnAction() {
+        override fun getClickAction(): AnAction =
+            object : AnAction() {
                 override fun actionPerformed(e: AnActionEvent) {
+                    val service = DocProcessorServiceK2.getInstance(annotation.project)
+                    val documentableWrapper = service.getDocumentableWrapperOrNull(declaration) ?: return
+                    val processedDocumentableWrapper =
+                        service.getProcessedDocumentableWrapperOrNull(documentableWrapper) ?: return
+
+                    val arguments = annotation.getValueArgumentsInParentheses()
+
+                    val htmlFile = exportToHtmlFile(arguments, processedDocumentableWrapper)
+                    val virtualFile = LocalFileSystem.getInstance().findFileByIoFile(htmlFile)
+
                     OpenFileAction.openFile(
                         file = virtualFile ?: return,
                         project = e.project ?: return,
                     )
                 }
             }
-        }
 
         override fun isNavigateAction(): Boolean = true
 
@@ -56,24 +65,25 @@ class ExportAsHtmlAnnotator : Annotator {
 
             other as GutterIcon
 
-            return htmlFile.absolutePath == other.htmlFile.absolutePath
+            if (declaration != other.declaration) return false
+            if (annotation != other.annotation) return false
+
+            return true
         }
 
-        override fun hashCode(): Int = htmlFile.absolutePath.hashCode()
+        override fun hashCode(): Int {
+            var result = declaration.hashCode()
+            result = 31 * result + annotation.hashCode()
+            return result
+        }
 
-        override fun toString(): String = "GutterIcon(htmlFile=${htmlFile.absolutePath})"
+        override fun toString(): String = "GutterIcon(declaration=$declaration, annotation=$annotation)"
     }
 
     private fun annotate(declaration: KtDeclaration, annotation: KtAnnotationEntry, holder: AnnotationHolder) {
-        val service = DocProcessorServiceK2.getInstance(annotation.project)
-        val documentableWrapper = service.getDocumentableWrapperOrNull(declaration) ?: return
-        val processedDocumentableWrapper = service.getProcessedDocumentableWrapperOrNull(documentableWrapper) ?: return
-        val arguments = annotation.getValueArgumentsInParentheses()
-        val htmlFile = exportToHtmlFile(arguments, processedDocumentableWrapper)
-
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
             .needsUpdateOnTyping()
-            .gutterIconRenderer(GutterIcon(htmlFile))
+            .gutterIconRenderer(GutterIcon(declaration, annotation))
             .range(annotation.textRange)
             .create()
     }
