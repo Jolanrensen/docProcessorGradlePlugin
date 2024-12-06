@@ -7,7 +7,7 @@ import nl.jolanrensen.docProcessor.getTagArguments
 class ExampleDocProcessor : TagDocProcessor() {
 
     /** We'll intercept @example tags. */
-    override fun tagIsSupported(tag: String): Boolean = tag == "example"
+    override val providesTags: Set<String> = setOf("example")
 
     /** How `{@inner tags}` are processed. */
     override fun processInlineTagWithContent(

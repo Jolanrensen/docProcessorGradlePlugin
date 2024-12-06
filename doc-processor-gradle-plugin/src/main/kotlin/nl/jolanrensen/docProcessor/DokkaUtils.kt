@@ -32,7 +32,6 @@ import org.jetbrains.dokka.analysis.java.JavadocTag
 import org.jetbrains.dokka.analysis.java.ParamJavadocTag
 import org.jetbrains.dokka.analysis.java.ThrowingExceptionJavadocTag
 import org.jetbrains.dokka.analysis.java.ThrowsJavadocTag
-import org.jetbrains.dokka.analysis.java.doccomment.DocComment
 import org.jetbrains.dokka.analysis.java.doccomment.DocCommentCreator
 import org.jetbrains.dokka.analysis.java.doccomment.DocumentationContent
 import org.jetbrains.dokka.analysis.java.util.PsiDocumentableSource
@@ -69,6 +68,7 @@ import org.jetbrains.kotlin.util.capitalizeDecapitalize.toLowerCaseAsciiOnly
 import org.jetbrains.kotlin.utils.addToStdlib.UnsafeCastFunction
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
+import org.jetbrains.dokka.analysis.java.doccomment.DocComment as DokkaDocComment
 
 /**
  * Is [linkable element](https://kotlinlang.org/docs/kotlin-doc.html#links-to-elements)
@@ -85,23 +85,24 @@ fun Documentable.isLinkableElement(): Boolean =
 /**
  * Get Kdoc content. Note! This doesn't include the @ Kdoc tags.
  *
- * @receiver [DocComment]
+ * @receiver [DokkaDocComment]
  * @return
  */
-val DocComment.documentString: String?
+val DokkaDocComment.documentString: DocContent?
     get() = when (this) {
         is JavaDocComment -> comment.text
         is KotlinDocComment -> comment.text
         else -> null
-    }?.getDocContentOrNull()
+    }?.asDocTextOrNull()
+        ?.getDocContent()
 
 /**
  * Get text range of Kdoc/JavaDoc comment from /** to */
  *
- * @receiver [DocComment]
+ * @receiver [DokkaDocComment]
  * @return [TextRange]
  */
-val DocComment.textRange: TextRange
+val DokkaDocComment.textRange: TextRange
     get() = when (this) {
         is JavaDocComment -> comment.textRange
         is KotlinDocComment -> comment.parent.textRange
@@ -134,7 +135,7 @@ val DocumentableSource.psi: PsiElement?
 val DocumentableSource.textRange: TextRange?
     get() = psi?.textRange
 
-internal class JavaDocComment(val comment: PsiDocComment) : DocComment {
+internal class JavaDocComment(val comment: PsiDocComment) : DokkaDocComment {
     override fun hasTag(tag: JavadocTag): Boolean =
         when (tag) {
             is ThrowingExceptionJavadocTag -> hasTag(tag)
@@ -201,7 +202,7 @@ internal class JavaDocComment(val comment: PsiDocComment) : DocComment {
     override fun hashCode(): Int = comment.hashCode()
 }
 
-class KotlinDocComment(val comment: KDocTag, val resolveDocContext: ResolveDocContext) : DocComment {
+class KotlinDocComment(val comment: KDocTag, val resolveDocContext: ResolveDocContext) : DokkaDocComment {
 
     private val tagsWithContent: List<KDocTag> = comment.children.mapNotNull { (it as? KDocTag) }
 
@@ -470,7 +471,7 @@ private fun KtElement.lookupKDocInContainer(): KDocContent? {
 }
 
 object DescriptorKotlinDocCommentCreator : DocCommentCreator {
-    override fun create(element: PsiNamedElement): DocComment? {
+    override fun create(element: PsiNamedElement): DokkaDocComment? {
         val ktElement = element.navigationElement as? KtElement ?: return null
         val kdoc = ktElement.findKDoc() ?: return null
 
@@ -479,13 +480,13 @@ object DescriptorKotlinDocCommentCreator : DocCommentCreator {
 }
 
 object JavaDocCommentCreator : DocCommentCreator {
-    override fun create(element: PsiNamedElement): DocComment? {
+    override fun create(element: PsiNamedElement): DokkaDocComment? {
         val psiDocComment = (element as? PsiDocCommentOwner)?.docComment ?: return null
         return JavaDocComment(psiDocComment)
     }
 }
 
-fun findClosestDocComment(element: PsiNamedElement?, logger: DokkaLogger): DocComment? {
+fun findClosestDocComment(element: PsiNamedElement?, logger: DokkaLogger): DokkaDocComment? {
     if (element == null) return null
     JavaDocCommentCreator.create(element)?.run { return this }
     DescriptorKotlinDocCommentCreator.create(element)?.run { return this }

@@ -34,6 +34,20 @@ fun String.removeEscapeCharacters(escapeChars: List<Char> = listOf('\\')): Strin
         }
     }
 
+fun String.getIndicesOfEscapeChars(escapeChars: List<Char> = listOf('\\')): List<Int> =
+    buildList {
+        var escapeNext = false
+        for ((i, char) in this@getIndicesOfEscapeChars.withIndex()) {
+            if (escapeNext) {
+                escapeNext = false
+            } else if (char in escapeChars) {
+                escapeNext = true
+                this += i
+                continue
+            }
+        }
+    }
+
 /**
  * Replaces multiple ranges with their respective replacements.
  * The replacements can be of any size but cannot overlap. Ranges
