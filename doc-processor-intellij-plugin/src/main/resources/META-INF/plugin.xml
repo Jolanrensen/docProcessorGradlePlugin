@@ -33,7 +33,7 @@
             icon="AllIcons.Gutter.JavadocRead"
             id="Doc Preprocessor"/>
 
-        <!-- K1 -->
+        <!-- K1 kdoc rendering -->
 
         <documentationProvider
             implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProviderK1"
@@ -50,7 +50,7 @@
             id="DocProcessorJava"
             order="first"/>
 
-        <!-- K2 -->
+        <!-- K2 kdoc rendering -->
 
         <platform.backend.documentation.psiTargetProvider
             id="DocProcessorPsiDocumentationTargetProvider"
@@ -80,11 +80,15 @@
                    id="ExportAsHtmlAnnotator"
                    order="first"/>
 
+        <!-- Completion -->
         <completion.contributor
             language="kotlin"
             implementationClass="nl.jolanrensen.docProcessor.completion.KDocCompletionContributor"
             id="DocProcessorCompletionContributor"
             order="first"/>
+
+        <typedHandler implementation="nl.jolanrensen.docProcessor.completion.KDocCompletionInvoker"
+                      order="first"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
