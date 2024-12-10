@@ -8,6 +8,7 @@ import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.CompletionUtil
+import com.intellij.codeInsight.completion.CompletionUtilCore
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.EditorModificationUtil
@@ -50,7 +51,7 @@ class KDocCompletionContributor : CompletionContributor() {
         extend(
             CompletionType.BASIC,
             // for inline tags: activates anywhere in the kdoc text
-            psiElement(KDocTokens.TEXT),
+            psiElement(KDocTokens.TEXT) or psiElement(KDocTokens.CODE_BLOCK_TEXT),
             KDocProcessorTagCompletionProvider(IN_TEXT),
         )
     }
@@ -61,6 +62,15 @@ enum class Mode {
     AT_TAG_NAME, // at exactly `@xxx`, also in the middle of the tag name
     IN_TEXT, // anywhere in the kdoc text
 }
+
+// keeps leading blanks in place, removes the rest
+internal fun String.removeDummyIdentifier(): String =
+    if (trimStart().startsWith(CompletionUtilCore.DUMMY_IDENTIFIER_TRIMMED)) {
+        val numberOfBlanks = length - trimStart().length
+        substring(0, numberOfBlanks)
+    } else {
+        this
+    }
 
 class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionProvider<CompletionParameters>() {
     private val activeTagDocProcessors = getLoadedTagProcessors()
@@ -81,8 +91,8 @@ class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionPro
         result: CompletionResultSet,
     ) {
         val charPattern = when (mode) {
-            IN_TEXT -> singleCharPattern('@') or singleCharPattern('{') or singleCharPattern('$')
-            AT_TAG_NAME, AFTER_ASTERISK -> singleCharPattern('@')
+            IN_TEXT, AFTER_ASTERISK -> singleCharPattern('@') or singleCharPattern('{') or singleCharPattern('$')
+            AT_TAG_NAME -> singleCharPattern('@')
         }
         // findIdentifierPrefix() requires identifier part characters to be a superset of identifier start characters
         val prefix = CompletionUtil.findIdentifierPrefix(
@@ -97,15 +107,15 @@ class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionPro
         // check special conditions for adding completions
         when (mode) {
             AFTER_ASTERISK -> {
-                // TODO it should succeed even without @
-//                if (prefix.isNotEmpty() && !prefix.startsWith('@')) return
-                val text = parameters.position.text.substringBefore('@')
+                val text = parameters.position.text.removeDummyIdentifier().substringBefore('@')
                 if (text.isNotBlank() || text.length > 3) return
             }
 
-            AT_TAG_NAME -> if (prefix.isNotEmpty() && !prefix.startsWith('@')) return
+            AT_TAG_NAME ->
+                if (prefix.isNotEmpty() && !prefix.startsWith('@')) return
 
-            IN_TEXT -> if (prefix.isNotEmpty() && prefix.first() !in setOf('@', '{', '$')) return
+            IN_TEXT ->
+                if (prefix.isNotEmpty() && prefix.first() !in setOf('@', '{', '$')) return
         }
 
         val resultWithPrefix = result.withPrefixMatcher(prefix)

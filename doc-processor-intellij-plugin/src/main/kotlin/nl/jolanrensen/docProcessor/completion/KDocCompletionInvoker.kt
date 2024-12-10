@@ -18,11 +18,14 @@ class KDocCompletionInvoker : TypedHandlerDelegate() {
     private fun autoPopupIfInKdoc(project: Project, editor: Editor) {
         AutoPopupController.getInstance(project).autoPopupMemberLookup(editor) { file ->
             val offset = editor.caretModel.offset
-            // val chars = editor.document.charsSequence
             val elementAtCaret = file.findElementAt(offset - 1)
             val lastNodeType = elementAtCaret?.node?.elementType ?: return@autoPopupMemberLookup false
 
-            lastNodeType === KDocTokens.TEXT
+            lastNodeType === KDocTokens.TEXT ||
+                lastNodeType === KDocTokens.TAG_NAME ||
+                lastNodeType === KDocTokens.LEADING_ASTERISK ||
+                lastNodeType === KDocTokens.CODE_BLOCK_TEXT ||
+                lastNodeType === KDocTokens.START
         }
     }
 
@@ -35,9 +38,7 @@ class KDocCompletionInvoker : TypedHandlerDelegate() {
     ): Result {
         if (file.fileType != KotlinFileType.INSTANCE) return Result.CONTINUE
         when (c) {
-            // @ is already handled by KotlinTypedHandler
-
-            '{', '$' -> autoPopupIfInKdoc(project, editor)
+            '{', '$', '@' -> autoPopupIfInKdoc(project, editor)
         }
         return Result.CONTINUE
     }
