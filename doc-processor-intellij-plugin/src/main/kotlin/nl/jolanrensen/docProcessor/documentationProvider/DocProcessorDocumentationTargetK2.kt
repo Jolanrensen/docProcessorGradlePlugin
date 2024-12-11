@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalContracts::class)
+@file:Suppress("UnstableApiUsage")
 
 package nl.jolanrensen.docProcessor.documentationProvider
 
@@ -7,6 +7,7 @@ import com.intellij.lang.documentation.AbstractDocumentationProvider
 import com.intellij.lang.documentation.CompositeDocumentationProvider
 import com.intellij.lang.documentation.ExternalDocumentationProvider
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.platform.backend.documentation.DocumentationTarget
@@ -19,6 +20,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.PsiTreeUtil.processElements
+import io.ktor.utils.io.CancellationException
 import nl.jolanrensen.docProcessor.docComment
 import nl.jolanrensen.docProcessor.services.DocProcessorServiceK2
 import org.jetbrains.annotations.ApiStatus
@@ -32,7 +34,6 @@ import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtFile
 import java.awt.Image
 import java.util.function.Consumer
-import kotlin.contracts.ExperimentalContracts
 
 /*
  * K2
@@ -58,57 +59,19 @@ class DocProcessorPsiDocumentationTargetProvider : PsiDocumentationTargetProvide
         val service = getService(element.project)
         if (!service.isEnabled) return kotlinPsi.documentationTarget(element, originalElement)
 
-        val modifiedElement = service.getModifiedElement(element)
         return try {
+            val modifiedElement = service.getModifiedElement(element)
             kotlinPsi.documentationTarget(modifiedElement ?: element, originalElement)
+        } catch (_: ProcessCanceledException) {
+            return null
+        } catch (_: CancellationException) {
+            return null
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
     }
 }
-
-// by offset in a file not needed?
-// class DocProcessorDocumentationTargetProvider : DocumentationTargetProvider {
-//
-//    fun PsiElement?.isModifier(): Boolean {
-//        contract { returns(true) implies (this@isModifier != null) }
-//        return this != null &&
-//            parent is KtModifierList &&
-//            KtTokens.MODIFIER_KEYWORDS_ARRAY.firstOrNull { it.value == text } != null
-//    }
-//
-//    /**
-//     * Creates [org.jetbrains.kotlin.idea.k2.codeinsight.quickDoc.KotlinDocumentationTarget]
-//     */
-//    val kotlin = KotlinDocumentationTargetProvider()
-//
-//    private val serviceInstances: MutableMap<Project, DocProcessorServiceK2> = mutableMapOf()
-//
-//    private fun getService(project: Project) =
-//        serviceInstances.getOrPut(project) { DocProcessorServiceK2.getInstance(project) }
-//
-//    override fun documentationTargets(file: PsiFile, offset: Int): List<DocumentationTarget> {
-//        val service = getService(file.project)
-//        if (!service.isEnabled) return kotlin.documentationTargets(file, offset)
-//        println("DocProcessorDocumentationTargetProvider.documentationTargets($file, $offset)")
-//
-//        val element = file.findElementAt(offset)
-//        if (!element.isModifier()) return emptyList()
-//
-//        val modifiedElement = service.getModifiedElement(element)
-//        if (modifiedElement == null) return emptyList()
-//
-//        val modifiedFile = modifiedElement.containingFile ?: return emptyList()
-//
-//        return try {
-//            kotlin.documentationTargets(modifiedFile, modifiedElement.startOffset)
-//        } catch (e: Exception) {
-//            e.printStackTrace()
-//            emptyList()
-//        }
-//    }
-// }
 
 /**
  * inline, used for rendering single doc comment in file, does not work for multiple, Issue #54,
@@ -121,7 +84,6 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
         private val originalDocumentation: PsiDocCommentBase,
         private val originalOwner: KtDeclaration,
         private val modifiedDocumentation: PsiDocCommentBase,
-        private val modifiedOwner: KtDeclaration,
     ) : InlineDocumentation {
 
         override fun getDocumentationRange(): TextRange = originalDocumentation.textRange
@@ -139,7 +101,7 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
             return JavaDocExternalFilter.filterInternalDocInfo(result)
         }
 
-        override fun getOwnerTarget(): DocumentationTarget? {
+        override fun getOwnerTarget(): DocumentationTarget {
             val kotlinDocumentationTargetClass = Class.forName(
                 "org.jetbrains.kotlin.idea.k2.codeinsight.quickDoc.KotlinDocumentationTarget",
             )
@@ -168,44 +130,64 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
         val service = getService(file.project)
         if (!service.isEnabled) return kotlin.inlineDocumentationItems(file)
 
-        val result = mutableListOf<InlineDocumentation>()
-        PsiTreeUtil.processElements(file) {
-            val owner = it as? KtDeclaration ?: return@processElements true
-            val originalDocumentation = owner.docComment as KDoc? ?: return@processElements true
-            result += findInlineDocumentation(file, originalDocumentation.textRange) ?: return@processElements true
+        try {
+            val result = mutableListOf<InlineDocumentation>()
+            PsiTreeUtil.processElements(file) {
+                val owner = it as? KtDeclaration ?: return@processElements true
+                val originalDocumentation = owner.docComment as KDoc? ?: return@processElements true
+                result += findInlineDocumentation(file, originalDocumentation.textRange) ?: return@processElements true
 
-            true
+                true
+            }
+
+            return result
+        } catch (_: ProcessCanceledException) {
+            return emptyList()
+        } catch (_: CancellationException) {
+            return emptyList()
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            return emptyList()
         }
-
-        return result
     }
 
     override fun findInlineDocumentation(file: PsiFile, textRange: TextRange): InlineDocumentation? {
         val service = getService(file.project)
         if (!service.isEnabled) return kotlin.findInlineDocumentation(file, textRange)
 
-        val comment = PsiTreeUtil.getParentOfType(
-            file.findElementAt(textRange.startOffset),
-            PsiDocCommentBase::class.java,
-        ) ?: return null
+        try {
+            val comment = PsiTreeUtil.getParentOfType(
+                file.findElementAt(textRange.startOffset),
+                PsiDocCommentBase::class.java,
+            ) ?: return null
 
-        if (comment.textRange != textRange) return null
+            if (comment.textRange != textRange) return null
 
-        val declaration = comment.owner as? KtDeclaration ?: return null
-        val modified = service.getModifiedElement(declaration)
+            val declaration = comment.owner as? KtDeclaration ?: return null
+            val modified = service.getModifiedElement(declaration)
 
-        if (modified == null) return null
+            if (modified == null) return null
 
-        return DocProcessorInlineDocumentation(
-            originalDocumentation = declaration.docComment as KDoc,
-            originalOwner = declaration,
-            modifiedDocumentation = modified.docComment as KDoc,
-            modifiedOwner = modified as KtDeclaration,
-        )
+            return DocProcessorInlineDocumentation(
+                originalDocumentation = declaration.docComment as KDoc,
+                originalOwner = declaration,
+                modifiedDocumentation = modified.docComment as KDoc,
+            )
+        } catch (_: ProcessCanceledException) {
+            return null
+        } catch (_: CancellationException) {
+            return null
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            return null
+        }
     }
 }
 
-/** k1-like method to render multiple documentation items at once, TODO issue #54 */
+/**
+ * k1-like method to render multiple documentation items at once, TODO issue #54
+ * Likely to be called often and fail even more, so catching all exceptions.
+ */
 class DocProcessorDocumentationProvider :
     AbstractDocumentationProvider(),
     ExternalDocumentationProvider {
@@ -227,24 +209,34 @@ class DocProcessorDocumentationProvider :
         if (file !is KtFile) return
         if (!getService(file.project).isEnabled) return
 
-        // capture all comments in the file
-        processElements(file) {
-            val comment = (it as? KtDeclaration)?.docComment
-            if (comment != null) {
-                sink.accept(comment)
+        try {
+            // capture all comments in the file
+            processElements(file) {
+                val comment = (it as? KtDeclaration)?.docComment
+                if (comment != null) {
+                    sink.accept(comment)
+                }
+                true
             }
-            true
+        } catch (_: ProcessCanceledException) {
+        } catch (_: CancellationException) {
+        } catch (e: Throwable) {
+            // e.printStackTrace()
         }
     }
 
     override fun generateDoc(element: PsiElement, originalElement: PsiElement?): String? {
         val service = getService(element.project)
         if (!service.isEnabled) return null
-        val modifiedElement = service.getModifiedElement(element)
         return try {
+            val modifiedElement = service.getModifiedElement(element)
             kotlin.generateDoc(modifiedElement ?: element, originalElement)
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: ProcessCanceledException) {
+            null
+        } catch (_: CancellationException) {
+            null
+        } catch (e: Throwable) {
+            // e.printStackTrace()
             null
         }
     }
@@ -256,11 +248,15 @@ class DocProcessorDocumentationProvider :
     override fun generateRenderedDoc(comment: PsiDocCommentBase): String? {
         val service = getService(comment.project)
         if (!service.isEnabled) return null
-        val modifiedElement = service.getModifiedElement(comment.owner ?: return null)
         return try {
+            val modifiedElement = service.getModifiedElement(comment.owner ?: return null)
             kotlin.generateRenderedDoc(modifiedElement?.docComment ?: comment)
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: ProcessCanceledException) {
+            null
+        } catch (_: CancellationException) {
+            null
+        } catch (e: Throwable) {
+            // e.printStackTrace()
             null
         }
     }

@@ -1,6 +1,9 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.HighlightInfo
+import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.TagDocProcessor
 
 /**
@@ -36,9 +39,7 @@ const val COMMENT_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  */
 class CommentDocProcessor : TagDocProcessor() {
 
-    private val tag = "comment"
-
-    override fun tagIsSupported(tag: String): Boolean = tag == this.tag
+    override val providesTags: Set<String> = setOf("comment")
 
     override fun processBlockTagWithContent(
         tagWithContent: String,
@@ -51,4 +52,58 @@ class CommentDocProcessor : TagDocProcessor() {
         path: String,
         documentable: DocumentableWrapper,
     ): String = ""
+
+    override fun getHighlightsForInlineTag(
+        tagName: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+    ): List<HighlightInfo> =
+        buildList {
+            // '{'
+            val leftBracket = HighlightInfo(
+                range = rangeInDocContent.first..rangeInDocContent.first,
+                type = HighlightType.COMMENT,
+            )
+
+            // '@' and tag name
+            this += HighlightInfo(
+                range = (rangeInDocContent.first + 1)..(rangeInDocContent.first + 1 + tagName.length),
+                type = HighlightType.COMMENT_TAG,
+            )
+
+            // comment contents
+            this += HighlightInfo(
+                range = (rangeInDocContent.first + 1 + tagName.length + 1)..rangeInDocContent.last - 1,
+                type = HighlightType.COMMENT,
+            )
+
+            // '}
+            val rightBracket = HighlightInfo(
+                range = rangeInDocContent.last..rangeInDocContent.last,
+                type = HighlightType.COMMENT,
+            )
+
+            // link left and right brackets
+            this += leftBracket.copy(related = listOf(rightBracket))
+            this += rightBracket.copy(related = listOf(leftBracket))
+        }
+
+    override fun getHighlightsForBlockTag(
+        tagName: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+    ): List<HighlightInfo> =
+        buildList {
+            // '@' and tag name
+            this += HighlightInfo(
+                range = rangeInDocContent.first..(rangeInDocContent.first + tagName.length),
+                type = HighlightType.COMMENT_TAG,
+            )
+
+            // comment contents
+            this += HighlightInfo(
+                range = (rangeInDocContent.first + 1 + tagName.length)..rangeInDocContent.last,
+                type = HighlightType.COMMENT,
+            )
+        }
 }

@@ -61,7 +61,7 @@ class TestStringUtils {
             This is [text][text].
             It has many lines [NewPath] [Not processed] [Also\].
             I hope you [like][it] [right?]
-        """.trimIndent()
+        """.trimIndent().asDocContent()
 
         val res = someText.replaceKdocLinks { "NewPath" }
 
@@ -70,17 +70,18 @@ class TestStringUtils {
             This is [text][NewPath].
             It has many lines [NewPath] [Not processed] [Also\].
             I hope you [like][NewPath] [right?][NewPath]
-        """.trimIndent()
+        """.trimIndent().asDocContent()
     }
 
     @Test
     fun `Replace KDoc links difficult`() {
         val someText =
             """`MyType::myColumn`[`[`][ColumnsContainer.get]`MyOtherType::myOtherColumn`[`]`][ColumnsContainer.get]"""
+                .asDocContent()
 
         val res = someText.replaceKdocLinks { "NewPath" }
 
-        res shouldBe """`MyType::myColumn`[`[`][NewPath]`MyOtherType::myOtherColumn`[`]`][NewPath]"""
+        res shouldBe """`MyType::myColumn`[`[`][NewPath]`MyOtherType::myOtherColumn`[`]`][NewPath]""".asDocContent()
     }
 
     @Test

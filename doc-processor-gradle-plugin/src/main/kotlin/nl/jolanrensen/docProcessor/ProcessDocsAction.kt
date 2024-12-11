@@ -350,11 +350,11 @@ abstract class ProcessDocsAction {
 
         return when {
             // don't create empty kdoc, just remove it altogether
-            newDocContent.isEmpty() && !sourceHasDocumentation -> range to ""
+            newDocContent.value.isEmpty() && !sourceHasDocumentation -> range to ""
 
             // don't create empty kdoc, just remove it altogether
             // We need to expand the replace-range so that the newline is also removed
-            newDocContent.isEmpty() && sourceHasDocumentation -> {
+            newDocContent.value.isEmpty() && sourceHasDocumentation -> {
                 val prependingNewlineIndex = fileContent
                     .indexOfLastOrNullWhile('\n', range.first - 1) { it.isWhitespace() }
 
@@ -375,9 +375,9 @@ abstract class ProcessDocsAction {
             }
 
             // create a new kdoc at given range
-            newDocContent.isNotEmpty() && !sourceHasDocumentation -> {
+            newDocContent.value.isNotEmpty() && !sourceHasDocumentation -> {
                 val newKdoc = buildString {
-                    append(newDocContent.toDoc())
+                    append(newDocContent.toDocText().value)
                     append("\n")
                     append(" ".repeat(docIndent))
                 }
@@ -386,8 +386,8 @@ abstract class ProcessDocsAction {
             }
 
             // replace the existing kdoc with the new one
-            newDocContent.isNotEmpty() && sourceHasDocumentation -> {
-                val newKdoc = newDocContent.toDoc(docIndent).trimStart()
+            newDocContent.value.isNotEmpty() && sourceHasDocumentation -> {
+                val newKdoc = newDocContent.toDocText(docIndent).value.trimStart()
 
                 range to newKdoc
             }

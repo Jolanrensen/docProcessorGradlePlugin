@@ -30,10 +30,10 @@
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow
             factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"
-            icon="com.intellij.icons.ExpUiIcons.Gutter.JavadocRead"
+            icon="AllIcons.Gutter.JavadocRead"
             id="Doc Preprocessor"/>
 
-        <!-- K1 -->
+        <!-- K1 kdoc rendering -->
 
         <documentationProvider
             implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationProviderK1"
@@ -50,17 +50,12 @@
             id="DocProcessorJava"
             order="first"/>
 
-        <!-- K2 -->
+        <!-- K2 kdoc rendering -->
 
         <platform.backend.documentation.psiTargetProvider
             id="DocProcessorPsiDocumentationTargetProvider"
             order="first"
             implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorPsiDocumentationTargetProvider"/>
-
-        <!--        <platform.backend.documentation.targetProvider-->
-        <!--            id="DocProcessorDocumentationTargetProvider"-->
-        <!--            order="first"-->
-        <!--            implementation="nl.jolanrensen.docProcessor.documentationProvider.DocProcessorDocumentationTargetProvider"/>-->
 
         <platform.backend.documentation.inlineDocumentationProvider
             id="DocProcessorInlineDocumentationProvider"
@@ -74,6 +69,26 @@
             id="DocProcessorK2"
             order="first"/>
 
+        <!-- Highlighting -->
+        <annotator language="kotlin"
+                   implementationClass="nl.jolanrensen.docProcessor.syntaxHighlighting.KDocHighlightAnnotator"
+                   id="KDocHighlightAnnotator"
+                   order="first"/>
+
+        <annotator language="kotlin"
+                   implementationClass="nl.jolanrensen.docProcessor.syntaxHighlighting.ExportAsHtmlAnnotator"
+                   id="ExportAsHtmlAnnotator"
+                   order="first"/>
+
+        <!-- Completion -->
+        <completion.contributor
+            language="kotlin"
+            implementationClass="nl.jolanrensen.docProcessor.completion.KDocCompletionContributor"
+            id="DocProcessorCompletionContributor"
+            order="first"/>
+
+        <typedHandler implementation="nl.jolanrensen.docProcessor.completion.KDocCompletionInvoker"
+                      order="first"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.kotlin">

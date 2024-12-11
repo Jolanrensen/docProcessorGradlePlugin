@@ -29,12 +29,7 @@ class ExportAsHtmlDocProcessor : TagDocProcessor() {
         const val EXPORT_AS_HTML_END = "exportAsHtmlEnd"
     }
 
-    private val tags = listOf(
-        EXPORT_AS_HTML_START,
-        EXPORT_AS_HTML_END,
-    )
-
-    override fun tagIsSupported(tag: String): Boolean = tag in tags
+    override val providesTags: Set<String> = setOf(EXPORT_AS_HTML_START, EXPORT_AS_HTML_END)
 
     override fun processBlockTagWithContent(
         tagWithContent: String,
@@ -61,7 +56,7 @@ class ExportAsHtmlDocProcessor : TagDocProcessor() {
         require(documentable is MutableDocumentableWrapper) {
             "DocumentableWrapper must be MutableDocumentableWrapper to use this processor."
         }
-        val lineInDoc = documentable.docContent.lines().indexOfFirst {
+        val lineInDoc = documentable.docContent.value.lines().indexOfFirst {
             it.contains("@$tag")
         }
         when (tag) {

@@ -86,7 +86,10 @@ fun DocumentableWrapper.Companion.createFromDokkaOrNull(
     ).coerceAtLeast(0)
 
     // grab just the contents of the doc without the *-stuff
-    val docContent = docFileTextRange.substring(fileText).getDocContentOrNull() ?: ""
+    val docContent = docFileTextRange.substring(fileText)
+        .asDocTextOrNull()
+        ?.getDocContent()
+        ?: "".asDocContent()
 
     // Collect the imports from the file
     val imports = source.getImports().map { it.toSimpleImportPath() }
