@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage")
+
 package nl.jolanrensen.docProcessor.documentationProvider
 
 import com.intellij.codeInsight.javadoc.JavaDocExternalFilter
@@ -182,7 +184,10 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
     }
 }
 
-/** k1-like method to render multiple documentation items at once, TODO issue #54 */
+/**
+ * k1-like method to render multiple documentation items at once, TODO issue #54
+ * Likely to be called often and fail even more, so catching all exceptions.
+ */
 class DocProcessorDocumentationProvider :
     AbstractDocumentationProvider(),
     ExternalDocumentationProvider {
@@ -216,7 +221,7 @@ class DocProcessorDocumentationProvider :
         } catch (_: ProcessCanceledException) {
         } catch (_: CancellationException) {
         } catch (e: Throwable) {
-            e.printStackTrace()
+            // e.printStackTrace()
         }
     }
 
@@ -227,11 +232,11 @@ class DocProcessorDocumentationProvider :
             val modifiedElement = service.getModifiedElement(element)
             kotlin.generateDoc(modifiedElement ?: element, originalElement)
         } catch (_: ProcessCanceledException) {
-            return null
+            null
         } catch (_: CancellationException) {
-            return null
-        } catch (e: Exception) {
-            e.printStackTrace()
+            null
+        } catch (e: Throwable) {
+            // e.printStackTrace()
             null
         }
     }
@@ -247,11 +252,11 @@ class DocProcessorDocumentationProvider :
             val modifiedElement = service.getModifiedElement(comment.owner ?: return null)
             kotlin.generateRenderedDoc(modifiedElement?.docComment ?: comment)
         } catch (_: ProcessCanceledException) {
-            return null
+            null
         } catch (_: CancellationException) {
-            return null
-        } catch (e: Exception) {
-            e.printStackTrace()
+            null
+        } catch (e: Throwable) {
+            // e.printStackTrace()
             null
         }
     }
