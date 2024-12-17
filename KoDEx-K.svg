@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 90 90">
+<!--    <rect width="90" height="90" fill="black"/>-->
+
+    <!-- Stylized "K" in the middle -->
+    <text x="0" y="65" fill="white" font-family="Courier, monospace" font-size="75" font-weight="bold">
+        |
+    </text>
+    <text x="30" y="65" fill="white" font-family="Courier, monospace" font-size="75" font-weight="bold">
+        {
+    </text>
+
+</svg>

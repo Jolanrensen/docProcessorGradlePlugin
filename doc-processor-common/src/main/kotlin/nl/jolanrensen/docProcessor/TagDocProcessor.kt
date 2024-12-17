@@ -39,6 +39,13 @@ abstract class TagDocProcessor : DocProcessor() {
     val DocumentableWrapper.hasSupportedTag
         get() = tags.any(::tagIsSupported)
 
+    /**
+     * An optionally modified list of [CompletionInfo] information to modify how the tags
+     * of this [TagDocProcessor] are displayed in the autocomplete of the IDE.
+     */
+    open val completionInfos: List<CompletionInfo>
+        get() = providesTags.map { CompletionInfo(it, name) }
+
     protected lateinit var mutableDocumentablesByPath: MutableDocumentablesByPath
 
     /**

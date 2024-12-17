@@ -5,6 +5,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import nl.jolanrensen.docProcessor.BACKTICKS
 import nl.jolanrensen.docProcessor.CURLY_BRACES
+import nl.jolanrensen.docProcessor.CompletionInfo
 import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
@@ -116,6 +117,54 @@ class ArgDocProcessor : TagDocProcessor() {
         get() = setOf("get", "set")
 
     override fun tagIsSupported(tag: String): Boolean = tag in supportedTags
+
+    override val completionInfos: List<CompletionInfo>
+        get() = listOf(
+            CompletionInfo(
+                tag = "get",
+                blockText = "@get []",
+                presentableBlockText = "@get KEY DEFAULT",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@get []}",
+                presentableInlineText = "{@get KEY DEFAULT}",
+                moveCaretOffsetInline = -2,
+                tailText =
+                    "Get value with KEY, else show \"DEFAULT\". @set KEY here before. [KEY] as reference is recommended.",
+            ),
+            CompletionInfo(
+                tag = "$",
+                blockText = null,
+                presentableBlockText = null,
+                moveCaretOffsetBlock = null,
+                inlineText = "$[]",
+                presentableInlineText = "\$KEY=DEFAULT",
+                moveCaretOffsetInline = -1,
+                tailText =
+                    "Get value with KEY, else show \"DEFAULT\". @set KEY here before. [KEY] as reference is recommended.",
+            ),
+            CompletionInfo(
+                tag = "\${}",
+                blockText = null,
+                presentableBlockText = null,
+                moveCaretOffsetBlock = null,
+                inlineText = "\${[]}",
+                presentableInlineText = "\${KEY=DEFAULT}",
+                moveCaretOffsetInline = -2,
+                tailText =
+                    "Get value with KEY, else show \"DEFAULT\". @set KEY here before. [KEY] as reference is recommended.",
+            ),
+            CompletionInfo(
+                tag = "set",
+                blockText = "@set []",
+                presentableBlockText = "@set KEY VALUE",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@set []}",
+                presentableInlineText = "{@set KEY VALUE}",
+                moveCaretOffsetInline = -2,
+                tailText =
+                    "Set value of KEY to \"VALUE\". Can be @get KEY here afterwards. [KEY] as reference is recommended.",
+            ),
+        )
 
     data class DocWrapperWithArgMap(
         val doc: DocumentableWrapper,

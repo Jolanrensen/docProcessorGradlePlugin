@@ -25,11 +25,11 @@ import com.intellij.psi.util.startOffset
 import nl.jolanrensen.docProcessor.DocProcessor
 import nl.jolanrensen.docProcessor.HighlightInfo
 import nl.jolanrensen.docProcessor.HighlightType
+import nl.jolanrensen.docProcessor.applyMapping
 import nl.jolanrensen.docProcessor.asDocTextOrNull
 import nl.jolanrensen.docProcessor.docProcessorIsEnabled
 import nl.jolanrensen.docProcessor.getDocContentWithMap
 import nl.jolanrensen.docProcessor.getLoadedProcessors
-import nl.jolanrensen.docProcessor.map
 import org.jetbrains.kotlin.idea.codeinsight.utils.findExistingEditor
 import org.jetbrains.kotlin.idea.highlighter.KotlinHighlightingColors
 import org.jetbrains.kotlin.kdoc.psi.api.KDoc
@@ -215,7 +215,7 @@ private fun getHighlightInfosFor(kdoc: KDoc, loadedProcessors: List<DocProcessor
 
         for (processor in loadedProcessors) {
             val highlightInfo = processor.getHighlightsFor(docContent)
-                .map(mapping::get) // map back to doc text indices
+                .applyMapping(mapping::get) // map back to doc text indices
 
             addAll(highlightInfo)
         }

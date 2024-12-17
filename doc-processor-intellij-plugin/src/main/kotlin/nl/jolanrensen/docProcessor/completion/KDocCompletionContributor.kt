@@ -10,24 +10,20 @@ import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.CompletionUtil
 import com.intellij.codeInsight.completion.CompletionUtilCore
 import com.intellij.codeInsight.lookup.LookupElementBuilder
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.EditorModificationUtil
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.patterns.StandardPatterns
+import com.intellij.ui.IconManager
 import com.intellij.util.ProcessingContext
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.completion.Mode.AFTER_ASTERISK
 import nl.jolanrensen.docProcessor.completion.Mode.AT_TAG_NAME
 import nl.jolanrensen.docProcessor.completion.Mode.IN_TEXT
-import nl.jolanrensen.docProcessor.defaultProcessors.ArgDocProcessor
 import nl.jolanrensen.docProcessor.defaultProcessors.ExportAsHtmlDocProcessor
-import nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor
-import nl.jolanrensen.docProcessor.defaultProcessors.IncludeFileDocProcessor
 import nl.jolanrensen.docProcessor.getLoadedTagProcessors
 import org.jetbrains.kotlin.idea.completion.or
 import org.jetbrains.kotlin.idea.completion.singleCharPattern
 import org.jetbrains.kotlin.kdoc.lexer.KDocTokens
-import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 
 /**
  * Contributes completions for new special KDoc tags.
@@ -78,7 +74,12 @@ class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionPro
     private fun LookupElementBuilder.withTailText(processor: TagDocProcessor): LookupElementBuilder =
         withTailText("  ${processor.name}")
 
-    private fun LookupElementBuilder.withIcon(): LookupElementBuilder = withIcon(AllIcons.Gutter.JavadocRead)
+    private val icon by lazy {
+        IconManager.getInstance()
+            .getIcon("icons/KoDEx-K-lookupElement.svg", KDocCompletionContributor::class.java.classLoader)
+    }
+
+    private fun LookupElementBuilder.withIcon(): LookupElementBuilder = withIcon(icon)
 
     private fun LookupElementBuilder.moveCaret(offset: Int): LookupElementBuilder =
         withInsertHandler { c, _ ->
@@ -118,53 +119,44 @@ class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionPro
                 if (prefix.isNotEmpty() && prefix.first() !in setOf('@', '{', '$')) return
         }
 
+        // TODO use CompletionInfo
+
         val resultWithPrefix = result.withPrefixMatcher(prefix)
         for (processor in activeTagDocProcessors) {
+            for (info in processor.completionInfos) {
+                // inline tags
+                if (info.inlineText != null &&
+                    info.presentableInlineText != null &&
+                    info.moveCaretOffsetInline != null
+                ) {
+                    resultWithPrefix.addElement(
+                        LookupElementBuilder.create(info.inlineText!!)
+                            .withPresentableText(info.presentableInlineText!!)
+                            .moveCaret(info.moveCaretOffsetInline!!)
+                            .withTailText("  ${info.tailText} (${processor.name})")
+                            .withIcon(),
+                    )
+                }
+
+                // block tags
+                if (mode == AT_TAG_NAME || mode == AFTER_ASTERISK) {
+                    if (info.blockText != null ||
+                        info.presentableBlockText != null ||
+                        info.moveCaretOffsetBlock != null
+                    ) {
+                        resultWithPrefix.addElement(
+                            LookupElementBuilder.create(info.blockText!!)
+                                .withPresentableText(info.presentableBlockText!!)
+                                .moveCaret(info.moveCaretOffsetBlock!!)
+                                .withTailText("  ${info.tailText} (${processor.name})")
+                                .withIcon(),
+                        )
+                    }
+                }
+            }
+
+            // TODO remove
             when (processor) {
-                // special cases
-                is IncludeDocProcessor,
-                is ArgDocProcessor, // can enable or disable, depending on whether we want to include [] by default
-                ->
-                    for (tag in processor.providesTags) {
-                        resultWithPrefix.addElement(
-                            LookupElementBuilder.create("{@$tag []}")
-                                .withPresentableText("{@$tag }")
-                                .moveCaret(-2)
-                                .withIcon()
-                                .withTailText(processor),
-                        )
-
-                        if (mode == AT_TAG_NAME || mode == AFTER_ASTERISK) {
-                            resultWithPrefix.addElement(
-                                LookupElementBuilder.create("@$tag []")
-                                    .withPresentableText("@$tag")
-                                    .moveCaret(-1)
-                                    .withIcon()
-                                    .withTailText(processor),
-                            )
-                        }
-                    }
-
-                is IncludeFileDocProcessor ->
-                    for (tag in processor.providesTags) {
-                        resultWithPrefix.addElement(
-                            LookupElementBuilder.create("{@$tag ()}")
-                                .withPresentableText("{@$tag }")
-                                .moveCaret(-2)
-                                .withIcon()
-                                .withTailText(processor),
-                        )
-                        if (mode == AT_TAG_NAME || mode == AFTER_ASTERISK) {
-                            resultWithPrefix.addElement(
-                                LookupElementBuilder.create("@$tag ()")
-                                    .withPresentableText("@$tag")
-                                    .moveCaret(-1)
-                                    .withIcon()
-                                    .withTailText(processor),
-                            )
-                        }
-                    }
-
                 is ExportAsHtmlDocProcessor ->
                     for (tag in processor.providesTags) {
                         resultWithPrefix.addElement(
@@ -188,6 +180,7 @@ class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionPro
                             LookupElementBuilder.create("{@$tag }")
                                 .moveCaret(-1)
                                 .withIcon()
+                                .withTypeText("test")
                                 .withTailText(processor),
                         )
                         if (mode == AT_TAG_NAME || mode == AFTER_ASTERISK) {
@@ -200,19 +193,5 @@ class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionPro
                     }
             }
         }
-
-        val argDocProcessor = activeTagDocProcessors.firstIsInstanceOrNull<ArgDocProcessor>() ?: return
-        resultWithPrefix.addElement(
-            LookupElementBuilder.create("$")
-                .withIcon()
-                .withTailText(argDocProcessor),
-        )
-
-        resultWithPrefix.addElement(
-            LookupElementBuilder.create("\${}")
-                .moveCaret(-1)
-                .withIcon()
-                .withTailText(argDocProcessor),
-        )
     }
 }

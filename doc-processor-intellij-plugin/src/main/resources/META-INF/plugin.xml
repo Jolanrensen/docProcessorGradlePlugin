@@ -30,7 +30,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow
             factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"
-            icon="AllIcons.Gutter.JavadocRead"
+            icon="/icons/KoDEx-K-toolWindow.svg"
             id="Doc Preprocessor"/>
 
         <!-- K1 kdoc rendering -->

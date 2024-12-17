@@ -1,5 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import nl.jolanrensen.docProcessor.CompletionInfo
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
@@ -96,6 +97,20 @@ class IncludeDocProcessor : TagDocProcessor() {
     }
 
     override val providesTags: Set<String> = setOf(TAG)
+
+    override val completionInfos: List<CompletionInfo>
+        get() = listOf(
+            CompletionInfo(
+                tag = TAG,
+                blockText = "@$TAG []",
+                presentableBlockText = "@$TAG [element]",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@$TAG []}",
+                presentableInlineText = "{@$TAG [element]}",
+                moveCaretOffsetInline = -2,
+                tailText = "Copy KDocs of element here. Accepts 1 argument.",
+            ),
+        )
 
     /**
      * Filter documentables to only include linkable elements (classes, functions, properties, etc) and

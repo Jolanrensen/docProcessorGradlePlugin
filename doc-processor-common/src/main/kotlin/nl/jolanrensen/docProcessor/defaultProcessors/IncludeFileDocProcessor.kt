@@ -1,5 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import nl.jolanrensen.docProcessor.CompletionInfo
 import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.HighlightInfo
@@ -33,6 +34,20 @@ class IncludeFileDocProcessor : TagDocProcessor() {
     }
 
     override val providesTags: Set<String> = setOf(TAG)
+
+    override val completionInfos: List<CompletionInfo>
+        get() = listOf(
+            CompletionInfo(
+                tag = TAG,
+                blockText = "@$TAG ()",
+                presentableBlockText = "@$TAG (file)",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@$TAG ()}",
+                presentableInlineText = "{@$TAG (file)}",
+                moveCaretOffsetInline = -2,
+                tailText = "Copy file content here. Use relative paths. Accepts 1 argument.",
+            ),
+        )
 
     private fun processContent(line: String, documentable: DocumentableWrapper): String {
         val includeFileArguments = line.getTagArguments(
