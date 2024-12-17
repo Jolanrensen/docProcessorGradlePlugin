@@ -1,11 +1,14 @@
+<img src="KoDExColored.svg" align="right" width="75" height="75">
+
+# `/** KoDEx */`: Kotlin Documentation Extensions
 [![Maven metadata URL](https://img.shields.io/maven-metadata/v?label=Gradle%20Plugin&metadataUrl=https%3A%2F%2Fplugins.gradle.org%2Fm2%2Fnl%2Fjolanrensen%2FdocProcessor%2Fnl.jolanrensen.docProcessor.gradle.plugin%2Fmaven-metadata.xml)](https://plugins.gradle.org/plugin/nl.jolanrensen.docProcessor)
 
-# KDoc / JavaDoc Preprocessor Gradle Plugin (Beta)
+KDoc Preprocessor Gradle Plugin and IDEA plugin (Beta)
 
-This Gradle plugin allows you to preprocess your KDoc / JavaDoc comments with custom preprocessors and obtain modified
+This Gradle plugin allows you to adapt your KDoc comments with custom preprocessors and obtain modified
 sources.
 
-These preprocessors can be used to add custom tags to your KDoc / JavaDoc comments or change the entirety of the
+These preprocessors can add custom tags to your KDoc comments or change the entirety of the
 comment.
 This is not a Dokka plugin, meaning you can actually get a `sources.jar` file with the modified comments instead of just
 having the comments modified in a `javadoc.jar` or a Dokka HTML website.
