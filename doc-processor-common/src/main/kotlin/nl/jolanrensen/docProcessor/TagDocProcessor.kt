@@ -24,12 +24,27 @@ import kotlinx.coroutines.runBlocking
  */
 abstract class TagDocProcessor : DocProcessor() {
 
-    /** The tags to be replaced, like "sample" */
-    abstract fun tagIsSupported(tag: String): Boolean
+    /**
+     * The tags this processor offers, like "sample".
+     *
+     * This may not be the same as the tags it can actually handle ([tagIsSupported]),
+     * but will be used in autocompletion in the IDE.
+     */
+    abstract val providesTags: Set<String>
+
+    /** The tags to be replaced, like "sample", checks [providesTags] by default but can be overridden. */
+    open fun tagIsSupported(tag: String): Boolean = tag in providesTags
 
     /** Returns true if [tagIsSupported] is in this [DocumentableWrapper]. */
     val DocumentableWrapper.hasSupportedTag
         get() = tags.any(::tagIsSupported)
+
+    /**
+     * An optionally modified list of [CompletionInfo] information to modify how the tags
+     * of this [TagDocProcessor] are displayed in the autocomplete of the IDE.
+     */
+    override val completionInfos: List<CompletionInfo>
+        get() = providesTags.map { CompletionInfo(it, name) }
 
     protected lateinit var mutableDocumentablesByPath: MutableDocumentablesByPath
 
@@ -232,14 +247,14 @@ abstract class TagDocProcessor : DocProcessor() {
             var i = 0
             while (true) {
                 val inlineTagNames = text
-                    .findInlineTagNamesInDocContentWithRanges()
+                    .findInlineTagNamesWithRanges()
                     .filter { (tagName, _) -> tagIsSupported(tagName) }
 
                 if (inlineTagNames.isEmpty()) break
 
                 var wasModified = false
                 for ((_, range) in inlineTagNames) {
-                    val tagContent = text.substring(range)
+                    val tagContent = text.value.substring(range)
 
                     // sanity check
                     require(tagContent.startsWith("{@") && tagContent.endsWith("}")) {
@@ -261,7 +276,7 @@ abstract class TagDocProcessor : DocProcessor() {
                             cause = e,
                         )
                     }
-                    text = text.replaceRange(range, newTagContent)
+                    text = text.value.replaceRange(range, newTagContent).asDocContent()
 
                     wasModified = tagContent != newTagContent
 
@@ -286,20 +301,20 @@ abstract class TagDocProcessor : DocProcessor() {
 
         // Then process the normal tags
         val processedDoc: DocContent = processedInlineTagsDoc
-            .splitDocContentPerBlockWithRanges()
+            .splitPerBlockWithRanges()
             .map { (split, rangeDocContent) ->
                 val shouldProcess =
-                    split.trimStart().startsWith("@") &&
+                    split.value.trimStart().startsWith("@") &&
                         split.getTagNameOrNull()
                             ?.let(::tagIsSupported) == true
 
                 if (shouldProcess) {
                     try {
                         processBlockTagWithContent(
-                            tagWithContent = split,
+                            tagWithContent = split.value,
                             path = path,
                             documentable = documentable,
-                        )
+                        ).asDocContent()
                     } catch (e: Throwable) {
                         throw TagDocProcessorFailedException(
                             processorName = name,
@@ -316,11 +331,95 @@ abstract class TagDocProcessor : DocProcessor() {
                 // skip empty blocks, making sure to keep the first and last blocks
                 // even if they are empty, to preserve original newlines
                 list.filterIndexed { i, it ->
-                    i == 0 || i == list.lastIndex || it.isNotEmpty()
+                    i == 0 || i == list.lastIndex || it.value.isNotEmpty()
                 }
-            }.joinToString("\n")
+            }.joinToString("\n").asDocContent()
 
         return processedDoc
     }
-}
 
+    fun getArgumentHighlightOrNull(
+        argumentIndex: Int,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+        tagName: String,
+        numberOfArguments: Int,
+        type: HighlightType,
+    ): HighlightInfo? {
+        val line = docContent.value.substring(rangeInDocContent)
+        val (_, rangeInLine) = line.getTagArgumentWithRangeByIndexOrNull(
+            index = argumentIndex,
+            tag = tagName,
+            numberOfArguments = numberOfArguments,
+        ) ?: return null
+
+        return buildHighlightInfo(
+            range = rangeInLine.first + rangeInDocContent.first..rangeInLine.last + rangeInDocContent.first,
+            type = type,
+            tag = tagName,
+        )
+    }
+
+    protected open fun getHighlightsForInlineTag(
+        tagName: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+    ): List<HighlightInfo> =
+        buildList {
+            // Left '{'
+            val leftBracket = buildHighlightInfo(
+                range = rangeInDocContent.first..rangeInDocContent.first,
+                type = HighlightType.BRACKET,
+                tag = tagName,
+            )
+
+            // '@' and tag name
+            this += buildHighlightInfo(
+                range = (rangeInDocContent.first + 1)..(rangeInDocContent.first + 1 + tagName.length),
+                type = HighlightType.TAG,
+                tag = tagName,
+            )
+
+            // Right '}'
+            val rightBracket = buildHighlightInfo(
+                range = rangeInDocContent.last..rangeInDocContent.last,
+                type = HighlightType.BRACKET,
+                tag = tagName,
+            )
+
+            // Linking brackets
+            this += leftBracket.copy(related = listOf(rightBracket))
+            this += rightBracket.copy(related = listOf(leftBracket))
+        }
+
+    protected open fun getHighlightsForBlockTag(
+        tagName: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+    ): List<HighlightInfo> =
+        buildList {
+            // '@' and tag name
+            this += buildHighlightInfo(
+                range = rangeInDocContent.first..(rangeInDocContent.first + tagName.length),
+                type = HighlightType.TAG,
+                tag = tagName,
+            )
+        }
+
+    override fun getHighlightsFor(docContent: DocContent): List<HighlightInfo> =
+        buildList {
+            // {@inline tags}
+            val inlineTags = docContent.findInlineTagNamesWithRanges()
+            for ((tagName, range) in inlineTags) {
+                if (!tagIsSupported(tagName)) continue
+                this += getHighlightsForInlineTag(tagName, range, docContent)
+            }
+
+            // @block tags
+            val blockTags = docContent.findBlockTagsWithRanges()
+            for ((tagName, range) in blockTags) {
+                if (!tagIsSupported(tagName)) continue
+                this += getHighlightsForBlockTag(tagName, range, docContent)
+            }
+        }
+}

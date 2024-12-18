@@ -6,6 +6,36 @@ import org.junit.jupiter.api.Test
 class TestGetTagArguments {
 
     @Test
+    fun `Get content with indices`() {
+        val tagContent = "@tag simple content"
+
+        val argsWithIndices = tagContent.getTagArgumentsWithRanges("tag", 2)
+        for ((arg, range) in argsWithIndices) {
+            arg shouldBe tagContent.substring(range)
+        }
+
+        argsWithIndices shouldBe listOf(
+            "simple" to 5..10,
+            "content" to 12..18,
+        )
+    }
+
+    @Test
+    fun `Get content with indices and braces`() {
+        val tagContent = "{@tag simple content}"
+
+        val argsWithIndices = tagContent.getTagArgumentsWithRanges("tag", 2)
+        for ((arg, range) in argsWithIndices) {
+            arg shouldBe tagContent.substring(range)
+        }
+
+        argsWithIndices shouldBe listOf(
+            "simple" to 6..11,
+            "content" to 13..19,
+        )
+    }
+
+    @Test
     fun `Simple content with spaces`() {
         val tagContent = "{@tag simple content with spaces}"
 

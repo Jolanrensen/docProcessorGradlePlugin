@@ -1,6 +1,10 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import nl.jolanrensen.docProcessor.CompletionInfo
+import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
+import nl.jolanrensen.docProcessor.HighlightInfo
+import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
@@ -25,13 +29,29 @@ const val INCLUDE_FILE_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProce
  */
 class IncludeFileDocProcessor : TagDocProcessor() {
 
-    private val tag = "includeFile"
+    companion object {
+        const val TAG = "includeFile"
+    }
 
-    override fun tagIsSupported(tag: String): Boolean = tag == this.tag
+    override val providesTags: Set<String> = setOf(TAG)
+
+    override val completionInfos: List<CompletionInfo>
+        get() = listOf(
+            CompletionInfo(
+                tag = TAG,
+                blockText = "@$TAG ()",
+                presentableBlockText = "@$TAG (FILE)",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@$TAG ()}",
+                presentableInlineText = "{@$TAG (FILE)}",
+                moveCaretOffsetInline = -2,
+                tailText = "Copy FILE content here. Use relative paths. Accepts 1 argument.",
+            ),
+        )
 
     private fun processContent(line: String, documentable: DocumentableWrapper): String {
         val includeFileArguments = line.getTagArguments(
-            tag = tag,
+            tag = TAG,
             numberOfArguments = 2,
         )
         val filePath = includeFileArguments
@@ -111,4 +131,39 @@ class IncludeFileDocProcessor : TagDocProcessor() {
             line = tagWithContent,
             documentable = documentable,
         )
+
+    override fun getHighlightsForInlineTag(
+        tagName: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+    ): List<HighlightInfo> =
+        buildList {
+            this += super.getHighlightsForInlineTag(tagName, rangeInDocContent, docContent)
+            getArgumentHighlightOrNull(
+                argumentIndex = 0,
+                docContent = docContent,
+                rangeInDocContent = rangeInDocContent,
+                tagName = tagName,
+                numberOfArguments = 2,
+                type = HighlightType.TAG_KEY,
+            )?.let(::add)
+        }
+
+    override fun getHighlightsForBlockTag(
+        tagName: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+    ): List<HighlightInfo> =
+        buildList {
+            this += super.getHighlightsForBlockTag(tagName, rangeInDocContent, docContent)
+
+            getArgumentHighlightOrNull(
+                argumentIndex = 0,
+                docContent = docContent,
+                rangeInDocContent = rangeInDocContent,
+                tagName = tagName,
+                numberOfArguments = 2,
+                type = HighlightType.TAG_KEY,
+            )?.let(::add)
+        }
 }

@@ -27,11 +27,11 @@ open class DocumentablesByPathWithCache(
     // holds the resulting docs of the documentables, to be updated each time a documentable has been processed
     // Can be deleted if needsRebuild is true
     // cannot be used in query(), see postIncludeDocContentCache instead
-    private val docContentResultCache: MutableMap<UUID, String> = mutableMapOf()
+    private val docContentResultCache: MutableMap<UUID, DocContent> = mutableMapOf()
 
     // holds the intermediate (post-@include) docContent states of the docs
     // this is used on query
-    private val postIncludeDocContentCache: MutableMap<UUID, String> = mutableMapOf()
+    private val postIncludeDocContentCache: MutableMap<UUID, DocContent> = mutableMapOf()
 
     private var docToProcess: MutableDocumentableWrapper? = null
     private var docsToProcess: MutableMap<String, MutableList<MutableDocumentableWrapper>> = mutableMapOf()
@@ -48,7 +48,7 @@ open class DocumentablesByPathWithCache(
             }
         }
 
-    fun getDocContentResult(docId: UUID): String? = docContentResultCache[docId]
+    fun getDocContentResult(docId: UUID): DocContent? = docContentResultCache[docId]
 
     /**
      * called from [nl.jolanrensen.docProcessor.services.PostIncludeDocProcessorCacheCollector]
@@ -57,8 +57,10 @@ open class DocumentablesByPathWithCache(
         postIncludeDocContentCache[documentable.identifier] = documentable.docContent
     }
 
-    // we set a context and a documentable to process
-    // returns whether it needs a rebuild
+    /**
+     * we set a context and a documentable to process
+     * returns whether it needs a rebuild
+     */
     fun updatePreProcessing(docToProcess: DocumentableWrapper): Boolean {
         val doc = docToProcess.toMutable()
         this.docToProcess = doc
@@ -131,7 +133,7 @@ open class DocumentablesByPathWithCache(
         return needsRebuild
     }
 
-    // retrieve a doc by identifier from queryCache or docsToProcess
+    /** retrieve a doc by identifier from queryCache or docsToProcess */
     override fun get(identifier: UUID): MutableDocumentableWrapper? =
         queryCache.values
             .firstNotNullOfOrNull { it.firstOrNull { it.identifier == identifier } }

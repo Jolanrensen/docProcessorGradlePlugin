@@ -1,5 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import nl.jolanrensen.docProcessor.CompletionInfo
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.MutableDocumentableWrapper
 import nl.jolanrensen.docProcessor.TagDocProcessor
@@ -29,12 +30,23 @@ class ExportAsHtmlDocProcessor : TagDocProcessor() {
         const val EXPORT_AS_HTML_END = "exportAsHtmlEnd"
     }
 
-    private val tags = listOf(
-        EXPORT_AS_HTML_START,
-        EXPORT_AS_HTML_END,
-    )
+    override val providesTags: Set<String> = setOf(EXPORT_AS_HTML_START, EXPORT_AS_HTML_END)
 
-    override fun tagIsSupported(tag: String): Boolean = tag in tags
+    override val completionInfos: List<CompletionInfo>
+        get() = listOf(
+            CompletionInfo(
+                tag = EXPORT_AS_HTML_START,
+                inlineText = "{@$EXPORT_AS_HTML_START}",
+                presentableInlineText = "{@$EXPORT_AS_HTML_START}",
+                tailText = "Set start of @ExportAsHtml range. Takes no arguments.",
+            ),
+            CompletionInfo(
+                tag = EXPORT_AS_HTML_END,
+                inlineText = "{@$EXPORT_AS_HTML_END}",
+                presentableInlineText = "{@$EXPORT_AS_HTML_END}",
+                tailText = "Set end of @ExportAsHtml range. Takes no arguments.",
+            ),
+        )
 
     override fun processBlockTagWithContent(
         tagWithContent: String,
@@ -61,7 +73,7 @@ class ExportAsHtmlDocProcessor : TagDocProcessor() {
         require(documentable is MutableDocumentableWrapper) {
             "DocumentableWrapper must be MutableDocumentableWrapper to use this processor."
         }
-        val lineInDoc = documentable.docContent.lines().indexOfFirst {
+        val lineInDoc = documentable.docContent.value.lines().indexOfFirst {
             it.contains("@$tag")
         }
         when (tag) {

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="13px" height="13px" viewBox="0 0 13 13">
+
+<!--    <rect width="13" height="13" fill="black"/>-->
+
+    <!-- KDocs-style markings: /** -->
+    <text x="2.6" y="3.575" fill="white" font-family="Courier, monospace" font-size="3.25" font-weight="bold">
+        /**
+    </text>
+
+    <!-- Stylized "K" in the middle -->
+    <text x="3.9" y="7.475" fill="white" font-family="Courier, monospace" font-size="4.875" font-weight="bold">
+        |
+    </text>
+    <text x="5.85" y="7.475" fill="white" font-family="Courier, monospace" font-size="4.875" font-weight="bold">
+        {
+    </text>
+
+    <!-- KDocs-style markings: */ -->
+    <text x="4.55" y="12.35" fill="white" font-family="Courier, monospace" font-size="3.25" font-weight="bold">
+        */
+    </text>
+</svg>
