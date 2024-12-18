@@ -1,11 +1,13 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import nl.jolanrensen.docProcessor.CompletionInfo
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.ProgrammingLanguage
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.decodeCallableTarget
+import nl.jolanrensen.docProcessor.defaultProcessors.IncludeDocProcessor.Companion.TAG
 import nl.jolanrensen.docProcessor.docRegex
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.withoutFilters
@@ -41,6 +43,32 @@ class SampleDocProcessor : TagDocProcessor() {
     }
 
     override val providesTags: Set<String> = setOf(SAMPLE_TAG, SAMPLE_NO_COMMENTS_TAG)
+
+    override val completionInfos: List<CompletionInfo>
+        get() = listOf(
+            CompletionInfo(
+                tag = TAG,
+                blockText = "@$TAG []",
+                presentableBlockText = "@$TAG [ELEMENT]",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@$TAG []}",
+                presentableInlineText = "{@$TAG [ELEMENT]}",
+                moveCaretOffsetInline = -2,
+                tailText =
+                    "Copy code of ELEMENT here. Accepts 1 argument. Respects \"// SampleStart\" and \"// SampleEnd\" comments.",
+            ),
+            CompletionInfo(
+                tag = SAMPLE_NO_COMMENTS_TAG,
+                blockText = "@$SAMPLE_NO_COMMENTS_TAG []",
+                presentableBlockText = "@$SAMPLE_NO_COMMENTS_TAG [ELEMENT]",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@$SAMPLE_NO_COMMENTS_TAG []}",
+                presentableInlineText = "{@$SAMPLE_NO_COMMENTS_TAG [ELEMENT]}",
+                moveCaretOffsetInline = -2,
+                tailText =
+                    "Copy code of ELEMENT here minus comments. Accepts 1 argument. Respects \"// SampleStart\" and \"// SampleEnd\" comments.",
+            ),
+        )
 
     private val sampleStartRegex = Regex(" *// *SampleStart *\n")
     private val sampleEndRegex = Regex(" *// *SampleEnd *\n")

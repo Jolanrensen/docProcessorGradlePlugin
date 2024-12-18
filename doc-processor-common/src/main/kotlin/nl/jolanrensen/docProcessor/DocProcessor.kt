@@ -60,21 +60,45 @@ abstract class DocProcessor : Serializable {
     }
 
     /**
+     * An optional list of [CompletionInfo] information to display
+     * in the autocomplete of the IDE.
+     */
+    open val completionInfos: List<CompletionInfo>
+        get() = emptyList()
+
+    /**
      * Can be overridden to provide custom highlighting for doc content given by [docContent].
      *
      * NOTE: this can contain '*' characters and indents, so make sure to handle that.
      */
     open fun getHighlightsFor(docContent: DocContent): List<HighlightInfo> = emptyList()
 
-    protected fun HighlightInfo(
+    /**
+     * Builds a [HighlightInfo] object with the given parameters in the context of this processor.
+     * Fills in [HighlightInfo.tagProcessorName] with the name of this processor.
+     * Builds [HighlightInfo.description] from the [completionInfos] of this processor.
+     */
+    protected fun buildHighlightInfo(
         range: IntRange,
         type: HighlightType,
+        tag: String,
+        description: String = completionInfos // get the description from the completion infos
+            .find { it.tag == tag }
+            ?.let {
+                "${
+                    (it.presentableBlockText ?: it.presentableInlineText)
+                        ?.surroundWith("\"")
+                        ?.plus(": ")
+                        ?: ""
+                }${it.tailText}"
+            } ?: "",
         related: List<HighlightInfo> = emptyList(),
     ): HighlightInfo =
         HighlightInfo(
             range = range,
             type = type,
             related = related,
+            description = description,
             tagProcessorName = name,
         )
 }

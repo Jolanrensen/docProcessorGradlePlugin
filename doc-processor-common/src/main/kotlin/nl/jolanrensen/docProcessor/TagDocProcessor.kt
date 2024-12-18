@@ -43,7 +43,7 @@ abstract class TagDocProcessor : DocProcessor() {
      * An optionally modified list of [CompletionInfo] information to modify how the tags
      * of this [TagDocProcessor] are displayed in the autocomplete of the IDE.
      */
-    open val completionInfos: List<CompletionInfo>
+    override val completionInfos: List<CompletionInfo>
         get() = providesTags.map { CompletionInfo(it, name) }
 
     protected lateinit var mutableDocumentablesByPath: MutableDocumentablesByPath
@@ -353,9 +353,10 @@ abstract class TagDocProcessor : DocProcessor() {
             numberOfArguments = numberOfArguments,
         ) ?: return null
 
-        return HighlightInfo(
+        return buildHighlightInfo(
             range = rangeInLine.first + rangeInDocContent.first..rangeInLine.last + rangeInDocContent.first,
             type = type,
+            tag = tagName,
         )
     }
 
@@ -366,21 +367,24 @@ abstract class TagDocProcessor : DocProcessor() {
     ): List<HighlightInfo> =
         buildList {
             // Left '{'
-            val leftBracket = HighlightInfo(
+            val leftBracket = buildHighlightInfo(
                 range = rangeInDocContent.first..rangeInDocContent.first,
                 type = HighlightType.BRACKET,
+                tag = tagName,
             )
 
             // '@' and tag name
-            this += HighlightInfo(
+            this += buildHighlightInfo(
                 range = (rangeInDocContent.first + 1)..(rangeInDocContent.first + 1 + tagName.length),
                 type = HighlightType.TAG,
+                tag = tagName,
             )
 
             // Right '}'
-            val rightBracket = HighlightInfo(
+            val rightBracket = buildHighlightInfo(
                 range = rangeInDocContent.last..rangeInDocContent.last,
                 type = HighlightType.BRACKET,
+                tag = tagName,
             )
 
             // Linking brackets
@@ -395,9 +399,10 @@ abstract class TagDocProcessor : DocProcessor() {
     ): List<HighlightInfo> =
         buildList {
             // '@' and tag name
-            this += HighlightInfo(
+            this += buildHighlightInfo(
                 range = rangeInDocContent.first..(rangeInDocContent.first + tagName.length),
                 type = HighlightType.TAG,
+                tag = tagName,
             )
         }
 

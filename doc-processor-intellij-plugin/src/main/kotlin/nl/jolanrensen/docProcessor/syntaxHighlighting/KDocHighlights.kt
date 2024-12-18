@@ -53,7 +53,7 @@ class KDocHighlightAnnotator :
     @Suppress("ktlint:standard:comment-wrapping")
     private fun HighlightInfo.createAsAnnotator(kdoc: KDoc, holder: AnnotationHolder) =
         holder
-            .newAnnotation(HighlightSeverity.INFORMATION, "Tag from: $tagProcessorName")
+            .newAnnotation(HighlightSeverity.INFORMATION, "$description ($tagProcessorName)")
             .needsUpdateOnTyping()
             .range(
                 TextRange(

@@ -8,12 +8,14 @@ package nl.jolanrensen.docProcessor
  * @param related Other highlights that are related to this one, like matching brackets.
  *   When this [range] is touched, it and the [related] ranges will pop visually.
  * @param tagProcessorName The name of the tag processor that created this highlight.
+ * @param description An optional description of the tag processor that created this highlight.
  */
 data class HighlightInfo(
     val range: IntRange,
     val type: HighlightType,
     val related: List<HighlightInfo> = emptyList(),
     val tagProcessorName: String,
+    val description: String,
 )
 
 enum class HighlightType {
@@ -55,6 +57,7 @@ fun List<HighlightInfo>.applyMapping(mapping: (Int) -> Int): List<HighlightInfo>
                     type = it.type,
                     related = it.related.applyMapping(mapping),
                     tagProcessorName = it.tagProcessorName,
+                    description = it.description,
                 )
             }
     }

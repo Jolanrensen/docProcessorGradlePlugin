@@ -13,7 +13,7 @@ enum class Mode(val id: String) {
 var mode: Mode
     get() = Mode.valueOf(
         PropertiesComponent.getInstance()
-            .getValue(MODE_KEY, Mode.K1.name),
+            .getValue(MODE_KEY, Mode.K2.name),
     )
     set(value) {
         PropertiesComponent.getInstance()

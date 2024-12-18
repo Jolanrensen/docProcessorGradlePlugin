@@ -1,5 +1,6 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
+import nl.jolanrensen.docProcessor.CompletionInfo
 import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.HighlightInfo
@@ -39,7 +40,19 @@ const val COMMENT_DOC_PROCESSOR = "nl.jolanrensen.docProcessor.defaultProcessors
  */
 class CommentDocProcessor : TagDocProcessor() {
 
-    override val providesTags: Set<String> = setOf("comment")
+    companion object {
+        const val TAG = "comment"
+    }
+
+    override val providesTags: Set<String> = setOf(TAG)
+
+    override val completionInfos: List<CompletionInfo>
+        get() = listOf(
+            CompletionInfo(
+                tag = TAG,
+                tailText = "Comment something. Will be removed from the docs. Takes any number of arguments.",
+            ),
+        )
 
     override fun processBlockTagWithContent(
         tagWithContent: String,
@@ -60,27 +73,31 @@ class CommentDocProcessor : TagDocProcessor() {
     ): List<HighlightInfo> =
         buildList {
             // '{'
-            val leftBracket = HighlightInfo(
+            val leftBracket = buildHighlightInfo(
                 range = rangeInDocContent.first..rangeInDocContent.first,
                 type = HighlightType.COMMENT,
+                tag = TAG,
             )
 
             // '@' and tag name
-            this += HighlightInfo(
+            this += buildHighlightInfo(
                 range = (rangeInDocContent.first + 1)..(rangeInDocContent.first + 1 + tagName.length),
                 type = HighlightType.COMMENT_TAG,
+                tag = TAG,
             )
 
             // comment contents
-            this += HighlightInfo(
+            this += buildHighlightInfo(
                 range = (rangeInDocContent.first + 1 + tagName.length + 1)..rangeInDocContent.last - 1,
                 type = HighlightType.COMMENT,
+                tag = TAG,
             )
 
             // '}
-            val rightBracket = HighlightInfo(
+            val rightBracket = buildHighlightInfo(
                 range = rangeInDocContent.last..rangeInDocContent.last,
                 type = HighlightType.COMMENT,
+                tag = TAG,
             )
 
             // link left and right brackets
@@ -95,15 +112,17 @@ class CommentDocProcessor : TagDocProcessor() {
     ): List<HighlightInfo> =
         buildList {
             // '@' and tag name
-            this += HighlightInfo(
+            this += buildHighlightInfo(
                 range = rangeInDocContent.first..(rangeInDocContent.first + tagName.length),
                 type = HighlightType.COMMENT_TAG,
+                tag = TAG,
             )
 
             // comment contents
-            this += HighlightInfo(
+            this += buildHighlightInfo(
                 range = (rangeInDocContent.first + 1 + tagName.length)..rangeInDocContent.last,
                 type = HighlightType.COMMENT,
+                tag = TAG,
             )
         }
 }

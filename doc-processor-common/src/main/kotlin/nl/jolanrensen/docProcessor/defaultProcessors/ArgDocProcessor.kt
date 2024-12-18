@@ -133,9 +133,9 @@ class ArgDocProcessor : TagDocProcessor() {
             ),
             CompletionInfo(
                 tag = "$",
-                blockText = null,
-                presentableBlockText = null,
-                moveCaretOffsetBlock = null,
+                blockText = "$[]",
+                presentableBlockText = "\$KEY=DEFAULT",
+                moveCaretOffsetBlock = -1,
                 inlineText = "$[]",
                 presentableInlineText = "\$KEY=DEFAULT",
                 moveCaretOffsetInline = -1,
@@ -144,9 +144,9 @@ class ArgDocProcessor : TagDocProcessor() {
             ),
             CompletionInfo(
                 tag = "\${}",
-                blockText = null,
-                presentableBlockText = null,
-                moveCaretOffsetBlock = null,
+                blockText = "\${[]}",
+                presentableBlockText = "\${KEY=DEFAULT}",
+                moveCaretOffsetBlock = -2,
                 inlineText = "\${[]}",
                 presentableInlineText = "\${KEY=DEFAULT}",
                 moveCaretOffsetInline = -2,
@@ -476,43 +476,49 @@ class ArgDocProcessor : TagDocProcessor() {
                 .`find ${}'s`()
             for (range in bracedDollarTags) {
                 // '$'
-                this += HighlightInfo(
+                this += buildHighlightInfo(
                     range = range.first..range.first,
                     type = HighlightType.TAG,
+                    tag = "\${}",
                 )
 
                 // '{'
-                val left = HighlightInfo(
+                val left = buildHighlightInfo(
                     range = (range.first + 1)..(range.first + 1),
                     type = HighlightType.BRACKET,
+                    tag = "\${}",
                 )
                 val (key, value) = docContent.value.substring(range).findKeyAndValueFromDollarSign()
 
                 // key
-                this += HighlightInfo(
+                this += buildHighlightInfo(
                     range = (range.first + 2)..(range.first + 2 + key.length),
                     type = HighlightType.TAG_KEY,
+                    tag = "\${}",
                 )
 
                 // `=`
                 if (value != null) { // null if there is no '='
                     val equalsPosition = range.first + 2 + key.length
-                    this += HighlightInfo(
+                    this += buildHighlightInfo(
                         range = equalsPosition..equalsPosition,
                         type = HighlightType.BRACKET,
+                        tag = "\${}",
                     )
 
                     // value
-                    this += HighlightInfo(
+                    this += buildHighlightInfo(
                         range = equalsPosition + 1..range.last - 1,
                         type = HighlightType.TAG_VALUE,
+                        tag = "\${}",
                     )
                 }
 
                 // '}'
-                val right = HighlightInfo(
+                val right = buildHighlightInfo(
                     range = range.last..range.last,
                     type = HighlightType.BRACKET,
+                    tag = "\${}",
                 )
 
                 // link left and right brackets
@@ -528,34 +534,39 @@ class ArgDocProcessor : TagDocProcessor() {
                 if (docContent.value[range.first + 1] == '{') continue // skip ${...} tags
 
                 // '$'
-                this += HighlightInfo(
+                this += buildHighlightInfo(
                     range = range.first..range.first,
                     type = HighlightType.TAG,
+                    tag = "$",
                 )
 
                 if (equalsPosition != null) {
                     // key
-                    this += HighlightInfo(
+                    this += buildHighlightInfo(
                         range = range.first + 1..equalsPosition - 1,
                         type = HighlightType.TAG_KEY,
+                        tag = "$",
                     )
 
                     // `=`
-                    this += HighlightInfo(
+                    this += buildHighlightInfo(
                         range = equalsPosition..equalsPosition,
                         type = HighlightType.BRACKET,
+                        tag = "$",
                     )
 
                     // value
-                    this += HighlightInfo(
+                    this += buildHighlightInfo(
                         range = equalsPosition + 1..range.last,
                         type = HighlightType.TAG_VALUE,
+                        tag = "$",
                     )
                 } else {
                     // key
-                    this += HighlightInfo(
+                    this += buildHighlightInfo(
                         range = range.first + 1..range.last,
                         type = HighlightType.TAG_KEY,
+                        tag = "$",
                     )
                 }
             }

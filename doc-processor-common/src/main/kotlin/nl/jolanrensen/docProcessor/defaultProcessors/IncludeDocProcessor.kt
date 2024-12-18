@@ -103,12 +103,12 @@ class IncludeDocProcessor : TagDocProcessor() {
             CompletionInfo(
                 tag = TAG,
                 blockText = "@$TAG []",
-                presentableBlockText = "@$TAG [element]",
+                presentableBlockText = "@$TAG [ELEMENT]",
                 moveCaretOffsetBlock = -1,
                 inlineText = "{@$TAG []}",
-                presentableInlineText = "{@$TAG [element]}",
+                presentableInlineText = "{@$TAG [ELEMENT]}",
                 moveCaretOffsetInline = -2,
-                tailText = "Copy KDocs of element here. Accepts 1 argument.",
+                tailText = "Copy KDocs of ELEMENT here. Accepts 1 argument.",
             ),
         )
 

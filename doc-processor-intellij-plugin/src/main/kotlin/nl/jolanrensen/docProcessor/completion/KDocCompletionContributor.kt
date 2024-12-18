@@ -15,12 +15,10 @@ import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.patterns.StandardPatterns
 import com.intellij.ui.IconManager
 import com.intellij.util.ProcessingContext
-import nl.jolanrensen.docProcessor.TagDocProcessor
 import nl.jolanrensen.docProcessor.completion.Mode.AFTER_ASTERISK
 import nl.jolanrensen.docProcessor.completion.Mode.AT_TAG_NAME
 import nl.jolanrensen.docProcessor.completion.Mode.IN_TEXT
-import nl.jolanrensen.docProcessor.defaultProcessors.ExportAsHtmlDocProcessor
-import nl.jolanrensen.docProcessor.getLoadedTagProcessors
+import nl.jolanrensen.docProcessor.getLoadedProcessors
 import org.jetbrains.kotlin.idea.completion.or
 import org.jetbrains.kotlin.idea.completion.singleCharPattern
 import org.jetbrains.kotlin.kdoc.lexer.KDocTokens
@@ -69,10 +67,7 @@ internal fun String.removeDummyIdentifier(): String =
     }
 
 class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionProvider<CompletionParameters>() {
-    private val activeTagDocProcessors = getLoadedTagProcessors()
-
-    private fun LookupElementBuilder.withTailText(processor: TagDocProcessor): LookupElementBuilder =
-        withTailText("  ${processor.name}")
+    private val activeDocProcessors = getLoadedProcessors()
 
     private val icon by lazy {
         IconManager.getInstance()
@@ -119,10 +114,8 @@ class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionPro
                 if (prefix.isNotEmpty() && prefix.first() !in setOf('@', '{', '$')) return
         }
 
-        // TODO use CompletionInfo
-
         val resultWithPrefix = result.withPrefixMatcher(prefix)
-        for (processor in activeTagDocProcessors) {
+        for (processor in activeDocProcessors) {
             for (info in processor.completionInfos) {
                 // inline tags
                 if (info.inlineText != null &&
@@ -153,44 +146,6 @@ class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionPro
                         )
                     }
                 }
-            }
-
-            // TODO remove
-            when (processor) {
-                is ExportAsHtmlDocProcessor ->
-                    for (tag in processor.providesTags) {
-                        resultWithPrefix.addElement(
-                            LookupElementBuilder.create("{@$tag}")
-                                .withIcon()
-                                .withTailText(processor),
-                        )
-                        if (mode == AT_TAG_NAME || mode == AFTER_ASTERISK) {
-                            resultWithPrefix.addElement(
-                                LookupElementBuilder.create("@$tag")
-                                    .withIcon()
-                                    .withTailText(processor),
-                            )
-                        }
-                    }
-
-                // default case
-                else ->
-                    for (tag in processor.providesTags) {
-                        resultWithPrefix.addElement(
-                            LookupElementBuilder.create("{@$tag }")
-                                .moveCaret(-1)
-                                .withIcon()
-                                .withTypeText("test")
-                                .withTailText(processor),
-                        )
-                        if (mode == AT_TAG_NAME || mode == AFTER_ASTERISK) {
-                            resultWithPrefix.addElement(
-                                LookupElementBuilder.create("@$tag ")
-                                    .withIcon()
-                                    .withTailText(processor),
-                            )
-                        }
-                    }
             }
         }
     }

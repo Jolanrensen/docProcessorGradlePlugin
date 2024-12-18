@@ -40,12 +40,12 @@ class IncludeFileDocProcessor : TagDocProcessor() {
             CompletionInfo(
                 tag = TAG,
                 blockText = "@$TAG ()",
-                presentableBlockText = "@$TAG (file)",
+                presentableBlockText = "@$TAG (FILE)",
                 moveCaretOffsetBlock = -1,
                 inlineText = "{@$TAG ()}",
-                presentableInlineText = "{@$TAG (file)}",
+                presentableInlineText = "{@$TAG (FILE)}",
                 moveCaretOffsetInline = -2,
-                tailText = "Copy file content here. Use relative paths. Accepts 1 argument.",
+                tailText = "Copy FILE content here. Use relative paths. Accepts 1 argument.",
             ),
         )
 

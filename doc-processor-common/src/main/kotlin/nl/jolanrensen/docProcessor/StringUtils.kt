@@ -148,3 +148,5 @@ fun String.getLineAndCharacterOffset(offset: Int): Pair<Int, Int> {
 
     return Pair(line, character)
 }
+
+fun String.surroundWith(start: String, end: String = start): String = "$start$this$end"
