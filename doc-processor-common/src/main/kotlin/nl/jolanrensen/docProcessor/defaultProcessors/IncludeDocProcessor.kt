@@ -1,17 +1,19 @@
 package nl.jolanrensen.docProcessor.defaultProcessors
 
-import nl.jolanrensen.docProcessor.DocContent
+import nl.jolanrensen.docProcessor.CompletionInfo
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.KOTLIN
 import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.asDocContent
+import nl.jolanrensen.docProcessor.asDocTextOrNull
 import nl.jolanrensen.docProcessor.decodeCallableTarget
-import nl.jolanrensen.docProcessor.getDocContentOrNull
+import nl.jolanrensen.docProcessor.getDocContent
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.javaLinkRegex
 import nl.jolanrensen.docProcessor.replaceKdocLinks
-import nl.jolanrensen.docProcessor.toDoc
+import nl.jolanrensen.docProcessor.toDocText
 import nl.jolanrensen.docProcessor.withoutFilters
 import org.apache.commons.text.StringEscapeUtils
 import org.jgrapht.traverse.NotDirectedAcyclicGraphException
@@ -94,7 +96,21 @@ class IncludeDocProcessor : TagDocProcessor() {
         const val TAG = "include"
     }
 
-    override fun tagIsSupported(tag: String): Boolean = tag == TAG
+    override val providesTags: Set<String> = setOf(TAG)
+
+    override val completionInfos: List<CompletionInfo>
+        get() = listOf(
+            CompletionInfo(
+                tag = TAG,
+                blockText = "@$TAG []",
+                presentableBlockText = "@$TAG [ELEMENT]",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@$TAG []}",
+                presentableInlineText = "{@$TAG [ELEMENT]}",
+                moveCaretOffsetInline = -2,
+                tailText = "Copy KDocs of ELEMENT here. Accepts 1 argument.",
+            ),
+        )
 
     /**
      * Filter documentables to only include linkable elements (classes, functions, properties, etc) and
@@ -128,7 +144,10 @@ class IncludeDocProcessor : TagDocProcessor() {
                     appendLine("$path:")
                     appendLine(
                         documentables.joinToString("\n\n") {
-                            it.queryFileForDocTextRange().getDocContentOrNull()?.toDoc(4) ?: ""
+                            it.queryFileForDocTextRange().asDocTextOrNull()
+                                ?.getDocContent()
+                                ?.toDocText(4)?.value
+                                ?: ""
                         },
                     )
                 }
@@ -204,9 +223,11 @@ class IncludeDocProcessor : TagDocProcessor() {
             )
         }
 
-        var targetContent: DocContent = targetDocumentable.docContent
+        var targetContent = targetDocumentable.docContent
+            .value
             .removePrefix("\n")
             .removeSuffix("\n")
+            .asDocContent()
 
         targetContent = when (documentable.programmingLanguage) {
             // if the content contains links to other elements, we need to expand the path
@@ -230,7 +251,7 @@ class IncludeDocProcessor : TagDocProcessor() {
 
             JAVA -> {
                 // TODO: issue #8: Expanding Java reference links
-                if (javaLinkRegex in targetContent) {
+                if (javaLinkRegex in targetContent.value) {
                     logger.warn {
                         "Java {@link statements} are not replaced by their fully qualified path. " +
                             "Make sure to use fully qualified paths in {@link statements} when " +
@@ -239,9 +260,10 @@ class IncludeDocProcessor : TagDocProcessor() {
                 }
 
                 // Escape HTML characters in Java docs
-                StringEscapeUtils.escapeHtml4(targetContent)
+                StringEscapeUtils.escapeHtml4(targetContent.value)
                     .replace("@", "&#64;")
                     .replace("*/", "&#42;&#47;")
+                    .asDocContent()
             }
         }
 
@@ -252,11 +274,11 @@ class IncludeDocProcessor : TagDocProcessor() {
                     append(" ")
                 }
                 append(extraContent)
-            }
+            }.asDocContent()
         }
 
         // replace the include statement with the kdoc of the queried node (if found)
-        return targetContent
+        return targetContent.value
     }
 
     /**

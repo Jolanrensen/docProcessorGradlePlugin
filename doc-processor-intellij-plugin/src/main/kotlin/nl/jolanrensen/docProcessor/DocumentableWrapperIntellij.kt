@@ -81,7 +81,7 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
             """
                     |Could not find start of comment.
                     |Paths: $paths
-                    |Comment Content: "${docComment.text.getDocContentOrNull()}"
+                    |Comment Content: "${docComment.text.asDocTextOrNull()?.getDocContent()}"
                     |Query: "$query"
             """.trimMargin()
         }
@@ -89,7 +89,7 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
             """
                     |Could not find end of comment.
                     |Paths: $paths
-                    |Comment Content: "${docComment.text.getDocContentOrNull()}"
+                    |Comment Content: "${docComment.text.asDocTextOrNull()?.getDocContent()}"
                     |Query: "$query"
             """.trimMargin()
         }
@@ -115,7 +115,8 @@ fun DocumentableWrapper.Companion.createFromIntellijOrNull(
     }
 
     // grab just the contents of the doc without the *-stuff
-    val docContent = docFileTextRange.substring(fileText).getDocContentOrNull() ?: ""
+    val docContent = docFileTextRange.substring(fileText).asDocTextOrNull()?.getDocContent()
+        ?: "".asDocContent()
 
     // Collect the imports from the file
     val imports = documentable.getImports().map { it.toSimpleImportPath() }

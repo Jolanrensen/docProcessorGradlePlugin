@@ -16,7 +16,7 @@ import java.util.ServiceLoader
  */
 abstract class DocProcessor : Serializable {
 
-    protected val name: String = this::class.simpleName ?: "DocProcessor"
+    val name: String = this::class.simpleName ?: "DocProcessor"
 
     /** Main logging access point. */
     val logger: KLogger = KotlinLogging.logger(name)
@@ -58,6 +58,49 @@ abstract class DocProcessor : Serializable {
             hasRun = true
         }
     }
+
+    /**
+     * An optional list of [CompletionInfo] information to display
+     * in the autocomplete of the IDE.
+     */
+    open val completionInfos: List<CompletionInfo>
+        get() = emptyList()
+
+    /**
+     * Can be overridden to provide custom highlighting for doc content given by [docContent].
+     *
+     * NOTE: this can contain '*' characters and indents, so make sure to handle that.
+     */
+    open fun getHighlightsFor(docContent: DocContent): List<HighlightInfo> = emptyList()
+
+    /**
+     * Builds a [HighlightInfo] object with the given parameters in the context of this processor.
+     * Fills in [HighlightInfo.tagProcessorName] with the name of this processor.
+     * Builds [HighlightInfo.description] from the [completionInfos] of this processor.
+     */
+    protected fun buildHighlightInfo(
+        range: IntRange,
+        type: HighlightType,
+        tag: String,
+        description: String = completionInfos // get the description from the completion infos
+            .find { it.tag == tag }
+            ?.let {
+                "${
+                    (it.presentableBlockText ?: it.presentableInlineText)
+                        ?.surroundWith("\"")
+                        ?.plus(": ")
+                        ?: ""
+                }${it.tailText}"
+            } ?: "",
+        related: List<HighlightInfo> = emptyList(),
+    ): HighlightInfo =
+        HighlightInfo(
+            range = range,
+            type = type,
+            related = related,
+            description = description,
+            tagProcessorName = name,
+        )
 }
 
 fun findProcessors(fullyQualifiedNames: List<String>, arguments: Map<String, Any?>): List<DocProcessor> {

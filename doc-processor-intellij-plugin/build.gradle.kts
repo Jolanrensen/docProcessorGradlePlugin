@@ -1,4 +1,5 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -48,7 +49,7 @@ dependencies {
     testImplementation("io.kotest:kotest-assertions-core:5.5.5")
 
     intellijPlatform {
-        intellijIdeaCommunity("2024.2")
+        intellijIdeaCommunity("2024.3")
         bundledPlugins(
             "org.jetbrains.kotlin",
             "com.intellij.java",
@@ -56,6 +57,11 @@ dependencies {
         zipSigner()
         instrumentationTools()
         testFramework(TestFrameworkType.Platform)
+    }
+}
+tasks.named<RunIdeTask>("runIde") {
+    jvmArgumentProviders += CommandLineArgumentProvider {
+        listOf("-Didea.kotlin.plugin.use.k2=true")
     }
 }
 
