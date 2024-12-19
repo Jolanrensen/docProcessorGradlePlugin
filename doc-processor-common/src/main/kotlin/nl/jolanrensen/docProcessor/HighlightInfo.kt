@@ -9,6 +9,7 @@ package nl.jolanrensen.docProcessor
  *   When this [range] is touched, it and the [related] ranges will pop visually.
  * @param tagProcessorName The name of the tag processor that created this highlight.
  * @param description An optional description of the tag processor that created this highlight.
+ * @see [TagDocProcessor.buildHighlightInfo] for creating these from inside a [TagDocProcessor].
  */
 data class HighlightInfo(
     val range: IntRange,

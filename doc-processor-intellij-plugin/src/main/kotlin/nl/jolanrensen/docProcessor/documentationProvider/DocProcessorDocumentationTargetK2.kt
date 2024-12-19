@@ -14,6 +14,7 @@ import com.intellij.platform.backend.documentation.DocumentationTarget
 import com.intellij.platform.backend.documentation.InlineDocumentation
 import com.intellij.platform.backend.documentation.InlineDocumentationProvider
 import com.intellij.platform.backend.documentation.PsiDocumentationTargetProvider
+import com.intellij.pom.Navigatable
 import com.intellij.psi.PsiDocCommentBase
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -45,6 +46,10 @@ import java.util.function.Consumer
 /** by element, used on hover and Ctrl+Q */
 class DocProcessorPsiDocumentationTargetProvider : PsiDocumentationTargetProvider {
 
+    init {
+        println("DocProcessorPsiDocumentationTargetProvider (K2) created")
+    }
+
     /**
      * Creates [org.jetbrains.kotlin.idea.k2.codeinsight.quickDoc.KotlinPsiDocumentationTargetProvider]
      */
@@ -55,20 +60,32 @@ class DocProcessorPsiDocumentationTargetProvider : PsiDocumentationTargetProvide
     private fun getService(project: Project) =
         serviceInstances.getOrPut(project) { DocProcessorServiceK2.getInstance(project) }
 
+    /**
+     * @param element         the element for which the documentation is requested (for example, if the mouse is over
+     *                        a method reference, this will be the method to which the reference is resolved).
+     * @param originalElement the element under the mouse cursor
+     */
     override fun documentationTarget(element: PsiElement, originalElement: PsiElement?): DocumentationTarget? {
         val service = getService(element.project)
-        if (!service.isEnabled) return kotlinPsi.documentationTarget(element, originalElement)
+        if (!service.isEnabled) return null
 
-        return try {
+        try {
             val modifiedElement = service.getModifiedElement(element)
-            kotlinPsi.documentationTarget(modifiedElement ?: element, originalElement)
+            val kotlinDocTarget = kotlinPsi.documentationTarget(modifiedElement ?: element, originalElement)
+                ?: return null
+
+            return object : DocumentationTarget by kotlinDocTarget {
+                // overriding so we can still click on references from the perspective of the original element
+                override val navigatable: Navigatable?
+                    get() = element as? Navigatable
+            }
         } catch (_: ProcessCanceledException) {
             return null
         } catch (_: CancellationException) {
             return null
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             e.printStackTrace()
-            null
+            return null
         }
     }
 }
@@ -79,6 +96,10 @@ class DocProcessorPsiDocumentationTargetProvider : PsiDocumentationTargetProvide
  */
 @ApiStatus.Experimental
 class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
+
+    init {
+        println("DocProcessorInlineDocumentationProvider (K2) created")
+    }
 
     class DocProcessorInlineDocumentation(
         private val originalDocumentation: PsiDocCommentBase,
@@ -128,7 +149,7 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
         if (file !is KtFile) return emptyList()
 
         val service = getService(file.project)
-        if (!service.isEnabled) return kotlin.inlineDocumentationItems(file)
+        if (!service.isEnabled) return emptyList()
 
         try {
             val result = mutableListOf<InlineDocumentation>()
@@ -153,7 +174,7 @@ class DocProcessorInlineDocumentationProvider : InlineDocumentationProvider {
 
     override fun findInlineDocumentation(file: PsiFile, textRange: TextRange): InlineDocumentation? {
         val service = getService(file.project)
-        if (!service.isEnabled) return kotlin.findInlineDocumentation(file, textRange)
+        if (!service.isEnabled) return null
 
         try {
             val comment = PsiTreeUtil.getParentOfType(
@@ -192,6 +213,10 @@ class DocProcessorDocumentationProvider :
     AbstractDocumentationProvider(),
     ExternalDocumentationProvider {
 
+    init {
+        println("DocProcessorDocumentationProvider (K2) created")
+    }
+
     private val kotlin = KotlinDocumentationProvider()
 
     private val serviceInstances: MutableMap<Project, DocProcessorServiceK2> = mutableMapOf()
@@ -228,36 +253,36 @@ class DocProcessorDocumentationProvider :
     override fun generateDoc(element: PsiElement, originalElement: PsiElement?): String? {
         val service = getService(element.project)
         if (!service.isEnabled) return null
-        return try {
+        try {
             val modifiedElement = service.getModifiedElement(element)
-            kotlin.generateDoc(modifiedElement ?: element, originalElement)
+            return kotlin.generateDoc(modifiedElement ?: element, originalElement)
         } catch (_: ProcessCanceledException) {
-            null
+            return null
         } catch (_: CancellationException) {
-            null
+            return null
         } catch (e: Throwable) {
             // e.printStackTrace()
-            null
+            return null
         }
     }
 
     override fun generateHoverDoc(element: PsiElement, originalElement: PsiElement?): String? =
-        super.generateDoc(element, originalElement)
+        generateDoc(element, originalElement)
 
     @Nls
     override fun generateRenderedDoc(comment: PsiDocCommentBase): String? {
         val service = getService(comment.project)
         if (!service.isEnabled) return null
-        return try {
+        try {
             val modifiedElement = service.getModifiedElement(comment.owner ?: return null)
-            kotlin.generateRenderedDoc(modifiedElement?.docComment ?: comment)
+            return kotlin.generateRenderedDoc(modifiedElement?.docComment ?: comment)
         } catch (_: ProcessCanceledException) {
-            null
+            return null
         } catch (_: CancellationException) {
-            null
+            return null
         } catch (e: Throwable) {
             // e.printStackTrace()
-            null
+            return null
         }
     }
 

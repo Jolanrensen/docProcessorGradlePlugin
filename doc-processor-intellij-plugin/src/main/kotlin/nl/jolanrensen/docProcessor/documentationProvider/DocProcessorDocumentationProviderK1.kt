@@ -26,7 +26,7 @@ class DocProcessorDocumentationProviderK1 :
     ExternalDocumentationProvider {
 
     init {
-        println("DocProcessorDocumentationProvider created")
+        println("DocProcessorDocumentationProviderK1 created")
     }
 
     private val kotlin = KotlinDocumentationProvider()
