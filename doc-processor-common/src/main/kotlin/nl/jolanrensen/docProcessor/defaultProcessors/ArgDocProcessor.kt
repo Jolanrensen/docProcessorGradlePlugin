@@ -5,14 +5,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import nl.jolanrensen.docProcessor.BACKTICKS
 import nl.jolanrensen.docProcessor.CURLY_BRACES
+import nl.jolanrensen.docProcessor.CompletionInfo
 import nl.jolanrensen.docProcessor.DocContent
 import nl.jolanrensen.docProcessor.DocumentableWrapper
 import nl.jolanrensen.docProcessor.DocumentablesByPath
+import nl.jolanrensen.docProcessor.HighlightInfo
+import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.ProgrammingLanguage.JAVA
 import nl.jolanrensen.docProcessor.SQUARE_BRACKETS
 import nl.jolanrensen.docProcessor.TagDocProcessor
+import nl.jolanrensen.docProcessor.asDocContent
 import nl.jolanrensen.docProcessor.decodeCallableTarget
-import nl.jolanrensen.docProcessor.findTagNamesInDocContent
+import nl.jolanrensen.docProcessor.findTagNames
 import nl.jolanrensen.docProcessor.getLineAndCharacterOffset
 import nl.jolanrensen.docProcessor.getTagArguments
 import nl.jolanrensen.docProcessor.getTagNameOrNull
@@ -83,7 +87,7 @@ const val ARG_DOC_PROCESSOR_LOG_NOT_FOUND = "$ARG_DOC_PROCESSOR.LOG_NOT_FOUND"
  */
 class ArgDocProcessor : TagDocProcessor() {
 
-    internal companion object {
+    companion object {
         internal val OLD_RETRIEVE_ARGUMENT_TAGS = listOf(
             "includeArg",
             "getArg",
@@ -94,12 +98,12 @@ class ArgDocProcessor : TagDocProcessor() {
             "setArg",
         )
 
-        internal val RETRIEVE_ARGUMENT_TAGS = listOf(
+        val RETRIEVE_ARGUMENT_TAGS = listOf(
             "get",
             // $, handled in process()
         ) + OLD_RETRIEVE_ARGUMENT_TAGS
 
-        internal val DECLARE_ARGUMENT_TAGS = listOf(
+        val DECLARE_ARGUMENT_TAGS = listOf(
             "set",
         ) + OLD_DECLARE_ARGUMENT_TAGS
     }
@@ -109,7 +113,58 @@ class ArgDocProcessor : TagDocProcessor() {
         DECLARE_ARGUMENT_TAGS,
     ).flatten()
 
+    override val providesTags: Set<String>
+        get() = setOf("get", "set")
+
     override fun tagIsSupported(tag: String): Boolean = tag in supportedTags
+
+    override val completionInfos: List<CompletionInfo>
+        get() = listOf(
+            CompletionInfo(
+                tag = "get",
+                blockText = "@get []",
+                presentableBlockText = "@get KEY DEFAULT",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@get []}",
+                presentableInlineText = "{@get KEY DEFAULT}",
+                moveCaretOffsetInline = -2,
+                tailText =
+                    "Get value with KEY, else show \"DEFAULT\". @set KEY here before. [KEY] as reference is recommended.",
+            ),
+            CompletionInfo(
+                tag = "$",
+                blockText = "$[]",
+                presentableBlockText = "\$KEY=DEFAULT",
+                moveCaretOffsetBlock = -1,
+                inlineText = "$[]",
+                presentableInlineText = "\$KEY=DEFAULT",
+                moveCaretOffsetInline = -1,
+                tailText =
+                    "Get value with KEY, else show \"DEFAULT\". @set KEY here before. [KEY] as reference is recommended.",
+            ),
+            CompletionInfo(
+                tag = "\${}",
+                blockText = "\${[]}",
+                presentableBlockText = "\${KEY=DEFAULT}",
+                moveCaretOffsetBlock = -2,
+                inlineText = "\${[]}",
+                presentableInlineText = "\${KEY=DEFAULT}",
+                moveCaretOffsetInline = -2,
+                tailText =
+                    "Get value with KEY, else show \"DEFAULT\". @set KEY here before. [KEY] as reference is recommended.",
+            ),
+            CompletionInfo(
+                tag = "set",
+                blockText = "@set []",
+                presentableBlockText = "@set KEY VALUE",
+                moveCaretOffsetBlock = -1,
+                inlineText = "{@set []}",
+                presentableInlineText = "{@set KEY VALUE}",
+                moveCaretOffsetInline = -2,
+                tailText =
+                    "Set value of KEY to \"VALUE\". Can be @get KEY here afterwards. [KEY] as reference is recommended.",
+            ),
+        )
 
     data class DocWrapperWithArgMap(
         val doc: DocumentableWrapper,
@@ -220,7 +275,7 @@ class ArgDocProcessor : TagDocProcessor() {
         val tagName = tagWithContent.getTagNameOrNull()
         val isDeclareArgumentDeclaration = tagName in DECLARE_ARGUMENT_TAGS
 
-        val tagNames = documentable.docContent.findTagNamesInDocContent()
+        val tagNames = documentable.docContent.findTagNames()
 
         val declareArgTagsStillPresent = DECLARE_ARGUMENT_TAGS.any { it in tagNames }
         val retrieveArgTagsPresent = RETRIEVE_ARGUMENT_TAGS.any { it in tagNames }
@@ -354,6 +409,168 @@ class ArgDocProcessor : TagDocProcessor() {
 
         return keys
     }
+
+    override fun getHighlightsForInlineTag(
+        tagName: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+    ): List<HighlightInfo> =
+        buildList {
+            this += super.getHighlightsForInlineTag(tagName, rangeInDocContent, docContent)
+
+            getArgumentHighlightOrNull(
+                argumentIndex = 0,
+                docContent = docContent,
+                rangeInDocContent = rangeInDocContent,
+                tagName = tagName,
+                numberOfArguments = 2,
+                type = HighlightType.TAG_KEY,
+            )?.let(::add)
+
+            if (tagName in RETRIEVE_ARGUMENT_TAGS) {
+                getArgumentHighlightOrNull(
+                    argumentIndex = 1,
+                    docContent = docContent,
+                    rangeInDocContent = rangeInDocContent,
+                    tagName = tagName,
+                    numberOfArguments = 2,
+                    type = HighlightType.TAG_VALUE,
+                )?.let(::add)
+            }
+        }
+
+    override fun getHighlightsForBlockTag(
+        tagName: String,
+        rangeInDocContent: IntRange,
+        docContent: DocContent,
+    ): List<HighlightInfo> =
+        buildList {
+            this += super.getHighlightsForBlockTag(tagName, rangeInDocContent, docContent)
+
+            getArgumentHighlightOrNull(
+                argumentIndex = 0,
+                docContent = docContent,
+                rangeInDocContent = rangeInDocContent,
+                tagName = tagName,
+                numberOfArguments = 2,
+                type = HighlightType.TAG_KEY,
+            )?.let(::add)
+
+            if (tagName in RETRIEVE_ARGUMENT_TAGS) {
+                getArgumentHighlightOrNull(
+                    argumentIndex = 1,
+                    docContent = docContent,
+                    rangeInDocContent = rangeInDocContent,
+                    tagName = tagName,
+                    numberOfArguments = 2,
+                    type = HighlightType.TAG_VALUE,
+                )?.let(::add)
+            }
+        }
+
+    override fun getHighlightsFor(docContent: DocContent): List<HighlightInfo> =
+        super.getHighlightsFor(docContent) + buildList {
+            // ${tags}
+            val bracedDollarTags = docContent
+                .value.asDocContent() // pretend we removed * and indents
+                .`find ${}'s`()
+            for (range in bracedDollarTags) {
+                // '$'
+                this += buildHighlightInfo(
+                    range = range.first..range.first,
+                    type = HighlightType.TAG,
+                    tag = "\${}",
+                )
+
+                // '{'
+                val left = buildHighlightInfo(
+                    range = (range.first + 1)..(range.first + 1),
+                    type = HighlightType.BRACKET,
+                    tag = "\${}",
+                )
+                val (key, value) = docContent.value.substring(range).findKeyAndValueFromDollarSign()
+
+                // key
+                this += buildHighlightInfo(
+                    range = (range.first + 2)..(range.first + 2 + key.length),
+                    type = HighlightType.TAG_KEY,
+                    tag = "\${}",
+                )
+
+                // `=`
+                if (value != null) { // null if there is no '='
+                    val equalsPosition = range.first + 2 + key.length
+                    this += buildHighlightInfo(
+                        range = equalsPosition..equalsPosition,
+                        type = HighlightType.BRACKET,
+                        tag = "\${}",
+                    )
+
+                    // value
+                    this += buildHighlightInfo(
+                        range = equalsPosition + 1..range.last - 1,
+                        type = HighlightType.TAG_VALUE,
+                        tag = "\${}",
+                    )
+                }
+
+                // '}'
+                val right = buildHighlightInfo(
+                    range = range.last..range.last,
+                    type = HighlightType.BRACKET,
+                    tag = "\${}",
+                )
+
+                // link left and right brackets
+                this += left.copy(related = listOf(right))
+                this += right.copy(related = listOf(left))
+            }
+
+            // $tags=...
+            val dollarTags = docContent
+                .value.asDocContent() // pretend we removed * and indents
+                .`find $tags`()
+            for ((range, equalsPosition) in dollarTags) {
+                if (docContent.value[range.first + 1] == '{') continue // skip ${...} tags
+
+                // '$'
+                this += buildHighlightInfo(
+                    range = range.first..range.first,
+                    type = HighlightType.TAG,
+                    tag = "$",
+                )
+
+                if (equalsPosition != null) {
+                    // key
+                    this += buildHighlightInfo(
+                        range = range.first + 1..equalsPosition - 1,
+                        type = HighlightType.TAG_KEY,
+                        tag = "$",
+                    )
+
+                    // `=`
+                    this += buildHighlightInfo(
+                        range = equalsPosition..equalsPosition,
+                        type = HighlightType.BRACKET,
+                        tag = "$",
+                    )
+
+                    // value
+                    this += buildHighlightInfo(
+                        range = equalsPosition + 1..range.last,
+                        type = HighlightType.TAG_VALUE,
+                        tag = "$",
+                    )
+                } else {
+                    // key
+                    this += buildHighlightInfo(
+                        range = range.first + 1..range.last,
+                        type = HighlightType.TAG_KEY,
+                        tag = "$",
+                    )
+                }
+            }
+        }
 }
 
 /**
@@ -384,7 +601,7 @@ fun DocContent.`replace ${}'s`(): DocContent {
     val text = this
     val locations = `find ${}'s`()
     val locationsWithKeyValues = locations
-        .associateWith { text.substring(it).findKeyAndValueFromDollarSign() }
+        .associateWith { text.value.substring(it).findKeyAndValueFromDollarSign() }
 
     val nonOverlappingRangesWithReplacement = locationsWithKeyValues
         .flatMap { (range, keyAndValue) ->
@@ -401,7 +618,9 @@ fun DocContent.`replace ${}'s`(): DocContent {
             }
         }
 
-    return text.replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+    return text.value
+        .replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+        .asDocContent()
 }
 
 /**
@@ -411,7 +630,7 @@ fun DocContent.`replace ${}'s`(): DocContent {
  * "${}" marks are ignored if "\" escaped.
  */
 @Suppress("ktlint:standard:function-naming")
-private fun DocContent.`find ${}'s`(): List<IntRange> {
+internal fun DocContent.`find ${}'s`(): List<IntRange> {
     var text = this
 
     /*
@@ -422,14 +641,14 @@ private fun DocContent.`find ${}'s`(): List<IntRange> {
         var depth = 0
         var start: Int? = null
         var escapeNext = false
-        for ((i, char) in this.withIndex()) {
+        for ((i, char) in value.withIndex()) {
             // escape this char
             when {
                 escapeNext -> escapeNext = false
 
                 char == '\\' -> escapeNext = true
 
-                char == '$' && this.getOrNull(i + 1) == '{' -> {
+                char == '$' && value.getOrNull(i + 1) == '{' -> {
                     start = i
                     depth++
                 }
@@ -447,15 +666,15 @@ private fun DocContent.`find ${}'s`(): List<IntRange> {
     return buildMap<Int, MutableList<IntRange>> {
         while (text.findInlineDollarTagRangesWithDepthOrNull() != null) {
             val (range, depth) = text.findInlineDollarTagRangesWithDepthOrNull()!!
-            val comment = text.substring(range)
+            val comment = text.value.substring(range)
             getOrPut(depth) { mutableListOf() } += range
 
-            text = text.replaceRange(
+            text = text.value.replaceRange(
                 range = range,
                 replacement = comment
                     .replace('{', '<')
                     .replace('}', '>'),
-            )
+            ).asDocContent()
         }
     }.toSortedMap(Comparator.reverseOrder())
         .flatMap { it.value }
@@ -466,7 +685,7 @@ private fun DocContent.`find ${}'s`(): List<IntRange> {
  * and "$KEY=DEFAULT" with "{@get KEY DEFAULT}"
  */
 @Suppress("ktlint:standard:function-naming")
-fun DocContent.`replace $tags`(): DocContent {
+internal fun DocContent.`replace $tags`(): DocContent {
     val text = this
     val locations = `find $tags`()
 
@@ -484,7 +703,9 @@ fun DocContent.`replace $tags`(): DocContent {
         }
     }
 
-    return text.replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+    return text.value
+        .replaceNonOverlappingRanges(*nonOverlappingRangesWithReplacement.toTypedArray())
+        .asDocContent()
 }
 
 /**
@@ -492,19 +713,19 @@ fun DocContent.`replace $tags`(): DocContent {
  * The function also returns the absolute index of the `=` sign if it exists
  */
 @Suppress("ktlint:standard:function-naming")
-private fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
+internal fun DocContent.`find $tags`(): List<Pair<IntRange, Int?>> {
     val text = this
 
     return buildList {
         var escapeNext = false
-        for ((i, char) in text.withIndex()) {
+        for ((i, char) in text.value.withIndex()) {
             when {
                 escapeNext -> escapeNext = false
 
                 char == '\\' -> escapeNext = true
 
                 char == '$' -> {
-                    val (key, value) = text.substring(startIndex = i).findKeyAndValueFromDollarSign()
+                    val (key, value) = text.value.substring(startIndex = i).findKeyAndValueFromDollarSign()
 
                     this += if (value == null) { // reporting "$key" range
                         Pair(

@@ -22,8 +22,8 @@ fun DocContent.renderToHtml(theme: Boolean, stripReferences: Boolean): String {
         absolutizeAnchorLinks = false,
         makeHttpsAutoLinks = false,
     )
-    val md = MarkdownParser(flavour).buildMarkdownTreeFromString(this)
-    val linkMap = LinkMap.buildLinkMap(md, this)
+    val md = MarkdownParser(flavour).buildMarkdownTreeFromString(this.value)
+    val linkMap = LinkMap.buildLinkMap(md, this.value)
     val providers = flavour.createHtmlGeneratingProviders(
         linkMap = linkMap,
         baseURI = null,
@@ -40,7 +40,7 @@ fun DocContent.renderToHtml(theme: Boolean, stripReferences: Boolean): String {
     providers[MarkdownElementTypes.CODE_SPAN] = codeSpanGenerator
 
     val body = HtmlGenerator(
-        markdownText = this,
+        markdownText = this.value,
         root = md,
         providers = providers,
     ).generateHtml().let {

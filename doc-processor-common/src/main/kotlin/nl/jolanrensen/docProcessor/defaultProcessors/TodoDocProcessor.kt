@@ -2,6 +2,7 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocProcessor
 import nl.jolanrensen.docProcessor.DocumentablesByPath
+import nl.jolanrensen.docProcessor.asDocContent
 import nl.jolanrensen.docProcessor.toDocumentablesByPath
 
 /**
@@ -19,9 +20,9 @@ class TodoDocProcessor : DocProcessor() {
             .documentablesToProcess
             .map { (path, documentables) ->
                 path to documentables.map {
-                    if (it.docContent.isBlank() || !it.sourceHasDocumentation) {
+                    if (it.docContent.value.isBlank() || !it.sourceHasDocumentation) {
                         it.copy(
-                            docContent = "TODO",
+                            docContent = "TODO".asDocContent(),
                             isModified = true,
                         )
                     } else {

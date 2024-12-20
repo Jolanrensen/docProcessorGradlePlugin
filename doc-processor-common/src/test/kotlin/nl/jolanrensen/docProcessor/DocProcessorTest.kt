@@ -34,7 +34,7 @@ abstract class DocProcessorTest(name: String) {
         language: ProgrammingLanguage = KOTLIN,
     ): DocumentableWrapper =
         DocumentableWrapper(
-            docContent = documentation.getDocContentOrNull()!!,
+            docContent = documentation.asDocText().getDocContent(),
             programmingLanguage = language,
             imports = imports,
             rawSource = documentation + "\n" + documentableSourceNoDoc,
@@ -109,6 +109,6 @@ abstract class DocProcessorTest(name: String) {
             }",
         )
 
-        return originalDoc.docContent.toDoc(originalDoc.docIndent)
+        return originalDoc.docContent.toDocText(originalDoc.docIndent).value
     }
 }

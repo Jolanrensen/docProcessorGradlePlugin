@@ -30,6 +30,8 @@ internal class IncludeDocAnalyzer :
                 .getAnalyzedResult()
     }
 
+    override val providesTags: Set<String> = setOf(IncludeDocProcessor.TAG)
+
     override fun analyseBlockTagWithContent(tagWithContent: String, path: String, documentable: DocumentableWrapper) =
         analyseContent(tagWithContent, documentable)
 

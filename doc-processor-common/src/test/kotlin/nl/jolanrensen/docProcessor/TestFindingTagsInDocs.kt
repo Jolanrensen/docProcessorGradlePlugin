@@ -48,7 +48,7 @@ class TestFindingTagsInDocs {
         ```
         @g Test
         
-    """.trimIndent()
+    """.trimIndent().asDocContent()
 
     @Test
     fun `Split doc content per block`() {
@@ -68,10 +68,10 @@ class TestFindingTagsInDocs {
                ```
             """.trimIndent(),
             "@g Test\n",
-        )
+        ).map { it.asDocContent() }
 
-        difficultKdoc.splitDocContentPerBlock() shouldBe expected
-        difficultKdoc.splitDocContentPerBlock().joinToString("\n") shouldBe difficultKdoc
+        difficultKdoc.splitPerBlock() shouldBe expected
+        difficultKdoc.splitPerBlock().joinToString("\n").asDocContent() shouldBe difficultKdoc
     }
 
     @Test
@@ -85,11 +85,11 @@ class TestFindingTagsInDocs {
         )
 
         difficultKdoc
-            .findInlineTagNamesInDocContentWithRanges()
-            .map { difficultKdoc.substring(it.second) }
+            .findInlineTagNamesWithRanges()
+            .map { difficultKdoc.value.substring(it.second) }
             .let { println(it) }
 
-        difficultKdoc.findInlineTagNamesInDocContentWithRanges() shouldBe expected
+        difficultKdoc.findInlineTagNamesWithRanges() shouldBe expected
     }
 
     @Test
@@ -102,7 +102,7 @@ class TestFindingTagsInDocs {
             "i",
         )
 
-        difficultKdoc.findInlineTagNamesInDocContent().toSet() shouldBe expected
+        difficultKdoc.findInlineTagNames().toSet() shouldBe expected
     }
 
     @Test
@@ -112,7 +112,7 @@ class TestFindingTagsInDocs {
             "g",
         )
 
-        difficultKdoc.findBlockTagNamesInDocContent().toSet() shouldBe expected
+        difficultKdoc.findBlockTagNames().toSet() shouldBe expected
     }
 
     @Ignore
@@ -156,11 +156,11 @@ class TestFindingTagsInDocs {
             
             @see [all\]
             
-        """.trimIndent()
+        """.trimIndent().asDocContent()
 
-        kdoc1.findInlineTagNamesInDocContent().toSet() shouldBe expectedInline
-        kdoc1.findBlockTagNamesInDocContent().toSet() shouldBe expectedBlock
-        println(kdoc1.splitDocContentPerBlock().joinToString("\n.............................................\n"))
+        kdoc1.findInlineTagNamesWithRanges().toSet() shouldBe expectedInline
+        kdoc1.findBlockTagNames().toSet() shouldBe expectedBlock
+        println(kdoc1.splitPerBlock().joinToString("\n.............................................\n"))
     }
 
     @Test
@@ -171,49 +171,41 @@ class TestFindingTagsInDocs {
              * [Some aliased link][helloWorld2] 
              * [helloWorld]
              */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         kdoc
-            .getDocContentOrNull()
-            ?.splitDocContentPerBlock()
-            ?.joinToString("\n")
-            ?.toDoc() shouldBe kdoc
+            .getDocContent()
+            .splitPerBlock()
+            .joinToString("\n")
+            .asDocContent()
+            .toDocText() shouldBe kdoc
     }
 
     @Test
     fun `Split by block one line`() {
         val kdoc = """
             /** Hello World! */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         kdoc
-            .getDocContentOrNull()
-            ?.splitDocContentPerBlock()
-            ?.joinToString("\n")
-            ?.toDoc() shouldBe kdoc
+            .getDocContent()
+            .splitPerBlock()
+            .joinToString("\n")
+            .asDocContent()
+            .toDocText() shouldBe kdoc
     }
 
     @Test
     fun `Split by block one line with tag`() {
         val kdoc = """
             /** @include Hello World! */
-        """.trimIndent()
+        """.trimIndent().asDocText()
 
         kdoc
-            .getDocContentOrNull()
-            ?.splitDocContentPerBlock()
-            ?.joinToString("\n")
-            ?.toDoc() shouldBe kdoc
-    }
-
-    @Test
-    fun `Test temp`() {
-        val kdoc = """
-            /** @{[Hello]} World! */
-        """.trimIndent()
-
-        kdoc
-            .getDocContentOrNull()!!
-            .findTagNamesInDocContent()
+            .getDocContent()
+            .splitPerBlock()
+            .joinToString("\n")
+            .asDocContent()
+            .toDocText() shouldBe kdoc
     }
 }

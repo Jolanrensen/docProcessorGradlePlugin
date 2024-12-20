@@ -1,4 +1,5 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -40,7 +41,6 @@ intellijPlatform {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
     api(project(":doc-processor-common"))
 
     // Use JUnit test framework for unit tests
@@ -48,7 +48,7 @@ dependencies {
     testImplementation("io.kotest:kotest-assertions-core:5.5.5")
 
     intellijPlatform {
-        intellijIdeaCommunity("2024.2")
+        intellijIdeaCommunity("2024.3")
         bundledPlugins(
             "org.jetbrains.kotlin",
             "com.intellij.java",
@@ -58,17 +58,22 @@ dependencies {
         testFramework(TestFrameworkType.Platform)
     }
 }
+tasks.named<RunIdeTask>("runIde") {
+    jvmArgumentProviders += CommandLineArgumentProvider {
+        listOf("-Didea.kotlin.plugin.use.k2=true")
+    }
+}
 
 tasks.getByName<Test>("test") {
     useJUnitPlatform()
 }
 
 tasks.withType<KotlinCompile> {
-    compilerOptions.jvmTarget = JvmTarget.JVM_17
+    compilerOptions.jvmTarget = JvmTarget.JVM_21
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }

@@ -9,7 +9,36 @@ import kotlin.collections.ArrayDeque
 /**
  * Just the contents of the comment, without the `*`-stuff.
  */
-typealias DocContent = String
+@JvmInline
+value class DocContent(val value: String) {
+    override fun toString(): String = value
+}
+
+fun String.asDocContent(): DocContent = DocContent(this)
+
+/**
+ * The entire comment, including the `*`-stuff and potential leading/trailing spaces.
+ */
+@JvmInline
+value class DocText(val value: String) {
+
+    init {
+        require(value.isNotBlank() && value.startsWith("/**") && value.endsWith("*/")) {
+            "DocText must start with '/**' and end with '*/'"
+        }
+    }
+
+    override fun toString(): String = value
+}
+
+fun String.asDocText(): DocText = DocText(this)
+
+fun String.asDocTextOrNull(): DocText? =
+    if (isNotBlank() && startsWith("/**") && endsWith("*/")) {
+        DocText(this)
+    } else {
+        null
+    }
 
 // used to keep track of the current blocks
 internal const val CURLY_BRACES = '{'
@@ -23,46 +52,80 @@ internal const val SINGLE_QUOTES = '\''
 /**
  * Returns the actual content of the KDoc/Javadoc comment
  */
-fun String.getDocContentOrNull(): DocContent? {
-    if (isBlank() || !startsWith("/**") || !endsWith("*/")) return null
+fun DocText.getDocContent(): DocContent = getDocContentWithMap().first
 
-    val lines = split('\n').withIndex()
+/**
+ * Returns the actual content of the KDoc/Javadoc comment
+ *
+ * [Pair.second] contains the mapping from the indices of the result to the indices
+ * of the same character in the original string: `result\[key\] == [this]\[value\]`
+ */
+fun DocText.getDocContentWithMap(): Pair<DocContent, List<Int>> {
+    // result[key] == this@getDocContentWithMapOrNull[value]
+    val resultToOriginalMap = mutableMapOf<Int, Int>()
 
-    val result = lines.joinToString("\n") { (i, it) ->
+    val lines = value.split('\n').withIndex()
+
+    var originalCharIndex = 0
+    var resultCharIndex = 0
+    val result = lines.joinToString("\n") { (lineIndex, it) ->
         var line = it
 
-        if (i == 0) {
+        // adds the number of removed characters in the result line to originalCharIndex
+        fun String.alsoUpdateOriginalCharIndex(): String = also { originalCharIndex += line.length - length }
+
+        // start of the comment
+        if (lineIndex == 0) {
             line = line.trimStart().removePrefix("/**")
+                .alsoUpdateOriginalCharIndex()
         }
-        if (i == lines.count() - 1) {
+        // end of the comment
+        if (lineIndex == lines.count() - 1) {
             val lastLine = line.trimStart()
 
             line = if (lastLine == "*/") {
                 ""
             } else {
-                lastLine
-                    .removePrefix("*")
+                lastLine.removePrefix("*").alsoUpdateOriginalCharIndex()
                     .removeSuffix("*/")
                     .removeSuffix(" ") // optional extra space at the end
             }
         }
-        if (i != 0 && i != lines.count() - 1) {
+        // middle of the comment (not start nor end)
+        if (lineIndex != 0 && lineIndex != lines.count() - 1) {
             line = line.trimStart().removePrefix("*")
+                .alsoUpdateOriginalCharIndex()
         }
 
-        line = line.removePrefix(" ") // optional extra space at the start
+        // remove optional extra space at the start
+        line = line.removePrefix(" ")
+            .alsoUpdateOriginalCharIndex()
+
+        // update the map for all characters now in the result line
+        for (j in line.indices) {
+            resultToOriginalMap[resultCharIndex + j] = originalCharIndex + lineIndex + j
+        }
+        // ..and the \n character
+        resultToOriginalMap[resultCharIndex + line.length] = originalCharIndex + lineIndex + line.length
+
+        // update the two indices for the next iteration
+        resultCharIndex += line.length + 1
+        originalCharIndex += line.length
 
         line
     }
 
-    return result
+    // remove the final \n character
+    resultToOriginalMap.remove(resultToOriginalMap.size - 1)
+
+    return result.asDocContent() to resultToOriginalMap.values.toList()
 }
 
 /**
  * Turns multi-line String into valid KDoc/Javadoc.
  */
-fun DocContent.toDoc(indent: Int = 0): String =
-    this
+fun DocContent.toDocText(indent: Int = 0): DocText =
+    this.value
         .split('\n')
         .toMutableList()
         .let {
@@ -84,29 +147,43 @@ fun DocContent.toDoc(indent: Int = 0): String =
                     append(s)
                 }
             }.joinToString("")
-        }
+        }.asDocText()
 
 /**
  * Can retrieve the arguments of an inline- or block-tag.
  * Arguments are split by spaces, unless they are in a block of "{}", "[]", "()", "<>", "`", """, or "'".
  * Blocks "marks" are ignored if "\" escaped.
  */
-fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
+fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> =
+    getTagArgumentsWithRanges(tag, numberOfArguments).map { it.first }
+
+/**
+ * Can retrieve the arguments of an inline- or block-tag.
+ * Arguments are split by spaces, unless they are in a block of "{}", "[]", "()", "<>", "`", """, or "'".
+ * Blocks "marks" are ignored if "\" escaped.
+ */
+fun String.getTagArgumentsWithRanges(tag: String, numberOfArguments: Int): List<Pair<String, IntRange>> {
     require("@$tag" in this) { "Could not find @$tag in $this" }
     require(numberOfArguments > 0) { "numberOfArguments must be greater than 0" }
 
+    var i = 0
     var content = this
 
     // remove inline tag stuff
     if (content.startsWith("{") && content.endsWith("}")) {
         content = content.removePrefix("{").removeSuffix("}")
+        i++
     }
+
+    val prevContentLength = content.length
 
     // remove leading spaces
     content = content.trimStart()
 
     // remove tag
     content = content.removePrefix("@$tag").trimStart()
+
+    i += prevContentLength - content.length
 
     val arguments = buildList {
         var currentBlock = ""
@@ -126,7 +203,13 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
                 isDone() -> Unit
 
                 char.isWhitespace() && blocksIndicators.isEmpty() -> {
-                    if (currentBlock.isNotBlank()) add(currentBlock)
+                    if (currentBlock.isNotBlank()) {
+                        this += Pair(
+                            first = currentBlock,
+                            second = i..<(i + currentBlock.length),
+                        )
+                        i += currentBlock.length
+                    }
                     currentBlock = ""
                 }
 
@@ -166,26 +249,37 @@ fun String.getTagArguments(tag: String, numberOfArguments: Int): List<String> {
             }
         }
 
-        add(currentBlock)
+        this += Pair(
+            first = currentBlock,
+            second = i..<(i + currentBlock.length),
+        )
     }
 
-    val trimmedArguments = arguments.mapIndexed { i, it ->
+    val trimmedArguments = arguments.mapIndexed { i, (ogContent, ogRange) ->
         when (i) {
             // last argument will be kept as is, removing one "splitting" space if it starts with one
             arguments.lastIndex ->
-                if (it.startsWith(" ") || it.startsWith("\t")) {
-                    it.drop(1)
+                if (ogContent.startsWith(" ") || ogContent.startsWith("\t")) {
+                    Pair(ogContent.drop(1), ogRange.first + 1..ogRange.last)
                 } else {
-                    it
+                    Pair(ogContent, ogRange)
                 }
 
-            else -> // other arguments will be trimmed. A newline counts as a space
-                it.removePrefix("\n").trimStart(' ', '\t')
+            else -> { // other arguments will be trimmed at the start only. A newline counts as a space
+                val trimmed = ogContent.removePrefix("\n").trimStart(' ', '\t')
+                Pair(trimmed, ogRange.first + (ogContent.length - trimmed.length)..ogRange.last)
+            }
         }
     }
 
     return trimmedArguments
 }
+
+fun String.getTagArgumentWithRangeByIndexOrNull(
+    index: Int,
+    tag: String,
+    numberOfArguments: Int,
+): Pair<String, IntRange>? = getTagArgumentsWithRanges(tag, numberOfArguments).getOrNull(index)
 
 /**
  * Can retrieve the arguments of an inline- or block-tag.
@@ -351,7 +445,17 @@ fun String.decodeCallableTarget(): String =
  * `{@someTag someContent}`
  * and will return "someTag" in these cases.
  */
-fun DocContent.getTagNameOrNull(): String? =
+fun DocContent.getTagNameOrNull(): String? = value.getTagNameOrNull()
+
+/**
+ * Get tag name from the start of some content.
+ * Can handle both
+ * `  @someTag someContent`
+ * and
+ * `{@someTag someContent}`
+ * and will return "someTag" in these cases.
+ */
+fun String.getTagNameOrNull(): String? =
     takeIf { it.trimStart().startsWith('@') || it.startsWith("{@") }
         ?.trimStart()
         ?.removePrefix("{")
@@ -366,8 +470,8 @@ fun DocContent.getTagNameOrNull(): String? =
  * Block "marks" are ignored if "\" escaped.
  * Can be joint with '\n' to get the original content.
  */
-fun DocContent.splitDocContentPerBlock(): List<DocContent> {
-    val docContent = this@splitDocContentPerBlock.split('\n')
+fun DocContent.splitPerBlock(ignoreKDocMarkers: Boolean = false): List<DocContent> {
+    val docContent = this@splitPerBlock.value.split('\n')
     return buildList {
         var currentBlock = ""
 
@@ -379,10 +483,21 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
 
         fun isInCodeBlock() = BACKTICKS in blocksIndicators
 
-        for (line in docContent) {
+        for (lineToUse in docContent) {
+            val lineToCheck = if (ignoreKDocMarkers) {
+                lineToUse
+                    .trimStart()
+                    .removePrefix("*")
+                    .removePrefix("/**")
+                    .removeSuffix("*/")
+                    .removeSuffix(" ")
+            } else {
+                lineToUse
+            }
+
             // start a new block if the line starts with a tag and we're not
             // in a {@..} or ```..``` block
-            val lineStartsWithTag = line
+            val lineStartsWithTag = lineToCheck
                 .removePrefix(" ")
                 .removePrefix(" ")
                 .startsWith("@")
@@ -391,25 +506,25 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
                 // start a new block if the line starts with a tag and we're not in a {@..} or ```..``` block
                 lineStartsWithTag && blocksIndicators.isEmpty() -> {
                     if (currentBlock.isNotEmpty()) {
-                        this += currentBlock.removeSuffix("\n")
+                        this += currentBlock.removeSuffix("\n").asDocContent()
                     }
-                    currentBlock = "$line\n"
+                    currentBlock = "$lineToUse\n"
                 }
 
-                line.isEmpty() && blocksIndicators.isEmpty() -> {
+                lineToCheck.isEmpty() && blocksIndicators.isEmpty() -> {
                     currentBlock += "\n"
                 }
 
                 else -> {
                     if (currentBlock.isEmpty()) {
-                        currentBlock = "$line\n"
+                        currentBlock = "$lineToUse\n"
                     } else {
-                        currentBlock += "$line\n"
+                        currentBlock += "$lineToUse\n"
                     }
                 }
             }
             var escapeNext = false
-            for ((i, char) in line.withIndex()) {
+            for ((i, char) in lineToCheck.withIndex()) {
                 when {
                     escapeNext -> {
                         escapeNext = false
@@ -420,17 +535,17 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
                         escapeNext = true
 
                     // ``` detection
-                    char == '`' && line.getOrNull(i + 1) == '`' && line.getOrNull(i + 2) == '`' ->
+                    char == '`' && lineToCheck.getOrNull(i + 1) == '`' && lineToCheck.getOrNull(i + 2) == '`' ->
                         if (!blocksIndicators.removeAllElementsFromLast(BACKTICKS)) blocksIndicators += BACKTICKS
                 }
                 if (isInCodeBlock()) continue
                 when {
                     // {@ detection
-                    char == '{' && line.getOrNull(i + 1) == '@' ->
+                    char == '{' && lineToCheck.getOrNull(i + 1) == '@' ->
                         blocksIndicators += CURLY_BRACES
 
                     // ${ detection for ArgDocProcessor
-                    char == '{' && line.getOrNull(i - 1) == '$' && line.getOrNull(i - 2) != '\\' ->
+                    char == '{' && lineToCheck.getOrNull(i - 1) == '$' && lineToCheck.getOrNull(i - 2) != '\\' ->
                         blocksIndicators += CURLY_BRACES
 
                     char == '}' ->
@@ -438,7 +553,7 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
                 }
             }
         }
-        add(currentBlock.removeSuffix("\n"))
+        this += currentBlock.removeSuffix("\n").asDocContent()
     }
 }
 
@@ -450,14 +565,20 @@ fun DocContent.splitDocContentPerBlock(): List<DocContent> {
  * Block "marks" are ignored if "\" escaped.
  * Can be joint with '\n' to get the original content.
  */
-fun DocContent.splitDocContentPerBlockWithRanges(): List<Pair<DocContent, IntRange>> {
-    val splitDocContents = this.splitDocContentPerBlock()
+fun DocContent.splitPerBlockWithRanges(): List<Pair<DocContent, IntRange>> {
+    val splitDocContents = this.splitPerBlock()
     var i = 0
 
     return buildList {
-        for (docContent in splitDocContents) {
-            add(Pair(docContent, i..i + docContent.length))
-            i += docContent.length + 1
+        for ((index, docContent) in splitDocContents.withIndex()) {
+            val range =
+                if (index == splitDocContents.lastIndex) {
+                    i..<i + docContent.value.length // last element has no trailing \n
+                } else {
+                    i..i + docContent.value.length
+                }
+            this += Pair(docContent, range)
+            i += docContent.value.length + 1
         }
     }
 }
@@ -468,21 +589,21 @@ fun DocContent.splitDocContentPerBlockWithRanges(): List<Pair<DocContent, IntRan
  * The list is sorted by depth, with the deepest tags first and then by order of appearance.
  * "{@}" marks are ignored if "\" escaped.
  */
-fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, IntRange>> {
-    val text = this
+fun DocContent.findInlineTagNamesWithRanges(): List<Pair<String, IntRange>> {
+    val text = value
     val map: SortedMap<Int, MutableList<Pair<String, IntRange>>> = sortedMapOf(Comparator.reverseOrder())
 
     // holds the current start indices of {@tags found
     val queue = ArrayDeque<Int>()
 
     var escapeNext = false
-    for ((i, char) in this.withIndex()) {
+    for ((i, char) in value.withIndex()) {
         when {
             escapeNext -> escapeNext = false
 
             char == '\\' -> escapeNext = true
 
-            char == '{' && this.getOrElse(i + 1) { ' ' } == '@' -> {
+            char == '{' && value.getOrElse(i + 1) { ' ' } == '@' -> {
                 queue.addLast(i)
             }
 
@@ -508,19 +629,27 @@ fun DocContent.findInlineTagNamesInDocContentWithRanges(): List<Pair<String, Int
  * Finds all inline tag names, including nested ones.
  * "{@}" marks are ignored if "\" escaped.
  */
-fun DocContent.findInlineTagNamesInDocContent(): List<String> =
-    findInlineTagNamesInDocContentWithRanges().map { it.first }
+fun DocContent.findInlineTagNames(): List<String> = findInlineTagNamesWithRanges().map { it.first }
 
 /** Finds all block tag names. */
-fun DocContent.findBlockTagNamesInDocContent(): List<String> =
-    splitDocContentPerBlock()
-        .filter { it.trimStart().startsWith("@") }
+fun DocContent.findBlockTagNames(): List<String> =
+    splitPerBlock()
+        .filter { it.value.trimStart().startsWith("@") }
         .mapNotNull { it.getTagNameOrNull() }
 
+/** Finds all block tags with ranges. */
+fun DocContent.findBlockTagsWithRanges(): List<Pair<String, IntRange>> =
+    splitPerBlockWithRanges()
+        .filter { it.first.value.trimStart().startsWith("@") }
+        .mapNotNull {
+            val tagName = it.first.getTagNameOrNull() ?: return@mapNotNull null
+            tagName to it.second
+        }
+
 /** Finds all tag names, including inline and block tags. */
-fun DocContent.findTagNamesInDocContent(): List<String> =
-    findInlineTagNamesInDocContent() +
-        findBlockTagNamesInDocContent()
+fun DocContent.findTagNames(): List<String> =
+    findInlineTagNames() +
+        findBlockTagNames()
 
 /** Is able to find an entire JavaDoc/KDoc comment including the starting indent. */
 val docRegex = Regex("""( *)/\*\*([^*]|\*(?!/))*?\*/""")
@@ -540,7 +669,7 @@ private enum class ReferenceState {
  * and all `[ReferenceLinks]` with `[ReferenceLinks][ProcessedPath]`.
  */
 fun DocContent.replaceKdocLinks(process: (String) -> String): DocContent {
-    val kdoc = this
+    val kdoc = this.value
     var escapeNext = false
     var insideCodeBlock = false
     var referenceState = NONE
@@ -590,7 +719,7 @@ fun DocContent.replaceKdocLinks(process: (String) -> String): DocContent {
             currentBlock += char
         }
         appendCurrentBlock()
-    }
+    }.asDocContent()
 }
 
 private fun StringBuilder.processReference(
@@ -646,7 +775,7 @@ fun IntRange.coerceIn(start: Int = Int.MIN_VALUE, endInclusive: Int = Int.MAX_VA
 
 fun DocContent.removeKotlinLinks(): DocContent =
     buildString {
-        val kdoc = this@removeKotlinLinks
+        val kdoc = this@removeKotlinLinks.value
         var escapeNext = false
         var insideCodeBlock = false
         var referenceState = NONE
@@ -721,7 +850,36 @@ fun DocContent.removeKotlinLinks(): DocContent =
             }
         }
         appendBlock()
-    }.replace("****", "")
+    }
+        .replace("****", "")
         .replace("``", "")
+        .asDocContent()
 
+/**
+ * Coerces the start and end of the range to be at most [endInclusive].
+ */
 fun IntRange.coerceAtMost(endInclusive: Int) = first.coerceAtMost(endInclusive)..last.coerceAtMost(endInclusive)
+
+/**
+ * Maps the given range with [mapping] to one or multiple ranges.
+ */
+fun IntRange.mapToRanges(mapping: (Int) -> Int): List<IntRange> {
+    if (isEmpty()) return emptyList()
+
+    val ranges = mutableListOf<IntRange>()
+    val iterator = iterator()
+    var start = mapping(iterator.next())
+    var end = start
+
+    iterator.forEach {
+        val mappedNum = mapping(it)
+        if (mappedNum != end + 1) {
+            ranges.add(start..end)
+            start = mappedNum
+        }
+        end = mappedNum
+    }
+
+    ranges.add(start..end) // Add the last range
+    return ranges
+}

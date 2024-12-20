@@ -2,6 +2,7 @@ package nl.jolanrensen.docProcessor.defaultProcessors
 
 import nl.jolanrensen.docProcessor.DocProcessor
 import nl.jolanrensen.docProcessor.DocumentablesByPath
+import nl.jolanrensen.docProcessor.asDocContent
 import nl.jolanrensen.docProcessor.toDocumentablesByPath
 
 /**
@@ -20,7 +21,7 @@ class NoDocProcessor : DocProcessor() {
                 path to documentables.map {
                     it.copy(
                         tags = emptySet(),
-                        docContent = "",
+                        docContent = "".asDocContent(),
                         isModified = true,
                     )
                 }
