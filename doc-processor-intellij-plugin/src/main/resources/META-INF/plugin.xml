@@ -31,7 +31,7 @@
         <toolWindow
             factoryClass="nl.jolanrensen.docProcessor.toolWindow.DocProcessorToolWindowFactory"
             icon="/icons/KoDEx-K-toolWindow.svg"
-            id="KoDEx"/>
+            id="KoDEx Settings"/>
 
         <!-- K1 kdoc rendering -->
 

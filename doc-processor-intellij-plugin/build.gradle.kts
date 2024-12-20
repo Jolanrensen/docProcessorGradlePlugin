@@ -41,7 +41,6 @@ intellijPlatform {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
     api(project(":doc-processor-common"))
 
     // Use JUnit test framework for unit tests
@@ -70,11 +69,11 @@ tasks.getByName<Test>("test") {
 }
 
 tasks.withType<KotlinCompile> {
-    compilerOptions.jvmTarget = JvmTarget.JVM_17
+    compilerOptions.jvmTarget = JvmTarget.JVM_21
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }

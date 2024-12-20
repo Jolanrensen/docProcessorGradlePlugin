@@ -18,6 +18,7 @@ import com.intellij.util.ProcessingContext
 import nl.jolanrensen.docProcessor.completion.Mode.AFTER_ASTERISK
 import nl.jolanrensen.docProcessor.completion.Mode.AT_TAG_NAME
 import nl.jolanrensen.docProcessor.completion.Mode.IN_TEXT
+import nl.jolanrensen.docProcessor.docProcessorCompletionIsEnabled
 import nl.jolanrensen.docProcessor.getLoadedProcessors
 import org.jetbrains.kotlin.idea.completion.or
 import org.jetbrains.kotlin.idea.completion.singleCharPattern
@@ -28,26 +29,28 @@ import org.jetbrains.kotlin.kdoc.lexer.KDocTokens
  */
 class KDocCompletionContributor : CompletionContributor() {
     init {
-        extend(
-            CompletionType.BASIC,
-            // for block tags: activates after `*` or `/**`
-            psiElement().afterLeaf(
-                psiElement(KDocTokens.LEADING_ASTERISK) or psiElement(KDocTokens.START),
-            ),
-            KDocProcessorTagCompletionProvider(AFTER_ASTERISK),
-        )
-        extend(
-            CompletionType.BASIC,
-            // for block tags: activates at exactly `@xxx`, also in the middle of the tag name
-            psiElement(KDocTokens.TAG_NAME),
-            KDocProcessorTagCompletionProvider(AT_TAG_NAME),
-        )
-        extend(
-            CompletionType.BASIC,
-            // for inline tags: activates anywhere in the kdoc text
-            psiElement(KDocTokens.TEXT) or psiElement(KDocTokens.CODE_BLOCK_TEXT),
-            KDocProcessorTagCompletionProvider(IN_TEXT),
-        )
+        if (docProcessorCompletionIsEnabled) {
+            extend(
+                CompletionType.BASIC,
+                // for block tags: activates after `*` or `/**`
+                psiElement().afterLeaf(
+                    psiElement(KDocTokens.LEADING_ASTERISK) or psiElement(KDocTokens.START),
+                ),
+                KDocProcessorTagCompletionProvider(AFTER_ASTERISK),
+            )
+            extend(
+                CompletionType.BASIC,
+                // for block tags: activates at exactly `@xxx`, also in the middle of the tag name
+                psiElement(KDocTokens.TAG_NAME),
+                KDocProcessorTagCompletionProvider(AT_TAG_NAME),
+            )
+            extend(
+                CompletionType.BASIC,
+                // for inline tags: activates anywhere in the kdoc text
+                psiElement(KDocTokens.TEXT) or psiElement(KDocTokens.CODE_BLOCK_TEXT),
+                KDocProcessorTagCompletionProvider(IN_TEXT),
+            )
+        }
     }
 }
 
@@ -86,6 +89,8 @@ class KDocProcessorTagCompletionProvider(private val mode: Mode) : CompletionPro
         context: ProcessingContext,
         result: CompletionResultSet,
     ) {
+        if (!docProcessorCompletionIsEnabled) return
+
         val charPattern = when (mode) {
             IN_TEXT, AFTER_ASTERISK -> singleCharPattern('@') or singleCharPattern('{') or singleCharPattern('$')
             AT_TAG_NAME -> singleCharPattern('@')

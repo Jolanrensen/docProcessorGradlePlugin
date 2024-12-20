@@ -10,13 +10,8 @@ import nl.jolanrensen.docProcessor.defaultProcessors.INCLUDE_FILE_DOC_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.REMOVE_ESCAPE_CHARS_PROCESSOR
 import nl.jolanrensen.docProcessor.defaultProcessors.SAMPLE_DOC_PROCESSOR
 
-/**
- * Loads all processors that are included in the plugin with the correct settings.
- *
- * TODO make customizable
- */
-fun Any.getLoadedProcessors(): List<DocProcessor> {
-    Thread.currentThread().contextClassLoader = this.javaClass.classLoader
+fun ClassLoader.getLoadedProcessors(): List<DocProcessor> {
+    Thread.currentThread().contextClassLoader = this
 
     return findProcessors(
         fullyQualifiedNames = listOf(
@@ -35,4 +30,9 @@ fun Any.getLoadedProcessors(): List<DocProcessor> {
     )
 }
 
-fun Any.getLoadedTagProcessors(): List<TagDocProcessor> = getLoadedProcessors().filterIsInstance<TagDocProcessor>()
+/**
+ * Loads all processors that are included in the plugin with the correct settings.
+ *
+ * TODO make customizable
+ */
+fun Any.getLoadedProcessors(): List<DocProcessor> = this.javaClass.classLoader.getLoadedProcessors()

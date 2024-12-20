@@ -27,7 +27,7 @@ import nl.jolanrensen.docProcessor.HighlightInfo
 import nl.jolanrensen.docProcessor.HighlightType
 import nl.jolanrensen.docProcessor.applyMapping
 import nl.jolanrensen.docProcessor.asDocTextOrNull
-import nl.jolanrensen.docProcessor.docProcessorIsEnabled
+import nl.jolanrensen.docProcessor.docProcessorHighlightingIsEnabled
 import nl.jolanrensen.docProcessor.getDocContentWithMap
 import nl.jolanrensen.docProcessor.getLoadedProcessors
 import org.jetbrains.kotlin.idea.codeinsight.utils.findExistingEditor
@@ -44,8 +44,6 @@ import java.awt.event.KeyListener
 class KDocHighlightAnnotator :
     Annotator,
     DumbAware {
-
-    private val isEnabled get() = docProcessorIsEnabled
 
     // are used stateless
     private val loadedProcessors = getLoadedProcessors()
@@ -65,7 +63,7 @@ class KDocHighlightAnnotator :
             .create()
 
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
-        if (!isEnabled) return
+        if (!docProcessorHighlightingIsEnabled) return
         if (element !is KtDeclaration) return
         val kDoc = element.docComment ?: return
 
@@ -98,7 +96,6 @@ class KDocHighlightListener private constructor(private val editor: Editor) :
             editor.contentComponent.addKeyListener(this, this)
         }
 
-        private val isEnabled get() = docProcessorIsEnabled
         private val loadedProcessors = getLoadedProcessors()
         private val highlighters = mutableListOf<RangeHighlighter>()
 
@@ -117,7 +114,7 @@ class KDocHighlightListener private constructor(private val editor: Editor) :
         fun updateRelatedSymbolsHighlighting() {
             clearHighlighters()
             if (editor.isDisposed) return dispose()
-            if (!isEnabled) return
+            if (!docProcessorHighlightingIsEnabled) return
 
             val caretOffset = editor.caretModel.offset
             val scheme = EditorColorsManager.getInstance().globalScheme

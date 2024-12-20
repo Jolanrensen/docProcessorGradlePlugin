@@ -29,7 +29,7 @@ import nl.jolanrensen.docProcessor.docComment
 import nl.jolanrensen.docProcessor.docProcessorIsEnabled
 import nl.jolanrensen.docProcessor.getLoadedProcessors
 import nl.jolanrensen.docProcessor.getOrigin
-import nl.jolanrensen.docProcessor.mode
+import nl.jolanrensen.docProcessor.preprocessorMode
 import nl.jolanrensen.docProcessor.programmingLanguage
 import nl.jolanrensen.docProcessor.renderToHtml
 import nl.jolanrensen.docProcessor.toDocText
@@ -65,7 +65,7 @@ class DocProcessorServiceK1(private val project: Project) {
     /**
      * Determines whether the DocProcessor is enabled or disabled.
      */
-    val isEnabled get() = docProcessorIsEnabled && mode == Mode.K1
+    val isEnabled get() = docProcessorIsEnabled && preprocessorMode == Mode.K1
 
     /**
      * Helper function that queries the project for reference links and returns them as a list of DocumentableWrappers.
@@ -283,6 +283,5 @@ class DocProcessorServiceK1(private val project: Project) {
 
     init {
         thisLogger().setLevel(LogLevel.INFO) // TEMP
-        thisLogger().info(MessageBundle.message("projectService", project.name))
     }
 }

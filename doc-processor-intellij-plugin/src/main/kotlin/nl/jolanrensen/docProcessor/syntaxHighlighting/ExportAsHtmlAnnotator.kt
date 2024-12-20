@@ -15,7 +15,7 @@ import nl.jolanrensen.docProcessor.ExportAsHtml
 import nl.jolanrensen.docProcessor.Mode
 import nl.jolanrensen.docProcessor.annotationNames
 import nl.jolanrensen.docProcessor.docProcessorIsEnabled
-import nl.jolanrensen.docProcessor.mode
+import nl.jolanrensen.docProcessor.preprocessorMode
 import nl.jolanrensen.docProcessor.renderToHtml
 import nl.jolanrensen.docProcessor.services.DocProcessorServiceK2
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
@@ -88,7 +88,9 @@ class ExportAsHtmlAnnotator : Annotator {
             .create()
     }
 
-    private val isEnabled get() = docProcessorIsEnabled && mode == Mode.K2
+    // we'll count this as "doc processor enabled" and not highlighting, as it
+    // needs to actually run the preprocessors itself.
+    private val isEnabled get() = docProcessorIsEnabled && preprocessorMode == Mode.K2
 
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
         if (!isEnabled) return

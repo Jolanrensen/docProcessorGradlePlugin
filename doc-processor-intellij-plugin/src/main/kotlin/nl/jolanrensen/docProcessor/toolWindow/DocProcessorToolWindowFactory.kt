@@ -3,14 +3,17 @@ package nl.jolanrensen.docProcessor.toolWindow
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBPanel
 import com.intellij.ui.content.ContentFactory
+import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.bindSelected
+import com.intellij.ui.dsl.builder.panel
+import nl.jolanrensen.docProcessor.BooleanSetting
+import nl.jolanrensen.docProcessor.EnumSetting
 import nl.jolanrensen.docProcessor.MessageBundle
-import nl.jolanrensen.docProcessor.Mode
-import nl.jolanrensen.docProcessor.docProcessorIsEnabled
-import nl.jolanrensen.docProcessor.mode
-import javax.swing.JToggleButton
+import nl.jolanrensen.docProcessor.allSettings
+import nl.jolanrensen.docProcessor.getLoadedProcessors
+import nl.jolanrensen.docProcessor.services.DocProcessorServiceK2
+import javax.swing.JComponent
 
 class DocProcessorToolWindowFactory : ToolWindowFactory {
 
@@ -30,44 +33,40 @@ class DocProcessorToolWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
 
     class DocProcessorToolWindow(toolWindow: ToolWindow) {
-        private fun JToggleButton.updateState() {
-            isSelected = true
-            text = MessageBundle.message(
-                if (docProcessorIsEnabled) "enabled" else "disabled",
-            )
-        }
+        fun getContent(): JComponent =
+            panel {
+                indent {
+                    group(MessageBundle.message("settings")) {
+                        for (setting in allSettings) {
+                            row {
+                                when (setting) {
+                                    is BooleanSetting ->
+                                        checkBox(MessageBundle.message(setting.messageBundleName))
+                                            .bindSelected(setting::value)
 
-        private fun JToggleButton.updateMode() {
-            isSelected = true
-            text = MessageBundle.message(mode.id)
-        }
-
-        fun getContent(): JBPanel<JBPanel<*>> =
-            JBPanel<JBPanel<*>>().apply {
-                add(JBLabel(MessageBundle.message("docPreprocessorEnabled")))
-                add(
-                    JToggleButton().apply {
-                        updateState()
-                        addActionListener {
-                            docProcessorIsEnabled = !docProcessorIsEnabled
-                            updateState()
-                        }
-                    },
-                )
-
-                add(JBLabel(MessageBundle.message("mode")))
-                add(
-                    JToggleButton().apply {
-                        updateMode()
-                        addActionListener {
-                            mode = when (mode) {
-                                Mode.K1 -> Mode.K2
-                                Mode.K2 -> Mode.K1
+                                    is EnumSetting<*> -> {
+                                        label(MessageBundle.message(setting.messageBundleName))
+                                        comboBox(setting.values).bindItem({ setting.value }) {
+                                            it?.let { setting.setValueAsAny(it) }
+                                        }
+                                    }
+                                }
                             }
-                            updateMode()
                         }
-                    },
-                )
+                        row { text(MessageBundle.message("changeSettings")) }
+                    }
+
+                    group(MessageBundle.message("loadedPreprocessors")) {
+                        val loadedPreprocessors = DocProcessorServiceK2::class.java.classLoader.getLoadedProcessors()
+
+                        if (loadedPreprocessors.isEmpty()) row(MessageBundle.message("noPreprocessorsLoaded")) {}
+                        for ((i, preProcessor) in loadedPreprocessors.withIndex()) {
+                            row("${i + 1}. ${preProcessor.name}") {}
+                        }
+
+                        row { text(MessageBundle.message("loadedPreprocessorsMessage")) }
+                    }
+                }
             }
     }
 }

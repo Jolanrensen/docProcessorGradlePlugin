@@ -6,6 +6,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
+import nl.jolanrensen.docProcessor.docProcessorCompletionIsEnabled
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.kdoc.lexer.KDocTokens
 
@@ -36,6 +37,7 @@ class KDocCompletionInvoker : TypedHandlerDelegate() {
         file: PsiFile,
         fileType: FileType,
     ): Result {
+        if (!docProcessorCompletionIsEnabled) return Result.CONTINUE
         if (file.fileType != KotlinFileType.INSTANCE) return Result.CONTINUE
         when (c) {
             '{', '$', '@' -> autoPopupIfInKdoc(project, editor)
